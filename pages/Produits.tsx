@@ -1,0 +1,484 @@
+
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../services/api';
+import { Product, Category, Ingredient, RecipeItem } from '../types';
+import Modal from '../components/Modal';
+import { PlusCircle, Edit, Trash2, Search, Settings, GripVertical, CheckCircle, Clock, XCircle, MoreVertical, Upload } from 'lucide-react';
+
+const getStatusInfo = (status: Product['estado']) => {
+    switch (status) {
+        case 'disponible':
+            return { text: 'Disponible', color: 'bg-green-100 text-green-800', Icon: CheckCircle };
+        case 'agotado_temporal':
+            return { text: 'Rupture (Temp.)', color: 'bg-yellow-100 text-yellow-800', Icon: Clock };
+        case 'agotado_indefinido':
+            return { text: 'Indisponible', color: 'bg-red-100 text-red-800', Icon: XCircle };
+        default:
+            return { text: 'Inconnu', color: 'bg-gray-100 text-gray-800', Icon: HelpCircle };
+    }
+};
+
+// --- Main Page Component ---
+const Produits: React.FC = () => {
+    const { role } = useAuth();
+    const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const [searchTerm, setSearchTerm] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState<string>('all');
+
+    const [isProductModalOpen, setProductModalOpen] = useState(false);
+    const [isCategoryModalOpen, setCategoryModalOpen] = useState(false);
+    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+
+    const canEdit = role?.permissions['/produits'] === 'editor';
+
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true);
+            const [productsData, categoriesData, ingredientsData] = await Promise.all([
+                api.getProducts(),
+                api.getCategories(),
+                api.getIngredients()
+            ]);
+            setProducts(productsData);
+            setCategories(categoriesData);
+            setIngredients(ingredientsData);
+            setError(null);
+        } catch (err) {
+            setError("Impossible de charger les données des produits.");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const filteredProducts = useMemo(() =>
+        products.filter(p =>
+            (p.nom_produit.toLowerCase().includes(searchTerm.toLowerCase())) &&
+            (categoryFilter === 'all' || p.categoria_id === categoryFilter)
+        ), [products, searchTerm, categoryFilter]);
+
+    const handleOpenModal = (type: 'product' | 'category' | 'delete', mode: 'add' | 'edit' = 'add', product: Product | null = null) => {
+        if (type === 'product') {
+            setModalMode(mode);
+            setSelectedProduct(product);
+            setProductModalOpen(true);
+        } else if (type === 'category') {
+            setCategoryModalOpen(true);
+        } else if (type === 'delete' && product) {
+            setSelectedProduct(product);
+            setDeleteModalOpen(true);
+        }
+    };
+    
+    const handleStatusChange = async (product: Product, newStatus: Product['estado']) => {
+        try {
+            await api.updateProduct(product.id, { estado: newStatus });
+            fetchData();
+        } catch (error) {
+            console.error("Failed to update status", error);
+        }
+    }
+
+    if (loading) return <p className="text-gray-800">Chargement des produits...</p>;
+    if (error) return <p className="text-red-500">{error}</p>;
+
+    return (
+        <div className="space-y-6">
+            <h1 className="text-3xl font-bold text-gray-800">Gestion des Produits</h1>
+            
+            <div className="bg-white p-4 rounded-xl shadow-md flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 w-full">
+                    <div className="relative flex-grow">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                            type="text"
+                            placeholder="Rechercher un produit..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-4 py-2 border rounded-lg w-full text-gray-900"
+                        />
+                    </div>
+                    <select
+                        value={categoryFilter}
+                        onChange={e => setCategoryFilter(e.target.value)}
+                        className="border rounded-lg py-2 px-4 text-gray-900"
+                    >
+                        <option value="all">Toutes les catégories</option>
+                        {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.nom}</option>)}
+                    </select>
+                </div>
+                {canEdit && (
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <button onClick={() => setCategoryModalOpen(true)} className="flex-1 sm:flex-initial bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-300 transition">
+                            <Settings size={20} />
+                        </button>
+                        <button onClick={() => handleOpenModal('product', 'add')} className="flex-1 sm:flex-initial bg-brand-primary text-brand-secondary font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-400 transition">
+                            <PlusCircle size={20} />
+                            Ajouter Produit
+                        </button>
+                    </div>
+                )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredProducts.map(p => (
+                    <ProductCard 
+                        key={p.id} 
+                        product={p} 
+                        category={categories.find(c => c.id === p.categoria_id)}
+                        onEdit={() => handleOpenModal('product', 'edit', p)}
+                        onDelete={() => handleOpenModal('delete', 'edit', p)}
+                        onStatusChange={handleStatusChange}
+                        canEdit={canEdit}
+                    />
+                ))}
+            </div>
+
+            {isProductModalOpen && canEdit && (
+                <AddEditProductModal
+                    isOpen={isProductModalOpen}
+                    onClose={() => setProductModalOpen(false)}
+                    onSuccess={fetchData}
+                    product={selectedProduct}
+                    mode={modalMode}
+                    categories={categories}
+                    ingredients={ingredients}
+                />
+            )}
+            {isCategoryModalOpen && canEdit && (
+                <ManageCategoriesModal
+                    isOpen={isCategoryModalOpen}
+                    onClose={() => setCategoryModalOpen(false)}
+                    onSuccess={fetchData}
+                    categories={categories}
+                />
+            )}
+             {isDeleteModalOpen && canEdit && selectedProduct && (
+                <DeleteProductModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setDeleteModalOpen(false)}
+                    onSuccess={fetchData}
+                    product={selectedProduct}
+                />
+            )}
+        </div>
+    );
+};
+
+
+// --- Child Components ---
+
+const ProductCard: React.FC<{ product: Product; category?: Category; onEdit: () => void; onDelete: () => void; onStatusChange: (product: Product, newStatus: Product['estado']) => void; canEdit: boolean; }> = ({ product, category, onEdit, onDelete, onStatusChange, canEdit }) => {
+    const { text, color, Icon } = getStatusInfo(product.estado);
+    const [menuOpen, setMenuOpen] = useState(false);
+    
+    const margin = product.prix_vente - (product.cout_revient || 0);
+    const marginPercentage = product.prix_vente > 0 ? (margin / product.prix_vente) * 100 : 0;
+
+    return (
+        <div className="bg-white rounded-xl shadow-md flex flex-col overflow-hidden">
+            <img src={product.image} alt={product.nom_produit} className="w-full h-40 object-cover" />
+            <div className="p-4 flex flex-col flex-grow">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <p className="text-xs text-gray-500">{category?.nom || 'Sans catégorie'}</p>
+                        <h3 className="font-bold text-lg text-gray-900">{product.nom_produit}</h3>
+                    </div>
+                    <p className="text-xl font-extrabold text-brand-primary">{product.prix_vente.toFixed(2)}€</p>
+                </div>
+                 <p className="text-xs text-gray-600 mt-1 flex-grow">{product.description}</p>
+                 <div className="text-xs text-gray-600 mt-2">
+                    Coût: {(product.cout_revient || 0).toFixed(2)}€ | Marge: {margin.toFixed(2)}€ ({marginPercentage.toFixed(0)}%)
+                </div>
+                
+                <div className="flex justify-between items-center mt-4">
+                    <span className={`px-2 py-1 text-xs font-bold rounded-full flex items-center gap-1 ${color}`}>
+                        <Icon size={14} /> {text}
+                    </span>
+                    {canEdit && (
+                        <div className="relative">
+                            <button onClick={() => setMenuOpen(!menuOpen)} className="p-1 text-gray-500 hover:text-gray-800"><MoreVertical size={20} /></button>
+                            {menuOpen && (
+                                <div className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-md shadow-lg z-10 border">
+                                    <button onClick={() => { onEdit(); setMenuOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Modifier</button>
+                                    <button onClick={() => { onDelete(); setMenuOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Supprimer</button>
+                                    <div className="border-t my-1"></div>
+                                    <p className="px-4 pt-2 pb-1 text-xs text-gray-500">Changer statut :</p>
+                                    {['disponible', 'agotado_temporal', 'agotado_indefinido'].map(status => (
+                                        <button key={status} onClick={() => { onStatusChange(product, status as Product['estado']); setMenuOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            {getStatusInfo(status as Product['estado']).text}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess: () => void; product: Product | null; mode: 'add' | 'edit'; categories: Category[]; ingredients: Ingredient[]; }> = ({ isOpen, onClose, onSuccess, product, mode, categories, ingredients }) => {
+    const [formData, setFormData] = useState({
+        nom_produit: product?.nom_produit || '',
+        prix_vente: product?.prix_vente || 0,
+        categoria_id: product?.categoria_id || (categories[0]?.id ?? ''),
+        estado: product?.estado || 'disponible',
+        image: product?.image || 'https://picsum.photos/seed/newitem/400',
+        description: product?.description || '',
+        recipe: product?.recipe || [],
+    });
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [isSubmitting, setSubmitting] = useState(false);
+
+    const handleRecipeChange = (index: number, field: keyof RecipeItem, value: string) => {
+        const newRecipe = [...formData.recipe];
+        const numValue = field === 'qte_utilisee' ? parseFloat(value) : value;
+        newRecipe[index] = { ...newRecipe[index], [field]: numValue };
+        setFormData({ ...formData, recipe: newRecipe });
+    };
+
+    const addRecipeItem = () => {
+        if (ingredients.length === 0) return;
+        setFormData({ ...formData, recipe: [...formData.recipe, { ingredient_id: ingredients[0].id, qte_utilisee: 0 }] });
+    };
+    
+    const removeRecipeItem = (index: number) => {
+        const newRecipe = formData.recipe.filter((_, i) => i !== index);
+        setFormData({ ...formData, recipe: newRecipe });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (formData.recipe.length === 0) {
+            alert("Veuillez ajouter au moins un ingrédient à la recette.");
+            return;
+        }
+        setSubmitting(true);
+        try {
+            // In a real app, you'd upload `imageFile` to cloud storage and get a URL
+            // For this mock, we'll just use the existing or a new picsum URL
+            const finalData = { ...formData, image: imageFile ? URL.createObjectURL(imageFile) : formData.image };
+
+            if (mode === 'edit' && product) {
+                await api.updateProduct(product.id, finalData);
+            } else {
+                await api.addProduct(finalData as Omit<Product, 'id'>);
+            }
+            onSuccess();
+            onClose();
+        } catch (error) {
+            console.error("Failed to save product", error);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={mode === 'add' ? 'Ajouter un Produit' : 'Modifier le Produit'} size="lg">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                 <div className="max-h-[65vh] overflow-y-auto pr-2 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Nom</label>
+                            <input type="text" value={formData.nom_produit} onChange={e => setFormData({...formData, nom_produit: e.target.value})} required className="mt-1 block w-full input-field"/>
+                        </div>
+                         <div>
+                            <label className="block text-sm font-medium text-gray-700">Prix de Vente (€)</label>
+                            <input type="number" step="0.01" min="0" value={formData.prix_vente} onChange={e => setFormData({...formData, prix_vente: parseFloat(e.target.value)})} required className="mt-1 block w-full input-field"/>
+                        </div>
+                         <div>
+                            <label className="block text-sm font-medium text-gray-700">Catégorie</label>
+                            <select value={formData.categoria_id} onChange={e => setFormData({...formData, categoria_id: e.target.value})} required className="mt-1 block w-full input-field">
+                                {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Statut</label>
+                            <select value={formData.estado} onChange={e => setFormData({...formData, estado: e.target.value as Product['estado']})} required className="mt-1 block w-full input-field">
+                                <option value="disponible">Disponible</option>
+                                <option value="agotado_temporal">Rupture (Temp.)</option>
+                                <option value="agotado_indefinido">Indisponible</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Description</label>
+                        <textarea
+                            rows={3}
+                            value={formData.description}
+                            onChange={e => setFormData({...formData, description: e.target.value})}
+                            className="mt-1 block w-full input-field"
+                            placeholder="Courte description du produit..."
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Image du produit</label>
+                         <div className="mt-1 flex items-center gap-4">
+                            <img src={imageFile ? URL.createObjectURL(imageFile) : formData.image} alt="Aperçu" className="w-20 h-20 object-cover rounded-md bg-gray-100" />
+                             <label htmlFor="product-image-upload" className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary">
+                                 <div className="flex items-center gap-2">
+                                     <Upload size={16} />
+                                     <span>Changer l'image</span>
+                                 </div>
+                                <input id="product-image-upload" type="file" className="sr-only" onChange={e => setImageFile(e.target.files ? e.target.files[0] : null)} />
+                            </label>
+                         </div>
+                    </div>
+
+
+                    <div>
+                        <h4 className="text-md font-semibold text-gray-800 border-b pb-2 mb-2">Recette</h4>
+                        {formData.recipe.length === 0 && (
+                            <div className="text-center p-2 my-2 bg-red-50 border border-red-200 rounded-md">
+                                <p className="text-sm text-red-600">Un produit doit contenir au moins un ingrédient.</p>
+                            </div>
+                        )}
+                        <div className="space-y-2">
+                            {formData.recipe.map((item, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <GripVertical className="text-gray-400 cursor-move" size={16}/>
+                                    <select value={item.ingredient_id} onChange={e => handleRecipeChange(index, 'ingredient_id', e.target.value)} className="input-field flex-grow">
+                                        {ingredients.map(i => <option key={i.id} value={i.id}>{i.nom}</option>)}
+                                    </select>
+                                    <input type="number" placeholder="Qté" value={item.qte_utilisee} onChange={e => handleRecipeChange(index, 'qte_utilisee', e.target.value)} className="input-field w-24" />
+                                    <span className="text-gray-500 text-sm w-12">{ingredients.find(i => i.id === item.ingredient_id)?.unite === 'kg' ? 'g' : ingredients.find(i => i.id === item.ingredient_id)?.unite}</span>
+                                    <button type="button" onClick={() => removeRecipeItem(index)} className="p-1 text-red-500 hover:bg-red-100 rounded-full"><Trash2 size={16}/></button>
+                                </div>
+                            ))}
+                        </div>
+                        <button type="button" onClick={addRecipeItem} className="mt-2 text-sm text-blue-600 hover:underline">Ajouter un ingrédient</button>
+                    </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
+                    <button type="button" onClick={onClose} className="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition">Annuler</button>
+                    <button type="submit" disabled={isSubmitting || formData.recipe.length === 0} className="w-full sm:w-auto bg-brand-primary text-brand-secondary font-bold py-3 px-4 rounded-lg transition hover:bg-yellow-400 disabled:bg-gray-400 disabled:cursor-not-allowed">{isSubmitting ? 'Sauvegarde...' : 'Sauvegarder'}</button>
+                </div>
+            </form>
+        </Modal>
+    );
+};
+
+const ManageCategoriesModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess: () => void; categories: Category[] }> = ({ isOpen, onClose, onSuccess, categories }) => {
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [error, setError] = useState('');
+
+    const handleAdd = async () => {
+        if (!newCategoryName.trim()) return;
+        try {
+            await api.addCategory(newCategoryName);
+            setNewCategoryName('');
+            onSuccess();
+        } catch (err) { console.error(err); }
+    };
+    
+    const handleDelete = async (id: string) => {
+        setError('');
+        try {
+            await api.deleteCategory(id);
+            onSuccess();
+        } catch (err: any) {
+            setError(err.message);
+            console.error(err);
+        }
+    };
+    
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Gérer les Catégories">
+            <div className="space-y-4">
+                <div className="flex gap-2">
+                    <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nom de la nouvelle catégorie" className="input-field flex-grow" />
+                    <button onClick={handleAdd} className="bg-brand-primary text-brand-secondary font-bold px-4 rounded-lg">Ajouter</button>
+                </div>
+                {error && <p className="text-red-500 text-sm">{error}</p>}
+                <ul className="space-y-2 max-h-60 overflow-y-auto">
+                    {categories.map(cat => (
+                        <li key={cat.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                            <span className="text-gray-800">{cat.nom}</span>
+                            <button onClick={() => handleDelete(cat.id)} className="p-1 text-red-500 hover:bg-red-100 rounded-full"><Trash2 size={16}/></button>
+                        </li>
+                    ))}
+                </ul>
+                 <div className="pt-4 flex">
+                    <button type="button" onClick={onClose} className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition">Fermer</button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+const DeleteProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess: () => void; product: Product }> = ({ isOpen, onClose, onSuccess, product }) => {
+    const [isSubmitting, setSubmitting] = useState(false);
+
+    const handleDelete = async () => {
+        setSubmitting(true);
+        try {
+            await api.deleteProduct(product.id);
+            onSuccess();
+            onClose();
+        } catch (error) {
+            console.error("Failed to delete product", error);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Confirmer la Suppression">
+            <p className="text-gray-700">Êtes-vous sûr de vouloir supprimer le produit <strong className="text-gray-900">{product.nom_produit}</strong> ? Cette action est irréversible.</p>
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6">
+                <button type="button" onClick={onClose} className="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition">Annuler</button>
+                <button onClick={handleDelete} disabled={isSubmitting} className="w-full sm:w-auto bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition hover:bg-red-700 disabled:bg-gray-300">{isSubmitting ? 'Suppression...' : 'Supprimer'}</button>
+            </div>
+        </Modal>
+    );
+}
+
+// Simple helper components to avoid repetition
+const HelpCircle: React.FC<{ size: number }> = ({ size }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+);
+
+
+// Add a general style for input fields in a global style or here for simplicity
+const globalStyles = `
+.input-field {
+    border: 1px solid #D1D5DB;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    padding: 0.5rem 0.75rem;
+    color: #111827;
+    background-color: white;
+}
+.input-field:focus {
+    outline: none;
+    --tw-ring-color: #F9A826;
+    border-color: #F9A826;
+    box-shadow: 0 0 0 2px var(--tw-ring-color);
+}
+`;
+const styleSheet = document.createElement("style");
+styleSheet.innerText = globalStyles;
+document.head.appendChild(styleSheet);
+
+
+export default Produits;
