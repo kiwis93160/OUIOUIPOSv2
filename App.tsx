@@ -14,12 +14,16 @@ import CommandeClient from './pages/CommandeClient';
 import NotFound from './pages/NotFound';
 import ResumeVentes from './pages/ResumeVentes';
 
+const isPermissionGranted = (permission?: string) =>
+  permission === 'editor' || permission === 'readonly';
+
 const PrivateRoute: React.FC<{ children: React.ReactElement, permissionKey: string }> = ({ children, permissionKey }) => {
   const { role, loading } = useAuth();
   if (loading) {
     return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-primary"></div></div>;
   }
-  const hasPermission = role?.permissions[permissionKey] && role.permissions[permissionKey] !== 'none';
+  const permission = role?.permissions[permissionKey];
+  const hasPermission = isPermissionGranted(permission);
   return role && hasPermission ? children : <Navigate to="/login" replace />;
 };
 
@@ -28,9 +32,15 @@ const AppRoutes: React.FC = () => {
 
     const getHomeRedirect = () => {
         if (!role) return '/login';
-        if (role.permissions['/dashboard'] !== 'none') return '/dashboard';
-        if (role.permissions['/ventes'] !== 'none') return '/ventes';
-        if (role.permissions['/cocina'] !== 'none') return '/cocina';
+
+        const dashboardPermission = role.permissions['/dashboard'];
+        if (isPermissionGranted(dashboardPermission)) return '/dashboard';
+
+        const ventesPermission = role.permissions['/ventes'];
+        if (isPermissionGranted(ventesPermission)) return '/ventes';
+
+        const cocinaPermission = role.permissions['/cocina'];
+        if (isPermissionGranted(cocinaPermission)) return '/cocina';
         return '/login';
     };
 
