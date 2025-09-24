@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -71,6 +69,6 @@ const App: React.FC = () => {
       </BrowserRouter>
     </AuthProvider>
   );
-}
+};
 
 export default App;
