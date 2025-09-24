@@ -93,7 +93,7 @@ const Cuisine: React.FC = () => {
             {orders.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center text-2xl text-gray-700">Aucune commande en préparation.</div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 flex-1">
                     {orders.map(order => (
                         <KitchenTicket key={order.id} order={order} onReady={handleMarkAsReady} canMarkReady={canMarkReady} />
                     ))}

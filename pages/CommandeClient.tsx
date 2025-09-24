@@ -282,7 +282,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                 </button>
                             ))}
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                             {filteredProducts.map(product => (
                                 <div key={product.id} onClick={() => product.estado === 'disponible' && handleProductClick(product)}
                                     className={`border rounded-lg p-3 flex flex-col items-center text-center transition-shadow ${product.estado === 'disponible' ? 'cursor-pointer hover:shadow-lg' : 'opacity-50'}`}>

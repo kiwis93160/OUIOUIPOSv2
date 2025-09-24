@@ -258,7 +258,7 @@ const Commande: React.FC = () => {
                         ))}
                     </div>
                 </div>
-                <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto">
+                <div className="p-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 overflow-y-auto">
                     {filteredProducts.map(product => {
                         const isLowStock = !isProductAvailable(product);
                         const quantityInCart = productQuantitiesInCart[product.id] || 0;
