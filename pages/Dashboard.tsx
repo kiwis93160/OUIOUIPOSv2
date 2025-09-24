@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { DollarSign, Users, Armchair, AlertTriangle, Soup, BarChart2, PieChart as PieIcon } from 'lucide-react';
+import { DollarSign, Users, Armchair, AlertTriangle, Soup, BarChart2, PieChart as PieIcon, Shield } from 'lucide-react';
 import { api } from '../services/api';
-import { DashboardStats, SalesDataPoint, Ingredient } from '../types';
+import { DashboardStats, SalesDataPoint } from '../types';
 import Modal from '../components/Modal';
+import RoleManager from '../components/RoleManager';
 
 const MainStatCard: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
     <div className="bg-white p-6 rounded-xl shadow-md flex items-center space-x-4">
@@ -36,6 +37,7 @@ const Dashboard: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [pieChartMode, setPieChartMode] = useState<'category' | 'product'>('category');
     const [isLowStockModalOpen, setLowStockModalOpen] = useState(false);
+    const [isRoleManagerOpen, setRoleManagerOpen] = useState(false);
 
     useEffect(() => {
         const fetchAllStats = async () => {
@@ -63,6 +65,16 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="space-y-6">
+            <div className="flex justify-end">
+                <button
+                    onClick={() => setRoleManagerOpen(true)}
+                    className="inline-flex items-center rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-brand-primary/90"
+                >
+                    <Shield className="mr-2 h-4 w-4" />
+                    Gestion des rôles
+                </button>
+            </div>
+
             {/* Block 1: Key Indicators */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MainStatCard title="Ventes du Jour" value={`${stats.ventesAujourdhui.toFixed(2)} €`} icon={<DollarSign size={28}/>} />
@@ -134,6 +146,8 @@ const Dashboard: React.FC = () => {
                     <p className="text-gray-600 text-center">Aucun ingrédient en stock bas pour le moment.</p>
                 )}
             </Modal>
+
+            <RoleManager isOpen={isRoleManagerOpen} onClose={() => setRoleManagerOpen(false)} />
         </div>
     );
 };
