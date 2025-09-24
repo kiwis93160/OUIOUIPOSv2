@@ -116,7 +116,7 @@ const Ventes: React.FC = () => {
     return (
         <div>
             <h1 className="text-3xl font-bold mb-6 text-gray-800">Plan de Salle</h1>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {tables.map(table => (
                     <TableCard key={table.id} table={table} onServe={handleServeOrder} />
                 ))}

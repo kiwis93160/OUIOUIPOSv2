@@ -134,7 +134,7 @@ const Produits: React.FC = () => {
                 )}
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredProducts.map(p => (
                     <ProductCard 
                         key={p.id} 
@@ -294,7 +294,7 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
         <Modal isOpen={isOpen} onClose={onClose} title={mode === 'add' ? 'Ajouter un Produit' : 'Modifier le Produit'} size="lg">
             <form onSubmit={handleSubmit} className="space-y-4">
                  <div className="max-h-[65vh] overflow-y-auto pr-2 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Nom</label>
                             <input type="text" value={formData.nom_produit} onChange={e => setFormData({...formData, nom_produit: e.target.value})} required className="mt-1 block w-full input-field"/>
