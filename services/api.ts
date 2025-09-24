@@ -200,6 +200,45 @@ const createSaleEntriesForOrder = (order: Order) => {
 export const api = {
   notifications: notificationsService,
 
+  getRoles: async (): Promise<Role[]> => {
+    return simulateNetwork(MOCK_ROLES);
+  },
+
+  getRoleById: async (roleId: string): Promise<Role | null> => {
+    const role = MOCK_ROLES.find(r => r.id === roleId) || null;
+    return simulateNetwork(role);
+  },
+
+  createRole: async (payload: Omit<Role, 'id'>): Promise<Role> => {
+    const newRole: Role = {
+      ...payload,
+      id: `role_${Date.now()}`,
+    };
+    MOCK_ROLES.push(newRole);
+    return simulateNetwork(newRole);
+  },
+
+  updateRole: async (roleId: string, updates: Omit<Role, 'id'>): Promise<Role> => {
+    const roleIndex = MOCK_ROLES.findIndex(r => r.id === roleId);
+    if (roleIndex === -1) {
+      throw new Error('Role not found');
+    }
+
+    const updatedRole: Role = {
+      ...MOCK_ROLES[roleIndex],
+      ...updates,
+      id: roleId,
+    };
+
+    MOCK_ROLES[roleIndex] = updatedRole;
+    return simulateNetwork(updatedRole);
+  },
+
+  deleteRole: async (roleId: string): Promise<void> => {
+    MOCK_ROLES = MOCK_ROLES.filter(role => role.id !== roleId);
+    await simulateNetwork(null);
+  },
+
   loginWithPin: async (pin: string): Promise<Role | null> => {
     const role = MOCK_ROLES.find(r => r.pin === pin) || null;
     return simulateNetwork(role);
