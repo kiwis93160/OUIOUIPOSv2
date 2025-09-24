@@ -22,15 +22,26 @@ const Commande: React.FC = () => {
     const [isExitConfirmOpen, setExitConfirmOpen] = useState(false);
     const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
 
+    const isOrderSynced = useCallback((latestOrder?: Order | null) => {
+        if (!order) return true;
+        const referenceOrder = latestOrder ?? originalOrder;
+        if (!referenceOrder) return true;
+        return JSON.stringify(referenceOrder.items) === JSON.stringify(order.items);
+    }, [order, originalOrder]);
+
     const fetchOrderData = useCallback(async (isRefresh = false) => {
         if (!tableId) return;
         try {
             if (!isRefresh) setLoading(true);
 
-            if(isRefresh) {
-                 const orderData = await api.createOrGetOrderByTableId(tableId);
-                 setOrder(orderData);
-                 return;
+            if (isRefresh) {
+                const orderData = await api.createOrGetOrderByTableId(tableId);
+                const shouldSyncOriginal = isOrderSynced();
+                setOrder(orderData);
+                if (shouldSyncOriginal) {
+                    setOriginalOrder(JSON.parse(JSON.stringify(orderData)));
+                }
+                return;
             }
 
             const [orderData, productsData, categoriesData, ingredientsData] = await Promise.all([
@@ -50,7 +61,7 @@ const Commande: React.FC = () => {
         } finally {
             if (!isRefresh) setLoading(false);
         }
-    }, [tableId, navigate]);
+    }, [tableId, navigate, isOrderSynced]);
 
     useEffect(() => {
         fetchOrderData();
@@ -58,10 +69,7 @@ const Commande: React.FC = () => {
         return () => clearInterval(interval);
     }, [fetchOrderData]);
     
-    const hasUnsentChanges = useMemo(() => {
-        if (!originalOrder || !order) return false;
-        return JSON.stringify(originalOrder.items) !== JSON.stringify(order.items);
-    }, [order, originalOrder]);
+    const hasUnsentChanges = useMemo(() => !isOrderSynced(), [isOrderSynced]);
 
     const productQuantitiesInCart = useMemo(() => {
         if (!order) return {};
@@ -215,8 +223,8 @@ const Commande: React.FC = () => {
     };
 
     const handleConfirmExit = async () => {
-        if (originalOrder) {
-           await updateOrderItems(originalOrder.items);
+        if (originalOrder && !isOrderSynced(originalOrder)) {
+            await updateOrderItems(originalOrder.items);
         }
         setExitConfirmOpen(false);
         navigate('/ventes');
