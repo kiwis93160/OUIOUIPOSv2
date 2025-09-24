@@ -3,24 +3,19 @@ import path from 'path';
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
 
-const createAliases = (): Record<string, string> => {
-  const aliases: Record<string, string> = {
-    '@': path.resolve(__dirname, '.'),
-  };
-
+const resolveSupabaseFallbackAlias = (): Record<string, string> => {
   const supabaseModulePath = path.resolve(
     __dirname,
     'node_modules/@supabase/supabase-js'
   );
 
-  if (!fs.existsSync(supabaseModulePath)) {
-    aliases['@supabase/supabase-js'] = path.resolve(
-      __dirname,
-      'stubs/supabase-js.ts'
-    );
+  if (fs.existsSync(supabaseModulePath)) {
+    return {};
   }
 
-  return aliases;
+  return {
+    '@supabase/supabase-js': path.resolve(__dirname, 'stubs/supabase-js.ts'),
+  };
 };
 
 export default defineConfig(({ mode }) => {
@@ -38,7 +33,10 @@ export default defineConfig(({ mode }) => {
       'process.env.GEMINI_API_KEY': JSON.stringify(geminiApiKey),
     },
     resolve: {
-      alias: createAliases(),
+      alias: {
+        '@': path.resolve(__dirname, '.'),
+        ...resolveSupabaseFallbackAlias(),
+      },
     },
   };
 });
