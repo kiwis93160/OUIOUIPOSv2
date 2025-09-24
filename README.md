@@ -15,9 +15,60 @@ View your app in AI Studio: https://ai.studio/apps/drive/1meoqOtR5vy-dbHklLN4Aqh
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+2. Dupliquez [.env.example](.env.example) en `.env.local` et renseignez :
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `GEMINI_API_KEY`
 3. Run the app:
    `npm run dev`
+
+## Configuration Supabase
+
+### Tables attendues
+
+| Table | Colonnes clés |
+|-------|---------------|
+| `roles` | `id` (uuid), `name` (text), `pin` (text), `permissions` (jsonb) |
+| `restaurant_tables` | `id`, `nom`, `capacite`, `statut`, `commande_id` (uuid nullable), `couverts` |
+| `orders` | `id`, `type`, `table_id`, `table_nom`, `couverts`, `statut`, `estado_cocina`, `date_creation` (timestamptz), `date_envoi_cuisine`, `date_listo_cuisine`, `date_servido`, `payment_status`, `payment_method`, `payment_receipt_url`, `client_nom`, `client_telephone`, `client_adresse`, `receipt_url`, `total`, `profit` |
+| `order_items` | `id`, `order_id` (fk `orders.id`), `produit_id` (fk `products.id`), `nom_produit`, `prix_unitaire`, `quantite`, `excluded_ingredients` (jsonb), `commentaire`, `estado`, `date_envoi` |
+| `products` | `id`, `nom_produit`, `description`, `prix_vente`, `categoria_id` (fk `categories.id`), `estado`, `image` |
+| `product_recipes` | `id`, `product_id`, `ingredient_id`, `qte_utilisee` (numérique, exprimée en g/ml/unité) |
+| `categories` | `id`, `nom` |
+| `ingredients` | `id`, `nom`, `unite`, `stock_minimum`, `stock_actuel`, `prix_unitaire` |
+| `purchases` | `id`, `ingredient_id`, `quantite_achetee`, `prix_total`, `date_achat` |
+| `sales` | `id`, `order_id`, `product_id`, `product_name`, `category_id`, `category_name`, `quantity`, `unit_price`, `total_price`, `unit_cost`, `total_cost`, `profit`, `payment_method`, `sale_date` |
+
+Chaque commande finalisée (ou livraison validée) doit générer des lignes dans `sales`. Une fonction ou un trigger Supabase peut reproduire la logique du client (cf. `createSalesEntriesForOrder` dans `services/api.ts`).
+
+### Politiques RLS recommandées
+
+Toutes les tables sont protégées par RLS. Exemple de stratégies à appliquer pour le rôle `anon` (utilisé par la clé `VITE_SUPABASE_ANON_KEY`) :
+
+- `roles`
+  - **SELECT** : `true` (lecture des métadonnées de rôle depuis la caisse).
+  - **INSERT/UPDATE/DELETE** : restreindre à un rôle personnalisé (`auth.role() = 'service_role'`) ou à une clé service via Edge Functions.
+- `restaurant_tables`, `orders`, `order_items`
+  - **SELECT** : `true`.
+  - **INSERT/UPDATE/DELETE** : `auth.role() = 'anon'` (les mises à jour se font côté front), ou remplacer par des RPC sécurisées si besoin de validation serveur.
+- `products`, `product_recipes`, `categories`, `ingredients`
+  - **SELECT** : `true`.
+  - **INSERT/UPDATE/DELETE** : autoriser `auth.role() = 'anon'` pour l'interface d'administration ou limiter à un rôle spécifique.
+- `purchases`, `sales`
+  - **SELECT** : `true` (tableau de bord).
+  - **INSERT** : autoriser `auth.role() = 'anon'` si l'application web doit écrire directement, sinon déléguer à des triggers/Edge Functions.
+
+Adaptez ces stratégies à vos contraintes (par exemple en combinant `auth.jwt() ->> 'email'` pour filtrer les utilisateurs).
+
+### Déploiement Netlify
+
+Dans l'interface Netlify (`Site settings > Environment variables`), ajoutez :
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `GEMINI_API_KEY`
+
+Netlify redémarrera automatiquement après mise à jour. Vérifiez également que la configuration Supabase autorise le domaine Netlify (`Settings > API > Allowed Redirect URLs`) si vous activez l'authentification Supabase ultérieurement.
 
 ## QA manuel – gestion des rôles
 

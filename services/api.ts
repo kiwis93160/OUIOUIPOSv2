@@ -1,91 +1,499 @@
-import { Role, Table, Order, Product, Category, Ingredient, OrderItem, Purchase, RecipeItem, DashboardStats, SalesDataPoint, NotificationCounts, DailyReport, SoldProduct, Sale } from '../types';
+import { supabase } from './supabaseClient';
+import {
+  Role,
+  Table,
+  Order,
+  Product,
+  Category,
+  Ingredient,
+  OrderItem,
+  RecipeItem,
+  DashboardStats,
+  SalesDataPoint,
+  NotificationCounts,
+  DailyReport,
+  SoldProduct,
+  Sale,
+} from '../types';
 
-// ==================================================================================
-// MOCK DATABASE - This simulates Firestore collections
-// ==================================================================================
-let MOCK_ROLES: Role[] = [
-  { id: '1', name: 'admin', pin: '004789', permissions: { '/dashboard': 'editor', '/ventes': 'editor', '/cocina': 'editor', '/para-llevar': 'editor', '/produits': 'editor', '/ingredients': 'editor', '/resume-ventes': 'editor' } },
-  { id: '2', name: 'cocina', pin: '2222', permissions: { '/dashboard': 'none', '/ventes': 'none', '/cocina': 'editor', '/para-llevar': 'readonly', '/produits': 'none', '/ingredients': 'none', '/resume-ventes': 'none' } },
-  { id: '3', name: 'mesero', pin: '3333', permissions: { '/dashboard': 'readonly', '/ventes': 'editor', '/cocina': 'readonly', '/para-llevar': 'editor', '/produits': 'readonly', '/ingredients': 'readonly', '/resume-ventes': 'readonly' } },
-];
+type SupabaseRoleRow = {
+  id: string;
+  name: string;
+  pin?: string | null;
+  permissions: Role['permissions'] | null;
+};
 
-let MOCK_TABLES: Omit<Table, 'estado_cocina' | 'date_envoi_cuisine'>[] = [
-  { id: 't1', nom: 'T1', capacite: 4, statut: 'libre' },
-  { id: 't2', nom: 'T2', capacite: 2, statut: 'occupee', commandeId: 'o1', couverts: 2 },
-  { id: 't3', nom: 'T3', capacite: 6, statut: 'a_payer', commandeId: 'o2', couverts: 5 },
-  { id: 't4', nom: 'T4', capacite: 4, statut: 'libre' },
-  { id: 't5', nom: 'T5', capacite: 8, statut: 'libre' },
-];
+type SupabaseTableRow = {
+  id: string;
+  nom: string;
+  capacite: number;
+  statut: Table['statut'];
+  commande_id: string | null;
+  couverts: number | null;
+};
 
-let MOCK_INGREDIENTS: Ingredient[] = [
-    { id: 'i1', nom: 'Tortilla de maïs', unite: 'unite', stock_actuel: 200, stock_minimum: 50, prix_unitaire: 0.2 },
-    { id: 'i2', nom: 'Viande Al Pastor', unite: 'kg', stock_actuel: 5, stock_minimum: 2, prix_unitaire: 15 },
-    { id: 'i3', nom: 'Fromage Oaxaca', unite: 'kg', stock_actuel: 1.5, stock_minimum: 1, prix_unitaire: 12 },
-    { id: 'i4', nom: 'Tomate', unite: 'kg', stock_actuel: 10, stock_minimum: 3, prix_unitaire: 2.5 },
-    { id: 'i5', nom: 'Avocat', unite: 'unite', stock_actuel: 8, stock_minimum: 10, prix_unitaire: 0.8 },
-];
+type SupabaseRecipeRow = {
+  ingredient_id: string;
+  qte_utilisee: number;
+};
 
-let MOCK_PURCHASES: Purchase[] = [];
-let MOCK_SALES: Sale[] = [];
+type SupabaseProductRow = {
+  id: string;
+  nom_produit: string;
+  description: string | null;
+  prix_vente: number;
+  categoria_id: string;
+  estado: Product['estado'];
+  image: string | null;
+  product_recipes: SupabaseRecipeRow[] | null;
+};
 
-let MOCK_CATEGORIES: Category[] = [
-    { id: 'c1', nom: 'Tacos' },
-    { id: 'c2', nom: 'Quesadillas' },
-    { id: 'c3', nom: 'Boissons' },
-    { id: 'c4', nom: 'Entradas' },
-];
+type SupabaseIngredientRow = {
+  id: string;
+  nom: string;
+  unite: Ingredient['unite'];
+  stock_minimum: number;
+  stock_actuel: number;
+  prix_unitaire: number;
+};
 
-let MOCK_PRODUCTS: Product[] = [
-  { id: 'p1', nom_produit: 'Taco Al Pastor', description: "Porc mariné aux épices achiote, ananas grillé, coriandre et oignon sur une double tortilla de maïs.", prix_vente: 3.5, categoria_id: 'c1', estado: 'disponible', image: 'https://picsum.photos/seed/taco1/400', recipe: [{ingredient_id: 'i1', qte_utilisee: 2}, {ingredient_id: 'i2', qte_utilisee: 80}, {ingredient_id: 'i4', qte_utilisee: 20 }] },
-  { id: 'p2', nom_produit: 'Taco Carnitas', description: "Tendre porc confit mijoté pendant des heures, servi avec sa garniture traditionnelle.", prix_vente: 3.5, categoria_id: 'c1', estado: 'disponible', image: 'https://picsum.photos/seed/taco2/400', recipe: [{ingredient_id: 'i1', qte_utilisee: 2}] },
-  { id: 'p3', nom_produit: 'Quesadilla Fromage', description: "Une grande tortilla de blé repliée sur un lit généreux de fromage Oaxaca fondant et onctueux.", prix_vente: 5, categoria_id: 'c2', estado: 'disponible', image: 'https://picsum.photos/seed/quesa1/400', recipe: [{ingredient_id: 'i1', qte_utilisee: 2}, {ingredient_id: 'i3', qte_utilisee: 100}] },
-  { id: 'p4', nom_produit: 'Agua de Jamaica', description: "Boisson rafraîchissante et naturelle à base de fleurs d'hibiscus infusées, légèrement sucrée.", prix_vente: 2.5, categoria_id: 'c3', estado: 'disponible', image: 'https://picsum.photos/seed/boisson1/400', recipe: [] },
-  { id: 'p5', nom_produit: 'Coca-Cola', description: "Le grand classique, servi bien frais pour accompagner vos tacos.", prix_vente: 2, categoria_id: 'c3', estado: 'agotado_temporal', image: 'https://picsum.photos/seed/boisson2/400', recipe: [] },
-  { id: 'p6', nom_produit: 'Guacamole & Chips', description: "Notre guacamole maison frais, servi avec un panier de totopos croustillants.", prix_vente: 7.5, categoria_id: 'c4', estado: 'disponible', image: 'https://picsum.photos/seed/guac1/400', recipe: [{ingredient_id: 'i5', qte_utilisee: 2}, {ingredient_id: 'i4', qte_utilisee: 50}] },
-  { id: 'p7', nom_produit: 'Taco Suadero', description: "Boeuf tendrement cuit à la plancha, un classique de Mexico City.", prix_vente: 4.0, categoria_id: 'c1', estado: 'disponible', image: 'https://picsum.photos/seed/taco3/400', recipe: [{ingredient_id: 'i1', qte_utilisee: 2}, {ingredient_id: 'i4', qte_utilisee: 20 }] },
-  { id: 'p8', nom_produit: 'Quesadilla Champignons', description: "Fromage fondant et champignons de Paris sautés à l'ail et epazote.", prix_vente: 6.0, categoria_id: 'c2', estado: 'disponible', image: 'https://picsum.photos/seed/quesa2/400', recipe: [{ingredient_id: 'i1', qte_utilisee: 2}, {ingredient_id: 'i3', qte_utilisee: 80}] }
-];
+type SupabaseCategoryRow = {
+  id: string;
+  nom: string;
+};
 
-let MOCK_ORDERS: Order[] = [
-  { id: 'o1', type: 'sur_place', table_id: 't2', table_nom: 'T2', couverts: 2, statut: 'en_cours', estado_cocina: 'recibido', date_creation: Date.now() - 300000, date_envoi_cuisine: Date.now() - 240000, payment_status: 'unpaid', total: 16.5, items: [
-      { id: 'oi1', produitRef: 'p1', nom_produit: 'Taco Al Pastor', prix_unitaire: 3.5, quantite: 2, excluded_ingredients: [], commentaire: '', estado: 'enviado' },
-      { id: 'oi2', produitRef: 'p4', nom_produit: 'Agua de Jamaica', prix_unitaire: 2.5, quantite: 1, excluded_ingredients: [], commentaire: '', estado: 'enviado' },
-      { id: 'oi3', produitRef: 'p3', nom_produit: 'Quesadilla Fromage', prix_unitaire: 5, quantite: 1, excluded_ingredients: [], commentaire: 'Extra fromage', estado: 'en_attente' },
-  ]},
-  { id: 'o2', type: 'sur_place', table_id: 't3', table_nom: 'T3', couverts: 5, statut: 'en_cours', estado_cocina: 'listo', date_creation: Date.now() - 1200000, date_envoi_cuisine: Date.now() - 1100000, date_listo_cuisine: Date.now() - 300000, payment_status: 'unpaid', total: 35.0, items: [
-      { id: 'oi4', produitRef: 'p1', nom_produit: 'Taco Al Pastor', prix_unitaire: 3.5, quantite: 10, excluded_ingredients: [], commentaire: '', estado: 'enviado' },
-  ]},
-  { id: 'o3', type: 'a_emporter', couverts: 1, statut: 'pendiente_validacion', estado_cocina: 'no_enviado', date_creation: Date.now() - 60000, payment_status: 'unpaid', total: 10.5, items: [{id: 'oi5', produitRef: 'p1', nom_produit: 'Taco Al Pastor', prix_unitaire: 3.5, quantite: 3, excluded_ingredients:[], commentaire: '', estado: 'en_attente'}], clientInfo: { nom: 'Jean Client', telephone: '0612345678', adresse: '123 Rue Fictive'}, receipt_url: 'https://picsum.photos/seed/receipt1/400/600'},
-  { id: 'o4', type: 'a_emporter', couverts: 1, statut: 'finalisee', estado_cocina: 'servido', date_creation: Date.now() - 900000, payment_status: 'paid', total: 7.0, items: [{ id: 'oi_fix_1', produitRef: 'p1', nom_produit: 'Taco Al Pastor', prix_unitaire: 3.5, quantite: 2, excluded_ingredients: [], commentaire: '', estado: 'enviado' }], clientInfo: { nom: 'Marie Commande', telephone: '0687654321', adresse: '456 Avenue Imaginaire'}},
-  { id: 'o5', type: 'sur_place', table_id: 't1', table_nom: 'T1', couverts: 4, statut: 'finalisee', estado_cocina: 'servido', date_creation: Date.now() - 86400000 * 2, payment_status: 'paid', total: 52.5, payment_method: 'tarjeta', items: [
-      { id: 'oi6', produitRef: 'p1', nom_produit: 'Taco Al Pastor', prix_unitaire: 3.5, quantite: 15, excluded_ingredients: [], commentaire: '', estado: 'enviado' },
-  ]},
-  { id: 'o6', type: 'sur_place', table_id: 't5', table_nom: 'T5', couverts: 8, statut: 'finalisee', estado_cocina: 'servido', date_creation: Date.now() - 86400000 * 3, payment_status: 'paid', total: 50.0, payment_method: 'efectivo', items: [
-      { id: 'oi7', produitRef: 'p3', nom_produit: 'Quesadilla Fromage', prix_unitaire: 5, quantite: 10, excluded_ingredients: [], commentaire: '', estado: 'enviado' },
-  ]},
-  { id: 'o7', type: 'sur_place', table_id: 't4', table_nom: 'T4', couverts: 2, statut: 'finalisee', estado_cocina: 'servido', date_creation: Date.now() - 86400000, payment_status: 'paid', total: 28.0, payment_method: 'tarjeta', items: [
-      { id: 'oi8', produitRef: 'p2', nom_produit: 'Taco Carnitas', prix_unitaire: 3.5, quantite: 8, excluded_ingredients: [], commentaire: '', estado: 'enviado' },
-  ]},
-  { id: 'o8', type: 'a_emporter', couverts: 1, statut: 'finalisee', estado_cocina: 'servido', date_creation: Date.now() - 86400000, payment_status: 'paid', total: 90.0, payment_method: 'transferencia', items: [
-      { id: 'oi9', produitRef: 'p6', nom_produit: 'Guacamole & Chips', prix_unitaire: 7.5, quantite: 12, excluded_ingredients: [], commentaire: '', estado: 'enviado' },
-  ]},
-   { id: 'o9', type: 'sur_place', table_id: 't2', table_nom: 'T2', couverts: 2, statut: 'finalisee', estado_cocina: 'servido', date_creation: Date.now() - 86400000, payment_status: 'paid', total: 21.0, payment_method: 'efectivo', items: [
-      { id: 'oi10', produitRef: 'p1', nom_produit: 'Taco Al Pastor', prix_unitaire: 3.5, quantite: 6, excluded_ingredients: [], commentaire: '', estado: 'enviado' },
-  ]},
-  { id: 'o10', type: 'sur_place', table_id: 't1', table_nom: 'T1', couverts: 1, statut: 'finalisee', estado_cocina: 'servido', date_creation: Date.now() - 86400000 * 4, payment_status: 'paid', total: 20.0, payment_method: 'tarjeta', items: [
-      { id: 'oi11', produitRef: 'p7', nom_produit: 'Taco Suadero', prix_unitaire: 4.0, quantite: 5, excluded_ingredients: [], commentaire: '', estado: 'enviado' },
-  ]},
-  { id: 'o11', type: 'a_emporter', couverts: 1, statut: 'finalisee', estado_cocina: 'servido', date_creation: Date.now() - 86400000 * 5, payment_status: 'paid', total: 24.0, payment_method: 'transferencia', items: [
-      { id: 'oi12', produitRef: 'p8', nom_produit: 'Quesadilla Champignons', prix_unitaire: 6.0, quantite: 4, excluded_ingredients: [], commentaire: '', estado: 'enviado' },
-  ]},
-];
+type SupabaseOrderItemRow = {
+  id: string;
+  order_id: string;
+  produit_id: string;
+  nom_produit: string;
+  prix_unitaire: number;
+  quantite: number;
+  excluded_ingredients: string[] | null;
+  commentaire: string | null;
+  estado: OrderItem['estado'];
+  date_envoi: string | null;
+};
 
+type SupabaseOrderRow = {
+  id: string;
+  type: Order['type'];
+  table_id: string | null;
+  table_nom: string | null;
+  couverts: number | null;
+  statut: Order['statut'];
+  estado_cocina: Order['estado_cocina'];
+  date_creation: string;
+  date_envoi_cuisine: string | null;
+  date_listo_cuisine: string | null;
+  date_servido: string | null;
+  payment_status: Order['payment_status'];
+  total: number | null;
+  profit: number | null;
+  payment_method: Order['payment_method'] | null;
+  payment_receipt_url: string | null;
+  client_nom: string | null;
+  client_telephone: string | null;
+  client_adresse: string | null;
+  receipt_url: string | null;
+  order_items: SupabaseOrderItemRow[] | null;
+};
 
-// ==================================================================================
-// NOTIFICATION SERVICE (Pub/Sub)
-// ==================================================================================
+type SupabaseSaleRow = {
+  id: string;
+  order_id: string;
+  product_id: string;
+  product_name: string;
+  category_id: string;
+  category_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  unit_cost: number;
+  total_cost: number;
+  profit: number;
+  payment_method: Order['payment_method'] | null;
+  sale_date: string;
+};
+
+type SupabaseResponse<T> = {
+  data: T;
+  error: { message: string } | null;
+  status?: number;
+};
+
 type EventCallback = () => void;
-const eventListeners: { [key: string]: EventCallback[] } = {};
+
+const eventListeners: Record<string, EventCallback[]> = {};
+
+const unwrap = <T>(response: SupabaseResponse<T>): T => {
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+  return response.data;
+};
+
+const unwrapMaybe = <T>(response: SupabaseResponse<T | null>): T | null => {
+  if (response.error && response.status !== 406) {
+    throw new Error(response.error.message);
+  }
+  return response.data ?? null;
+};
+
+const toTimestamp = (value?: string | null): number | undefined => {
+  if (!value) {
+    return undefined;
+  }
+  return new Date(value).getTime();
+};
+
+const toIsoString = (value: number | undefined | null): string | null | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  return new Date(value).toISOString();
+};
+
+const calculateCost = (recipe: RecipeItem[], ingredientMap: Map<string, Ingredient>): number => {
+  return recipe.reduce((total, item) => {
+    const ingredient = ingredientMap.get(item.ingredient_id);
+    if (!ingredient) {
+      return total;
+    }
+
+    let unitPrice = ingredient.prix_unitaire;
+    if (ingredient.unite === 'kg' || ingredient.unite === 'L') {
+      unitPrice = unitPrice / 1000;
+    }
+
+    return total + unitPrice * item.qte_utilisee;
+  }, 0);
+};
+
+const mapRoleRow = (row: SupabaseRoleRow, includePin: boolean): Role => {
+  const role: Role = {
+    id: row.id,
+    name: row.name,
+    permissions: row.permissions ?? {},
+  };
+
+  if (includePin && row.pin) {
+    role.pin = row.pin;
+  }
+
+  return role;
+};
+
+const mapIngredientRow = (row: SupabaseIngredientRow): Ingredient => ({
+  id: row.id,
+  nom: row.nom,
+  unite: row.unite,
+  stock_minimum: row.stock_minimum,
+  stock_actuel: row.stock_actuel,
+  prix_unitaire: row.prix_unitaire,
+});
+
+const mapCategoryRow = (row: SupabaseCategoryRow): Category => ({
+  id: row.id,
+  nom: row.nom,
+});
+
+const mapRecipeRow = (row: SupabaseRecipeRow): RecipeItem => ({
+  ingredient_id: row.ingredient_id,
+  qte_utilisee: row.qte_utilisee,
+});
+
+const mapProductRow = (row: SupabaseProductRow, ingredientMap?: Map<string, Ingredient>): Product => {
+  const recipe = (row.product_recipes ?? []).map(mapRecipeRow);
+  const product: Product = {
+    id: row.id,
+    nom_produit: row.nom_produit,
+    description: row.description ?? undefined,
+    prix_vente: row.prix_vente,
+    categoria_id: row.categoria_id,
+    estado: row.estado,
+    image: row.image ?? '',
+    recipe,
+  };
+
+  if (ingredientMap) {
+    product.cout_revient = calculateCost(recipe, ingredientMap);
+  }
+
+  return product;
+};
+
+const mapOrderItemRow = (row: SupabaseOrderItemRow): OrderItem => ({
+  id: row.id,
+  produitRef: row.produit_id,
+  nom_produit: row.nom_produit,
+  prix_unitaire: row.prix_unitaire,
+  quantite: row.quantite,
+  excluded_ingredients: row.excluded_ingredients ?? [],
+  commentaire: row.commentaire ?? '',
+  estado: row.estado,
+  date_envoi: toTimestamp(row.date_envoi),
+});
+
+const mapOrderRow = (row: SupabaseOrderRow): Order => {
+  const items = (row.order_items ?? []).map(mapOrderItemRow);
+  const order: Order = {
+    id: row.id,
+    type: row.type,
+    table_id: row.table_id ?? undefined,
+    table_nom: row.table_nom ?? undefined,
+    couverts: row.couverts ?? 0,
+    statut: row.statut,
+    estado_cocina: row.estado_cocina,
+    date_creation: toTimestamp(row.date_creation) ?? Date.now(),
+    date_envoi_cuisine: toTimestamp(row.date_envoi_cuisine),
+    date_listo_cuisine: toTimestamp(row.date_listo_cuisine),
+    date_servido: toTimestamp(row.date_servido),
+    payment_status: row.payment_status,
+    items,
+    total:
+      row.total ??
+      items.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0),
+    profit: row.profit ?? undefined,
+    payment_method: row.payment_method ?? undefined,
+    payment_receipt_url: row.payment_receipt_url ?? undefined,
+    receipt_url: row.receipt_url ?? undefined,
+  };
+
+  if (row.client_nom || row.client_telephone || row.client_adresse) {
+    order.clientInfo = {
+      nom: row.client_nom ?? '',
+      telephone: row.client_telephone ?? '',
+      adresse: row.client_adresse ?? undefined,
+    };
+  }
+
+  return order;
+};
+
+const mapSaleRow = (row: SupabaseSaleRow): Sale => ({
+  id: row.id,
+  orderId: row.order_id,
+  productId: row.product_id,
+  productName: row.product_name,
+  categoryId: row.category_id,
+  categoryName: row.category_name,
+  quantity: row.quantity,
+  unitPrice: row.unit_price,
+  totalPrice: row.total_price,
+  unitCost: row.unit_cost,
+  totalCost: row.total_cost,
+  profit: row.profit,
+  paymentMethod: row.payment_method ?? undefined,
+  saleDate: toTimestamp(row.sale_date) ?? Date.now(),
+});
+
+const mapTableRow = (
+  row: SupabaseTableRow,
+  orderMeta: Map<string, { estado_cocina?: Order['estado_cocina']; date_envoi_cuisine?: number }>,
+): Table => {
+  const table: Table = {
+    id: row.id,
+    nom: row.nom,
+    capacite: row.capacite,
+    statut: row.statut,
+    commandeId: row.commande_id ?? undefined,
+    couverts: row.couverts ?? undefined,
+  };
+
+  if (table.commandeId) {
+    const meta = orderMeta.get(table.commandeId);
+    if (meta) {
+      table.estado_cocina = meta.estado_cocina;
+      table.date_envoi_cuisine = meta.date_envoi_cuisine;
+    }
+  }
+
+  return table;
+};
+
+const selectOrdersQuery = () =>
+  supabase
+    .from('orders')
+    .select(
+      `
+        id,
+        type,
+        table_id,
+        table_nom,
+        couverts,
+        statut,
+        estado_cocina,
+        date_creation,
+        date_envoi_cuisine,
+        date_listo_cuisine,
+        date_servido,
+        payment_status,
+        total,
+        profit,
+        payment_method,
+        payment_receipt_url,
+        client_nom,
+        client_telephone,
+        client_adresse,
+        receipt_url,
+        order_items (
+          id,
+          order_id,
+          produit_id,
+          nom_produit,
+          prix_unitaire,
+          quantite,
+          excluded_ingredients,
+          commentaire,
+          estado,
+          date_envoi
+        )
+      `,
+    )
+    .order('date_creation', { ascending: false });
+
+const selectProductsQuery = () =>
+  supabase
+    .from('products')
+    .select(
+      `
+        id,
+        nom_produit,
+        description,
+        prix_vente,
+        categoria_id,
+        estado,
+        image,
+        product_recipes (
+          ingredient_id,
+          qte_utilisee
+        )
+      `,
+    )
+    .order('nom_produit');
+
+const fetchOrderById = async (orderId: string): Promise<Order | null> => {
+  const response = await selectOrdersQuery().eq('id', orderId).maybeSingle();
+  const row = unwrapMaybe<SupabaseOrderRow>(response as SupabaseResponse<SupabaseOrderRow | null>);
+  return row ? mapOrderRow(row) : null;
+};
+
+const fetchIngredients = async (): Promise<Ingredient[]> => {
+  const response = await supabase
+    .from('ingredients')
+    .select('id, nom, unite, stock_minimum, stock_actuel, prix_unitaire')
+    .order('nom');
+  const rows = unwrap<SupabaseIngredientRow[]>(response as SupabaseResponse<SupabaseIngredientRow[]>);
+  return rows.map(mapIngredientRow);
+};
+
+const fetchCategories = async (): Promise<Category[]> => {
+  const response = await supabase
+    .from('categories')
+    .select('id, nom')
+    .order('nom');
+  const rows = unwrap<SupabaseCategoryRow[]>(response as SupabaseResponse<SupabaseCategoryRow[]>);
+  return rows.map(mapCategoryRow);
+};
+
+const fetchTablesWithMeta = async (): Promise<Table[]> => {
+  const response = await supabase
+    .from('restaurant_tables')
+    .select('id, nom, capacite, statut, commande_id, couverts')
+    .order('nom');
+
+  const tableRows = unwrap<SupabaseTableRow[]>(response as SupabaseResponse<SupabaseTableRow[]>);
+  const activeOrderIds = tableRows
+    .map(row => row.commande_id)
+    .filter((value): value is string => Boolean(value));
+
+  let orderMeta = new Map<string, { estado_cocina?: Order['estado_cocina']; date_envoi_cuisine?: number }>();
+  if (activeOrderIds.length > 0) {
+    const ordersResponse = await selectOrdersQuery().in('id', activeOrderIds);
+    const orderRows = unwrap<SupabaseOrderRow[]>(ordersResponse as SupabaseResponse<SupabaseOrderRow[]>);
+    const orders = orderRows.map(mapOrderRow);
+    orderMeta = new Map(
+      orders.map(order => [order.id, { estado_cocina: order.estado_cocina, date_envoi_cuisine: order.date_envoi_cuisine }]),
+    );
+  }
+
+  return tableRows.map(row => mapTableRow(row, orderMeta));
+};
+
+const getBusinessDayStart = (now: Date = new Date()): Date => {
+  const startTime = new Date(now);
+  startTime.setHours(5, 0, 0, 0);
+
+  if (now < startTime) {
+    startTime.setDate(startTime.getDate() - 1);
+  }
+
+  return startTime;
+};
+
+const createSalesEntriesForOrder = async (order: Order) => {
+  if (!order.items.length) {
+    return;
+  }
+
+  const productIds = Array.from(new Set(order.items.map(item => item.produitRef)));
+  const [categories, ingredients, productsResponse] = await Promise.all([
+    fetchCategories(),
+    fetchIngredients(),
+    productIds.length > 0 ? selectProductsQuery().in('id', productIds) : selectProductsQuery().limit(0),
+  ]);
+
+  const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
+  const categoryMap = new Map(categories.map(category => [category.id, category.nom]));
+
+  let productRows: SupabaseProductRow[] = [];
+  if (productIds.length > 0) {
+    productRows = unwrap<SupabaseProductRow[]>(productsResponse as SupabaseResponse<SupabaseProductRow[]>);
+  }
+
+  const productMap = new Map(
+    productRows.map(row => {
+      const product = mapProductRow(row, ingredientMap);
+      return [product.id, product] as const;
+    }),
+  );
+
+  await supabase.from('sales').delete().eq('order_id', order.id);
+
+  if (!order.items.length) {
+    return;
+  }
+
+  const saleDateIso = toIsoString(order.date_servido) ?? new Date().toISOString();
+  await supabase.from('sales').insert(
+    order.items.map(item => {
+      const product = productMap.get(item.produitRef);
+      const cost = product ? calculateCost(product.recipe, ingredientMap) : 0;
+      const categoryId = product?.categoria_id ?? 'unknown';
+      const categoryName = product ? categoryMap.get(categoryId) ?? 'Sans catégorie' : 'Sans catégorie';
+
+      return {
+        order_id: order.id,
+        product_id: item.produitRef,
+        product_name: item.nom_produit,
+        category_id: categoryId,
+        category_name: categoryName,
+        quantity: item.quantite,
+        unit_price: item.prix_unitaire,
+        total_price: item.prix_unitaire * item.quantite,
+        unit_cost: cost,
+        total_cost: cost * item.quantite,
+        profit: (item.prix_unitaire - cost) * item.quantite,
+        payment_method: order.payment_method ?? null,
+        sale_date: saleDateIso,
+      };
+    }),
+  );
+};
 
 const notificationsService = {
   subscribe: (event: string, callback: EventCallback): (() => void) => {
@@ -93,7 +501,6 @@ const notificationsService = {
       eventListeners[event] = [];
     }
     eventListeners[event].push(callback);
-    // Return an unsubscribe function
     return () => {
       eventListeners[event] = eventListeners[event].filter(cb => cb !== callback);
     };
@@ -102,756 +509,903 @@ const notificationsService = {
     if (eventListeners[event]) {
       eventListeners[event].forEach(callback => callback());
     }
-  }
+  },
 };
-
-
-// ==================================================================================
-// MOCK API FUNCTIONS - Simulate Cloud Functions
-// ==================================================================================
-
-// HELPER for business day calculation
-const getBusinessDayStart = (now: Date = new Date()): Date => {
-    let startTime = new Date(now);
-    startTime.setHours(5, 0, 0, 0);
-
-    if (now < startTime) {
-        // It's before 5 AM, so the business day started at 5 AM yesterday
-        startTime.setDate(startTime.getDate() - 1);
-    }
-    return startTime;
-};
-
-const simulateNetwork = <T,>(data: T): Promise<T> => {
-    return new Promise(res => setTimeout(() => res(JSON.parse(JSON.stringify(data))), 250));
-};
-
-const calculateCost = (recipe: RecipeItem[]): number => {
-    return recipe.reduce((totalCost, item) => {
-        const ingredient = MOCK_INGREDIENTS.find(i => i.id === item.ingredient_id);
-        if (!ingredient) return totalCost;
-
-        let costPerBaseUnit = ingredient.prix_unitaire;
-        if (ingredient.unite === 'kg' || ingredient.unite === 'L') {
-            costPerBaseUnit /= 1000; // Convert price per kg/L to price per g/ml
-        }
-        
-        return totalCost + (costPerBaseUnit * item.qte_utilisee);
-    }, 0);
-};
-
-// Helper function to adjust stock for a single product based on a quantity change
-const adjustIngredientStock = (productId: string, quantityChange: number) => {
-  const product = MOCK_PRODUCTS.find(p => p.id === productId);
-  if (!product || !product.recipe) return;
-
-  product.recipe.forEach(recipeItem => {
-    const ingredientIndex = MOCK_INGREDIENTS.findIndex(i => i.id === recipeItem.ingredient_id);
-    if (ingredientIndex > -1) {
-      const ingredient = MOCK_INGREDIENTS[ingredientIndex];
-      // quantityChange is the number of products to add/remove.
-      // amountToAdjust is the total amount of ingredient to add/remove from stock.
-      let amountToAdjust = recipeItem.qte_utilisee * quantityChange;
-
-      if (ingredient.unite === 'kg') amountToAdjust /= 1000; // Recipe in g, stock in kg
-      else if (ingredient.unite === 'L') amountToAdjust /= 1000; // Recipe in ml, stock in L
-
-      const currentStock = MOCK_INGREDIENTS[ingredientIndex].stock_actuel;
-      // We subtract the amount: if quantityChange is positive (add product), we decrement stock.
-      // If quantityChange is negative (remove product), we increment stock.
-      const newStock = currentStock - amountToAdjust;
-      MOCK_INGREDIENTS[ingredientIndex].stock_actuel = parseFloat(newStock.toFixed(3));
-    }
-  });
-  notificationsService.publish('notifications_updated');
-};
-
-const createSaleEntriesForOrder = (order: Order) => {
-    order.items.forEach(item => {
-        const product = MOCK_PRODUCTS.find(p => p.id === item.produitRef);
-        if (!product) return;
-        
-        const category = MOCK_CATEGORIES.find(c => c.id === product.categoria_id);
-        const unitCost = calculateCost(product.recipe);
-        const totalCost = unitCost * item.quantite;
-        const totalPrice = item.prix_unitaire * item.quantite;
-
-        const sale: Sale = {
-            id: `sale_${order.id}_${item.id}`,
-            orderId: order.id,
-            productId: product.id,
-            productName: product.nom_produit,
-            categoryId: product.categoria_id,
-            categoryName: category?.nom || 'N/A',
-            quantity: item.quantite,
-            unitPrice: item.prix_unitaire,
-            totalPrice: totalPrice,
-            unitCost: unitCost,
-            totalCost: totalCost,
-            profit: totalPrice - totalCost,
-            paymentMethod: order.payment_method,
-            saleDate: order.date_creation,
-        };
-        MOCK_SALES.push(sale);
-    });
-};
-
 
 export const api = {
   notifications: notificationsService,
 
   getRoles: async (): Promise<Role[]> => {
-    return simulateNetwork(MOCK_ROLES);
+    const response = await supabase
+      .from('roles')
+      .select('id, name, pin, permissions')
+      .order('name');
+    const rows = unwrap<SupabaseRoleRow[]>(response as SupabaseResponse<SupabaseRoleRow[]>);
+    return rows.map(row => mapRoleRow(row, true));
   },
 
   getRoleById: async (roleId: string): Promise<Role | null> => {
-    const role = MOCK_ROLES.find(r => r.id === roleId) || null;
-    return simulateNetwork(role);
+    const response = await supabase
+      .from('roles')
+      .select('id, name, permissions')
+      .eq('id', roleId)
+      .maybeSingle();
+    const row = unwrapMaybe<SupabaseRoleRow>(response as SupabaseResponse<SupabaseRoleRow | null>);
+    return row ? mapRoleRow(row, false) : null;
   },
 
   createRole: async (payload: Omit<Role, 'id'>): Promise<Role> => {
-    const newRole: Role = {
-      ...payload,
-      id: `role_${Date.now()}`,
-    };
-    MOCK_ROLES.push(newRole);
-    return simulateNetwork(newRole);
+    const response = await supabase
+      .from('roles')
+      .insert({
+        name: payload.name,
+        pin: payload.pin,
+        permissions: payload.permissions,
+      })
+      .select('id, name, pin, permissions')
+      .single();
+    const row = unwrap<SupabaseRoleRow>(response as SupabaseResponse<SupabaseRoleRow>);
+    notificationsService.publish('notifications_updated');
+    return mapRoleRow(row, true);
   },
 
   updateRole: async (roleId: string, updates: Omit<Role, 'id'>): Promise<Role> => {
-    const roleIndex = MOCK_ROLES.findIndex(r => r.id === roleId);
-    if (roleIndex === -1) {
-      throw new Error('Role not found');
-    }
-
-    const updatedRole: Role = {
-      ...MOCK_ROLES[roleIndex],
-      ...updates,
-      id: roleId,
-    };
-
-    MOCK_ROLES[roleIndex] = updatedRole;
-    return simulateNetwork(updatedRole);
+    const response = await supabase
+      .from('roles')
+      .update({
+        name: updates.name,
+        pin: updates.pin,
+        permissions: updates.permissions,
+      })
+      .eq('id', roleId)
+      .select('id, name, pin, permissions')
+      .single();
+    const row = unwrap<SupabaseRoleRow>(response as SupabaseResponse<SupabaseRoleRow>);
+    notificationsService.publish('notifications_updated');
+    return mapRoleRow(row, true);
   },
 
   deleteRole: async (roleId: string): Promise<void> => {
-    MOCK_ROLES = MOCK_ROLES.filter(role => role.id !== roleId);
-    await simulateNetwork(null);
+    const response = await supabase.from('roles').delete().eq('id', roleId);
+    unwrap(response as SupabaseResponse<unknown>);
+    notificationsService.publish('notifications_updated');
   },
 
   loginWithPin: async (pin: string): Promise<Role | null> => {
-    const role = MOCK_ROLES.find(r => r.pin === pin) || null;
-    return simulateNetwork(role);
+    const response = await supabase
+      .from('roles')
+      .select('id, name, permissions')
+      .eq('pin', pin)
+      .maybeSingle();
+    const row = unwrapMaybe<SupabaseRoleRow>(response as SupabaseResponse<SupabaseRoleRow | null>);
+    return row ? mapRoleRow(row, false) : null;
   },
-  
+
   getDashboardStats: async (): Promise<DashboardStats> => {
-      const businessDayStart = getBusinessDayStart();
-      const businessDayStartTimestamp = businessDayStart.getTime();
+    const businessDayStart = getBusinessDayStart();
+    const businessDayIso = businessDayStart.toISOString();
 
-      const todaysOrders = MOCK_ORDERS.filter(o => o.date_creation >= businessDayStartTimestamp && o.statut === 'finalisee');
-      const ventesAujourdhui = todaysOrders.reduce((acc, o) => acc + o.total, 0);
+    const [tables, ingredients, categories, productRowsResponse, ordersResponse, weekOrdersResponse] = await Promise.all([
+      fetchTablesWithMeta(),
+      fetchIngredients(),
+      fetchCategories(),
+      selectProductsQuery(),
+      selectOrdersQuery().eq('statut', 'finalisee').gte('date_creation', businessDayIso),
+      selectOrdersQuery().eq('statut', 'finalisee').gte('date_creation', (() => {
+        const start = new Date(businessDayStart);
+        start.setDate(start.getDate() - 13);
+        return start.toISOString();
+      })()),
+    ]);
 
-      const productsWithCost = MOCK_PRODUCTS.map(p => ({
-        ...p,
-        cout_revient: calculateCost(p.recipe)
-      }));
+    const todaysOrderRows = unwrap<SupabaseOrderRow[]>(ordersResponse as SupabaseResponse<SupabaseOrderRow[]>);
+    const todaysOrders = todaysOrderRows.map(mapOrderRow);
 
-      const beneficeAujourdhui = todaysOrders.reduce((totalProfit, order) => {
-          const orderProfit = order.items.reduce((itemProfit, item) => {
-              const product = productsWithCost.find(p => p.id === item.produitRef);
-              if (product && product.cout_revient) {
-                  return itemProfit + (item.prix_unitaire - product.cout_revient) * item.quantite;
-              }
-              return itemProfit;
-          }, 0);
-          return totalProfit + orderProfit;
-      }, 0);
+    const weekOrderRows = unwrap<SupabaseOrderRow[]>(weekOrdersResponse as SupabaseResponse<SupabaseOrderRow[]>);
+    const weekOrders = weekOrderRows.map(mapOrderRow);
 
-      const clientsAujourdhui = todaysOrders.reduce((acc, o) => acc + o.couverts, 0);
-      const panierMoyen = todaysOrders.length > 0 ? ventesAujourdhui / todaysOrders.length : 0;
-      
-      const ventesParCategorieMap: { [key: string]: number } = {};
-      MOCK_ORDERS.filter(o => o.statut === 'finalisee').forEach(order => {
-          order.items.forEach(item => {
-              const product = MOCK_PRODUCTS.find(p => p.id === item.produitRef);
-              if (product) {
-                  const category = MOCK_CATEGORIES.find(c => c.id === product.categoria_id);
-                  if (category) {
-                      ventesParCategorieMap[category.nom] = (ventesParCategorieMap[category.nom] || 0) + (item.prix_unitaire * item.quantite);
-                  }
-              }
-          });
+    const ingredientMap = new Map(ingredients.map(ing => [ing.id, ing]));
+    const productRows = unwrap<SupabaseProductRow[]>(productRowsResponse as SupabaseResponse<SupabaseProductRow[]>);
+    const productMap = new Map(
+      productRows.map(row => {
+        const product = mapProductRow(row, ingredientMap);
+        return [product.id, product] as const;
+      }),
+    );
+
+    const ventesAujourdhui = todaysOrders.reduce((sum, order) => sum + order.total, 0);
+    const beneficeAujourdhui = todaysOrders.reduce((profit, order) => {
+      return (
+        profit +
+        order.items.reduce((acc, item) => {
+          const product = productMap.get(item.produitRef);
+          const cost = product ? calculateCost(product.recipe, ingredientMap) : 0;
+          return acc + (item.prix_unitaire - cost) * item.quantite;
+        }, 0)
+      );
+    }, 0);
+
+    const clientsAujourdhui = todaysOrders.reduce((sum, order) => sum + order.couverts, 0);
+    const panierMoyen = todaysOrders.length > 0 ? ventesAujourdhui / todaysOrders.length : 0;
+
+    const categoryMap = new Map(categories.map(category => [category.id, category.nom]));
+
+    const ventesParCategorieMap = new Map<string, number>();
+    todaysOrders.forEach(order => {
+      order.items.forEach(item => {
+        const product = productMap.get(item.produitRef);
+        const categoryName = product ? categoryMap.get(product.categoria_id) ?? 'Sans catégorie' : 'Sans catégorie';
+        ventesParCategorieMap.set(
+          categoryName,
+          (ventesParCategorieMap.get(categoryName) ?? 0) + item.prix_unitaire * item.quantite,
+        );
       });
-      const ventesParCategorie: SalesDataPoint[] = Object.entries(ventesParCategorieMap).map(([name, value]) => ({ name, value }));
-      
-      return simulateNetwork({
-          ventesAujourdhui,
-          beneficeAujourdhui,
-          clientsAujourdhui,
-          panierMoyen,
-          tablesOccupees: MOCK_TABLES.filter(t => t.statut !== 'libre').length,
-          clientsActuels: MOCK_TABLES.filter(t => t.statut !== 'libre').reduce((acc, t) => acc + (t.couverts || 0), 0),
-          commandesEnCuisine: MOCK_ORDERS.filter(o => o.estado_cocina === 'recibido').length,
-          ingredientsStockBas: MOCK_INGREDIENTS.filter(i => i.stock_actuel <= i.stock_minimum),
-          ventes7Jours: [
-            { name: 'J-6', ventes: 800, ventesSemainePrecedente: 750 }, { name: 'J-5', ventes: 1100, ventesSemainePrecedente: 1050 },
-            { name: 'J-4', ventes: 950, ventesSemainePrecedente: 900 }, { name: 'J-3', ventes: 1300, ventesSemainePrecedente: 1200 },
-            { name: 'J-2', ventes: 1250, ventesSemainePrecedente: 1350 }, { name: 'J-1', ventes: 1500, ventesSemainePrecedente: 1400 },
-            { name: 'Auj', ventes: ventesAujourdhui, ventesSemainePrecedente: 1150 },
-          ],
-          ventesParCategorie,
-      });
+    });
+
+    const ventesParCategorie: SalesDataPoint[] = Array.from(ventesParCategorieMap.entries()).map(([name, value]) => ({
+      name,
+      value,
+    }));
+
+    const tablesOccupees = tables.filter(table => table.statut !== 'libre').length;
+    const clientsActuels = tables.reduce((sum, table) => sum + (table.couverts ?? 0), 0);
+    const commandesEnCuisine = todaysOrders.filter(order => order.estado_cocina === 'recibido').length;
+    const ingredientsStockBas = ingredients.filter(ingredient => ingredient.stock_actuel <= ingredient.stock_minimum);
+
+    const ventes7Jours = Array.from({ length: 7 }).map((_, index) => {
+      const dayStart = new Date(businessDayStart);
+      dayStart.setDate(dayStart.getDate() - (6 - index));
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      const dayTotal = weekOrders
+        .filter(order => order.date_creation >= dayStart.getTime() && order.date_creation < dayEnd.getTime())
+        .reduce((sum, order) => sum + order.total, 0);
+
+      const previousWeekStart = new Date(dayStart);
+      previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+      const previousWeekEnd = new Date(previousWeekStart);
+      previousWeekEnd.setDate(previousWeekEnd.getDate() + 1);
+
+      const previousWeekTotal = weekOrders
+        .filter(
+          order =>
+            order.date_creation >= previousWeekStart.getTime() && order.date_creation < previousWeekEnd.getTime(),
+        )
+        .reduce((sum, order) => sum + order.total, 0);
+
+      return {
+        name: index === 6 ? 'Auj' : `J-${6 - index}`,
+        ventes: dayTotal,
+        ventesSemainePrecedente: previousWeekTotal,
+      };
+    });
+
+    return {
+      ventesAujourdhui,
+      beneficeAujourdhui,
+      clientsAujourdhui,
+      panierMoyen,
+      tablesOccupees,
+      clientsActuels,
+      commandesEnCuisine,
+      ingredientsStockBas,
+      ventes7Jours,
+      ventesParCategorie,
+    };
   },
 
   getSalesByProduct: async (): Promise<SalesDataPoint[]> => {
-      const salesByProduct: { [key: string]: number } = {};
-      MOCK_ORDERS.filter(o => o.statut === 'finalisee').forEach(order => {
-          order.items.forEach(item => {
-              const product = MOCK_PRODUCTS.find(p => p.id === item.produitRef);
-              if (product) {
-                  salesByProduct[product.nom_produit] = (salesByProduct[product.nom_produit] || 0) + (item.prix_unitaire * item.quantite);
-              }
-          });
-      });
-      
-      const sortedSales = Object.entries(salesByProduct)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
+    const response = await supabase
+      .from('sales')
+      .select('product_id, product_name, total_price');
+    const rows = unwrap<{ product_id: string; product_name: string; total_price: number }[]>(
+      response as SupabaseResponse<{ product_id: string; product_name: string; total_price: number }[]>,
+    );
 
-      if (sortedSales.length > 6) {
-          const top6 = sortedSales.slice(0, 6);
-          const othersValue = sortedSales.slice(6).reduce((acc, curr) => acc + curr.value, 0);
-          return simulateNetwork([...top6, { name: 'Autres', value: othersValue }]);
-      }
-      return simulateNetwork(sortedSales);
+    const totals = new Map<string, { name: string; value: number }>();
+    rows.forEach(row => {
+      const current = totals.get(row.product_id) ?? { name: row.product_name, value: 0 };
+      current.value += row.total_price;
+      totals.set(row.product_id, current);
+    });
+
+    const sorted = Array.from(totals.values()).sort((a, b) => b.value - a.value);
+    if (sorted.length > 6) {
+      const top6 = sorted.slice(0, 6);
+      const others = sorted.slice(6).reduce((sum, item) => sum + item.value, 0);
+      return [...top6, { name: 'Autres', value: others }];
+    }
+    return sorted;
   },
 
   getTables: async (): Promise<Table[]> => {
-    const tablesWithData: Table[] = MOCK_TABLES.map(table => {
-      if (table.commandeId) {
-        const order = MOCK_ORDERS.find(o => o.id === table.commandeId);
-        return {
-          ...table,
-          estado_cocina: order?.estado_cocina,
-          date_envoi_cuisine: order?.date_envoi_cuisine,
-        }
-      }
-      return table;
-    });
-    return simulateNetwork(tablesWithData);
+    return fetchTablesWithMeta();
   },
 
   getIngredients: async (): Promise<Ingredient[]> => {
-    return simulateNetwork(MOCK_INGREDIENTS);
+    return fetchIngredients();
   },
 
   getProducts: async (): Promise<Product[]> => {
-    const activeProducts = MOCK_PRODUCTS.filter(p => p.estado !== 'archive');
-    const productsWithCost = activeProducts.map(p => ({
-        ...p,
-        cout_revient: calculateCost(p.recipe)
-    }));
-    return simulateNetwork(productsWithCost);
+    const [productRows, ingredients] = await Promise.all([
+      selectProductsQuery().neq('estado', 'archive'),
+      fetchIngredients(),
+    ]);
+    const rows = unwrap<SupabaseProductRow[]>(productRows as SupabaseResponse<SupabaseProductRow[]>);
+    const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
+    return rows.map(row => mapProductRow(row, ingredientMap));
   },
 
   getTopSellingProducts: async (): Promise<Product[]> => {
-    const targetCategoryNames = ["Tacos", "Quesadillas", "Entradas"];
-    const targetCategoryIds = MOCK_CATEGORIES
-      .filter(c => targetCategoryNames.includes(c.nom))
-      .map(c => c.id);
+    const targetCategories = ['Tacos', 'Quesadillas', 'Entradas'];
+    const salesResponse = await supabase
+      .from('sales')
+      .select('product_id, product_name, category_name, total_price, quantity');
+    const salesRows = unwrap<{
+      product_id: string;
+      product_name: string;
+      category_name: string;
+      total_price: number;
+      quantity: number;
+    }[]>(salesResponse as SupabaseResponse<{
+      product_id: string;
+      product_name: string;
+      category_name: string;
+      total_price: number;
+      quantity: number;
+    }[]>);
 
-    const salesCount: { [productId: string]: number } = {};
+    const filtered = salesRows.filter(row => targetCategories.includes(row.category_name));
+    const aggregated = new Map<string, { quantity: number }>();
 
-    MOCK_ORDERS
-      .filter(o => o.statut === 'finalisee')
-      .forEach(order => {
-        order.items.forEach(item => {
-          const product = MOCK_PRODUCTS.find(p => p.id === item.produitRef);
-          if (product && targetCategoryIds.includes(product.categoria_id)) {
-            salesCount[item.produitRef] = (salesCount[item.produitRef] || 0) + item.quantite;
-          }
-        });
-      });
-      
-    const topProductIds = Object.entries(salesCount)
-      .sort(([, qtyA], [, qtyB]) => qtyB - qtyA)
+    filtered.forEach(row => {
+      const current = aggregated.get(row.product_id) ?? { quantity: 0 };
+      current.quantity += row.quantity;
+      aggregated.set(row.product_id, current);
+    });
+
+    const topIds = Array.from(aggregated.entries())
+      .sort((a, b) => b[1].quantity - a[1].quantity)
       .slice(0, 6)
       .map(([productId]) => productId);
 
-    const topProducts = topProductIds.map(id => 
-      MOCK_PRODUCTS.find(p => p.id === id)
-    ).filter((p): p is Product => p !== undefined && p.estado !== 'archive');
-    
-    const productsWithCost = topProducts.map(p => ({
-        ...p,
-        cout_revient: calculateCost(p.recipe)
-    }));
+    if (topIds.length === 0) {
+      return [];
+    }
 
-    return simulateNetwork(productsWithCost);
+    const productsResponse = await selectProductsQuery().in('id', topIds);
+    const productRows = unwrap<SupabaseProductRow[]>(productsResponse as SupabaseResponse<SupabaseProductRow[]>);
+    const ingredients = await fetchIngredients();
+    const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
+
+    return productRows
+      .filter(row => row.estado !== 'archive')
+      .map(row => mapProductRow(row, ingredientMap));
   },
 
   getCategories: async (): Promise<Category[]> => {
-    return simulateNetwork(MOCK_CATEGORIES);
-  },
-  
-  getKitchenOrders: async (): Promise<Order[]> => {
-      const kitchenOrders = MOCK_ORDERS.filter(o => (o.statut === 'en_cours' || o.type === 'a_emporter') && o.estado_cocina === 'recibido');
-      return simulateNetwork(kitchenOrders);
+    return fetchCategories();
   },
 
-  getTakeawayOrders: async () => {
-      const pending = MOCK_ORDERS.filter(o => o.type === 'a_emporter' && o.statut === 'pendiente_validacion');
-      const ready = MOCK_ORDERS.filter(o => o.type === 'a_emporter' && o.estado_cocina === 'listo');
-      return simulateNetwork({ pending, ready });
+  getKitchenOrders: async (): Promise<Order[]> => {
+    const response = await selectOrdersQuery()
+      .eq('estado_cocina', 'recibido')
+      .or('statut.eq.en_cours,type.eq.a_emporter');
+    const rows = unwrap<SupabaseOrderRow[]>(response as SupabaseResponse<SupabaseOrderRow[]>);
+    return rows.map(mapOrderRow);
+  },
+
+  getTakeawayOrders: async (): Promise<{ pending: Order[]; ready: Order[] }> => {
+    const response = await selectOrdersQuery().eq('type', 'a_emporter');
+    const rows = unwrap<SupabaseOrderRow[]>(response as SupabaseResponse<SupabaseOrderRow[]>);
+    const orders = rows.map(mapOrderRow);
+    return {
+      pending: orders.filter(order => order.statut === 'pendiente_validacion'),
+      ready: orders.filter(order => order.estado_cocina === 'listo'),
+    };
   },
 
   getOrderById: async (orderId: string): Promise<Order | undefined> => {
-      const order = MOCK_ORDERS.find(o => o.id === orderId);
-      return simulateNetwork(order);
+    const order = await fetchOrderById(orderId);
+    return order ?? undefined;
   },
 
   createOrGetOrderByTableId: async (tableId: string): Promise<Order> => {
-    const table = MOCK_TABLES.find(t => t.id === tableId);
-    if (!table) throw new Error("Table not found");
+    const tableResponse = await supabase
+      .from('restaurant_tables')
+      .select('id, nom, capacite, statut, commande_id, couverts')
+      .eq('id', tableId)
+      .maybeSingle();
+    const tableRow = unwrapMaybe<SupabaseTableRow>(tableResponse as SupabaseResponse<SupabaseTableRow | null>);
 
-    if (table.commandeId) {
-      const existingOrder = MOCK_ORDERS.find(o => o.id === table.commandeId);
-      if (existingOrder) return simulateNetwork(existingOrder);
+    if (!tableRow) {
+      throw new Error('Table not found');
     }
-    
-    const newOrderId = `o${Date.now()}`;
-    const newOrder: Order = {
-      id: newOrderId,
-      type: 'sur_place',
-      table_id: tableId,
-      table_nom: table.nom,
-      couverts: table.capacite,
-      statut: 'en_cours',
-      estado_cocina: 'no_enviado',
-      date_creation: Date.now(),
-      payment_status: 'unpaid',
-      items: [],
-      total: 0
-    };
-    MOCK_ORDERS.push(newOrder);
-    
-    // Update table
-    const tableIndex = MOCK_TABLES.findIndex(t => t.id === tableId);
-    MOCK_TABLES[tableIndex] = { ...table, statut: 'occupee', commandeId: newOrderId, couverts: table.capacite };
+
+    if (tableRow.commande_id) {
+      const existingOrder = await fetchOrderById(tableRow.commande_id);
+      if (existingOrder) {
+        return existingOrder;
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    const insertResponse = await supabase
+      .from('orders')
+      .insert({
+        type: 'sur_place',
+        table_id: tableRow.id,
+        table_nom: tableRow.nom,
+        couverts: tableRow.couverts ?? tableRow.capacite,
+        statut: 'en_cours',
+        estado_cocina: 'no_enviado',
+        date_creation: nowIso,
+        payment_status: 'unpaid',
+        total: 0,
+      })
+      .select('*')
+      .single();
+    const insertedRow = unwrap<SupabaseOrderRow>(insertResponse as SupabaseResponse<SupabaseOrderRow>);
+
+    await supabase
+      .from('restaurant_tables')
+      .update({
+        statut: 'occupee',
+        commande_id: insertedRow.id,
+        couverts: tableRow.couverts ?? tableRow.capacite,
+      })
+      .eq('id', tableId);
+
     notificationsService.publish('notifications_updated');
-    return simulateNetwork(newOrder);
+    return mapOrderRow(insertedRow);
   },
-  
+
   updateOrder: async (orderId: string, updates: Partial<Order>): Promise<Order> => {
-    const orderIndex = MOCK_ORDERS.findIndex(o => o.id === orderId);
-    if (orderIndex === -1) throw new Error("Order not found");
-
-    const originalOrder = MOCK_ORDERS[orderIndex];
-    const newItems = updates.items;
-
-    if (newItems) {
-        const quantityChanges = new Map<string, number>();
-
-        // Consolidate original quantities of items not yet sent to kitchen
-        originalOrder.items.forEach(item => {
-            if (item.estado === 'en_attente') {
-                const currentChange = quantityChanges.get(item.produitRef) || 0;
-                quantityChanges.set(item.produitRef, currentChange - item.quantite);
-            }
-        });
-
-        // Consolidate new quantities
-        newItems.forEach(item => {
-            if (item.estado === 'en_attente') {
-                const currentChange = quantityChanges.get(item.produitRef) || 0;
-                quantityChanges.set(item.produitRef, currentChange + item.quantite);
-            }
-        });
-
-        // Apply stock changes based on the net difference
-        quantityChanges.forEach((change, productId) => {
-            if (change !== 0) {
-                adjustIngredientStock(productId, change);
-            }
-        });
+    const existingOrder = await fetchOrderById(orderId);
+    if (!existingOrder) {
+      throw new Error('Order not found');
     }
 
-    const updatedOrderData = { ...originalOrder, ...updates };
-    updatedOrderData.total = (updates.items || originalOrder.items).reduce((acc, item) => acc + (item.quantite * item.prix_unitaire), 0);
-    MOCK_ORDERS[orderIndex] = updatedOrderData;
-    
-    // No direct notification here, as stock changes already publish.
-    return simulateNetwork(updatedOrderData);
+    let items = existingOrder.items;
+    if (updates.items) {
+      const payload = updates.items.map(item => ({
+        id: item.id,
+        order_id: orderId,
+        produit_id: item.produitRef,
+        nom_produit: item.nom_produit,
+        prix_unitaire: item.prix_unitaire,
+        quantite: item.quantite,
+        excluded_ingredients: item.excluded_ingredients,
+        commentaire: item.commentaire,
+        estado: item.estado,
+        date_envoi: toIsoString(item.date_envoi) ?? null,
+      }));
+
+      await supabase.from('order_items').delete().eq('order_id', orderId);
+      if (payload.length > 0) {
+        await supabase.from('order_items').insert(payload);
+      }
+      items = updates.items;
+    }
+
+    const { items: _, clientInfo, ...rest } = updates;
+    const payload: Record<string, unknown> = {};
+
+    if (rest.type) payload.type = rest.type;
+    if (rest.table_id !== undefined) payload.table_id = rest.table_id;
+    if (rest.table_nom !== undefined) payload.table_nom = rest.table_nom;
+    if (rest.couverts !== undefined) payload.couverts = rest.couverts;
+    if (rest.statut) payload.statut = rest.statut;
+    if (rest.estado_cocina) payload.estado_cocina = rest.estado_cocina;
+    if (rest.payment_status) payload.payment_status = rest.payment_status;
+    if (rest.payment_method !== undefined) payload.payment_method = rest.payment_method;
+    if (rest.payment_receipt_url !== undefined) payload.payment_receipt_url = rest.payment_receipt_url;
+    if (rest.receipt_url !== undefined) payload.receipt_url = rest.receipt_url;
+    if (rest.total !== undefined) payload.total = rest.total;
+    if (rest.profit !== undefined) payload.profit = rest.profit;
+
+    if (rest.date_creation !== undefined) payload.date_creation = toIsoString(rest.date_creation);
+    if (rest.date_envoi_cuisine !== undefined) payload.date_envoi_cuisine = toIsoString(rest.date_envoi_cuisine);
+    if (rest.date_listo_cuisine !== undefined) payload.date_listo_cuisine = toIsoString(rest.date_listo_cuisine);
+    if (rest.date_servido !== undefined) payload.date_servido = toIsoString(rest.date_servido);
+
+    if (updates.items) {
+      payload.total = updates.items.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0);
+    }
+
+    if (clientInfo) {
+      payload.client_nom = clientInfo?.nom ?? null;
+      payload.client_telephone = clientInfo?.telephone ?? null;
+      payload.client_adresse = clientInfo?.adresse ?? null;
+    }
+
+    if (Object.keys(payload).length > 0) {
+      await supabase.from('orders').update(payload).eq('id', orderId);
+    }
+
+    notificationsService.publish('notifications_updated');
+    const updatedOrder = await fetchOrderById(orderId);
+    if (!updatedOrder) {
+      throw new Error('Order not found after update');
+    }
+    return updatedOrder;
   },
-  
+
   sendOrderToKitchen: async (orderId: string): Promise<Order> => {
-    let orderIndex = MOCK_ORDERS.findIndex(o => o.id === orderId);
-    if (orderIndex === -1) throw new Error("Order not found");
-
-    const order = MOCK_ORDERS[orderIndex];
-    const hasItemsToSend = order.items.some(item => item.estado === 'en_attente');
-
-    if (hasItemsToSend) {
-        order.estado_cocina = 'recibido';
-        order.date_envoi_cuisine = Date.now();
-        order.items.forEach(item => {
-            if(item.estado === 'en_attente') {
-                item.estado = 'enviado';
-            }
-        });
-        notificationsService.publish('notifications_updated');
+    const order = await fetchOrderById(orderId);
+    if (!order) {
+      throw new Error('Order not found');
     }
-    
-    return simulateNetwork(order);
+
+    const itemsToSend = order.items.filter(item => item.estado === 'en_attente');
+    if (itemsToSend.length === 0) {
+      return order;
+    }
+
+    const nowIso = new Date().toISOString();
+    await supabase
+      .from('order_items')
+      .update({ estado: 'enviado', date_envoi: nowIso })
+      .eq('order_id', orderId)
+      .eq('estado', 'en_attente');
+
+    await supabase
+      .from('orders')
+      .update({ estado_cocina: 'recibido', date_envoi_cuisine: nowIso })
+      .eq('id', orderId);
+
+    notificationsService.publish('notifications_updated');
+    const updatedOrder = await fetchOrderById(orderId);
+    if (!updatedOrder) {
+      throw new Error('Order not found after sending to kitchen');
+    }
+    return updatedOrder;
   },
 
   markOrderAsReady: async (orderId: string): Promise<Order> => {
-      let orderIndex = MOCK_ORDERS.findIndex(o => o.id === orderId);
-      if (orderIndex === -1) throw new Error("Order not found");
+    const nowIso = new Date().toISOString();
+    await supabase
+      .from('orders')
+      .update({ estado_cocina: 'listo', date_listo_cuisine: nowIso })
+      .eq('id', orderId);
 
-      const order = MOCK_ORDERS[orderIndex];
-      order.estado_cocina = 'listo';
-      order.date_listo_cuisine = Date.now();
+    const order = await fetchOrderById(orderId);
+    if (order?.table_id) {
+      await supabase
+        .from('restaurant_tables')
+        .update({ statut: 'a_payer' })
+        .eq('id', order.table_id);
+    }
 
-      if (order.table_id) {
-          const tableIndex = MOCK_TABLES.findIndex(t => t.id === order.table_id);
-          if (tableIndex !== -1) {
-              MOCK_TABLES[tableIndex].statut = 'a_payer';
-          }
-      }
-      notificationsService.publish('notifications_updated');
-      return simulateNetwork(order);
+    notificationsService.publish('notifications_updated');
+    const updatedOrder = await fetchOrderById(orderId);
+    if (!updatedOrder) {
+      throw new Error('Order not found after ready update');
+    }
+    return updatedOrder;
   },
 
   markOrderAsServed: async (orderId: string): Promise<Order> => {
-      const orderIndex = MOCK_ORDERS.findIndex(o => o.id === orderId);
-      if (orderIndex === -1) throw new Error("Order not found");
-      
-      const order = MOCK_ORDERS[orderIndex];
-      order.estado_cocina = 'servido';
-      order.date_servido = Date.now();
-      notificationsService.publish('notifications_updated');
-      return simulateNetwork(order);
+    const nowIso = new Date().toISOString();
+    await supabase
+      .from('orders')
+      .update({ estado_cocina: 'servido', date_servido: nowIso })
+      .eq('id', orderId);
+
+    notificationsService.publish('notifications_updated');
+    const updatedOrder = await fetchOrderById(orderId);
+    if (!updatedOrder) {
+      throw new Error('Order not found after serve update');
+    }
+    return updatedOrder;
   },
 
   finalizeOrder: async (orderId: string, paymentMethod: Order['payment_method'], receiptUrl?: string): Promise<Order> => {
-      const orderIndex = MOCK_ORDERS.findIndex(o => o.id === orderId);
-      if (orderIndex === -1) throw new Error("Order not found");
-      
-      const order = MOCK_ORDERS[orderIndex];
-      order.statut = 'finalisee';
-      order.payment_status = 'paid';
-      order.payment_method = paymentMethod;
-      order.payment_receipt_url = receiptUrl;
-      
-      const orderProfit = order.items.reduce((totalProfit, item) => {
-        const product = MOCK_PRODUCTS.find(p => p.id === item.produitRef);
-        if (!product) return totalProfit;
-        const unitCost = calculateCost(product.recipe);
-        return totalProfit + ((item.prix_unitaire - unitCost) * item.quantite);
-      }, 0);
-      order.profit = orderProfit;
-      
-      createSaleEntriesForOrder(order);
+    const order = await fetchOrderById(orderId);
+    if (!order) {
+      throw new Error('Order not found');
+    }
 
-      if (order.table_id) {
-          const tableIndex = MOCK_TABLES.findIndex(t => t.id === order.table_id);
-          if (tableIndex !== -1) {
-              MOCK_TABLES[tableIndex].statut = 'libre';
-              delete MOCK_TABLES[tableIndex].commandeId;
-              delete MOCK_TABLES[tableIndex].couverts;
-          }
-      }
-      notificationsService.publish('notifications_updated');
-      return simulateNetwork(order);
-  },
+    const nowIso = new Date().toISOString();
+    await supabase
+      .from('orders')
+      .update({
+        statut: 'finalisee',
+        payment_status: 'paid',
+        payment_method: paymentMethod,
+        payment_receipt_url: receiptUrl ?? null,
+        date_servido: nowIso,
+      })
+      .eq('id', orderId);
 
-  // --- Ingredient CRUD ---
-  addIngredient: async (newIngredientData: Omit<Ingredient, 'id' | 'stock_actuel' | 'prix_unitaire'>): Promise<Ingredient> => {
-    const newIngredient: Ingredient = {
-      id: `ing${Date.now()}`,
-      nom: newIngredientData.nom,
-      unite: newIngredientData.unite,
-      stock_minimum: newIngredientData.stock_minimum,
-      stock_actuel: 0,
-      prix_unitaire: 0,
-    };
-    MOCK_INGREDIENTS.push(newIngredient);
+    if (order.table_id) {
+      await supabase
+        .from('restaurant_tables')
+        .update({ statut: 'libre', commande_id: null, couverts: null })
+        .eq('id', order.table_id);
+    }
+
     notificationsService.publish('notifications_updated');
-    return simulateNetwork(newIngredient);
+    const updatedOrder = await fetchOrderById(orderId);
+    if (!updatedOrder) {
+      throw new Error('Order not found after finalization');
+    }
+    await createSalesEntriesForOrder(updatedOrder);
+    return updatedOrder;
   },
 
-  updateIngredient: async (ingredientId: string, updates: Partial<Omit<Ingredient, 'id' | 'stock_actuel' | 'prix_unitaire'>>): Promise<Ingredient> => {
-    const index = MOCK_INGREDIENTS.findIndex(ing => ing.id === ingredientId);
-    if (index === -1) throw new Error("Ingredient not found");
-    MOCK_INGREDIENTS[index] = { ...MOCK_INGREDIENTS[index], ...updates };
+  submitCustomerOrder: async (orderData: {
+    items: OrderItem[];
+    clientInfo: Order['clientInfo'];
+    receipt_url?: string;
+  }): Promise<Order> => {
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    const insertResponse = await supabase
+      .from('orders')
+      .insert({
+        type: 'a_emporter',
+        couverts: 1,
+        statut: 'pendiente_validacion',
+        estado_cocina: 'no_enviado',
+        date_creation: nowIso,
+        payment_status: 'unpaid',
+        total: orderData.items.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0),
+        client_nom: orderData.clientInfo?.nom ?? null,
+        client_telephone: orderData.clientInfo?.telephone ?? null,
+        client_adresse: orderData.clientInfo?.adresse ?? null,
+        receipt_url: orderData.receipt_url ?? null,
+      })
+      .select('*')
+      .single();
+    const orderRow = unwrap<SupabaseOrderRow>(insertResponse as SupabaseResponse<SupabaseOrderRow>);
+
+    if (orderData.items.length > 0) {
+      await supabase.from('order_items').insert(
+        orderData.items.map(item => ({
+          id: item.id,
+          order_id: orderRow.id,
+          produit_id: item.produitRef,
+          nom_produit: item.nom_produit,
+          prix_unitaire: item.prix_unitaire,
+          quantite: item.quantite,
+          excluded_ingredients: item.excluded_ingredients,
+          commentaire: item.commentaire,
+          estado: item.estado,
+          date_envoi: item.date_envoi ? new Date(item.date_envoi).toISOString() : null,
+        })),
+      );
+    }
+
     notificationsService.publish('notifications_updated');
-    return simulateNetwork(MOCK_INGREDIENTS[index]);
-  },
-
-  deleteIngredient: async (ingredientId: string): Promise<{ success: boolean }> => {
-    const index = MOCK_INGREDIENTS.findIndex(ing => ing.id === ingredientId);
-    if (index === -1) throw new Error("Ingredient not found");
-    // TODO: Add check to prevent deletion if ingredient is in a recipe
-    MOCK_INGREDIENTS.splice(index, 1);
-    notificationsService.publish('notifications_updated');
-    return simulateNetwork({ success: true });
-  },
-
-  resupplyIngredient: async (ingredientId: string, quantity: number, unitPrice: number): Promise<Ingredient> => {
-    const index = MOCK_INGREDIENTS.findIndex(ing => ing.id === ingredientId);
-    if (index === -1) throw new Error("Ingredient not found");
-    
-    const totalCost = quantity * unitPrice;
-    const ingredient = MOCK_INGREDIENTS[index];
-    const currentStockValue = ingredient.prix_unitaire * ingredient.stock_actuel;
-    const newStock = ingredient.stock_actuel + quantity;
-    
-    const newWeightedPrice = newStock > 0 ? (currentStockValue + totalCost) / newStock : 0;
-    
-    ingredient.stock_actuel = newStock;
-    ingredient.prix_unitaire = isNaN(newWeightedPrice) ? 0 : newWeightedPrice;
-
-    const newPurchase: Purchase = {
-        id: `pur${Date.now()}`,
-        ingredient_id: ingredientId,
-        quantite_achetee: quantity,
-        prix_total: totalCost,
-        date_achat: Date.now()
-    };
-    MOCK_PURCHASES.push(newPurchase);
-    notificationsService.publish('notifications_updated');
-    return simulateNetwork(ingredient);
-  },
-  
-  // --- Product & Category CRUD ---
-  addProduct: async(productData: Omit<Product, 'id'>): Promise<Product> => {
-    const newProduct: Product = {
-      id: `p${Date.now()}`,
-      ...productData,
-    };
-    MOCK_PRODUCTS.push(newProduct);
-    return simulateNetwork(newProduct);
-  },
-
-  updateProduct: async(productId: string, updates: Partial<Product>): Promise<Product> => {
-    const index = MOCK_PRODUCTS.findIndex(p => p.id === productId);
-    if (index === -1) throw new Error("Product not found");
-    MOCK_PRODUCTS[index] = { ...MOCK_PRODUCTS[index], ...updates };
-    return simulateNetwork(MOCK_PRODUCTS[index]);
-  },
-
-  deleteProduct: async(productId: string): Promise<{ success: boolean }> => {
-    const index = MOCK_PRODUCTS.findIndex(p => p.id === productId);
-    if (index === -1) throw new Error("Product not found");
-    MOCK_PRODUCTS[index].estado = 'archive';
-    notificationsService.publish('notifications_updated');
-    return simulateNetwork({ success: true });
-  },
-
-  addCategory: async(name: string): Promise<Category> => {
-    const newCategory: Category = {
-      id: `c${Date.now()}`,
-      nom: name,
-    };
-    MOCK_CATEGORIES.push(newCategory);
-    return simulateNetwork(newCategory);
-  },
-
-  deleteCategory: async(categoryId: string): Promise<{ success: boolean }> => {
-    // Check if any product uses this category
-    const isUsed = MOCK_PRODUCTS.some(p => p.categoria_id === categoryId);
-    if (isUsed) throw new Error("Cannot delete category in use by products.");
-
-    const index = MOCK_CATEGORIES.findIndex(c => c.id === categoryId);
-    if (index === -1) throw new Error("Category not found");
-    MOCK_CATEGORIES.splice(index, 1);
-    return simulateNetwork({ success: true });
-  },
-
-  submitCustomerOrder: async (orderData: { items: OrderItem[], clientInfo: { nom: string, telephone: string, adresse: string }, receipt_url: string }): Promise<Order> => {
-    const today = new Date();
-    const dateStr = `${today.getDate().toString().padStart(2, '0')}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getFullYear()}`;
-    const dailyCounter = MOCK_ORDERS.filter(o => o.id.startsWith(`WEB-${dateStr}`)).length + 1;
-
-    const newOrder: Order = {
-      id: `WEB-${dateStr}-${dailyCounter.toString().padStart(4, '0')}`,
-      type: 'a_emporter',
-      couverts: 1,
-      statut: 'pendiente_validacion',
-      estado_cocina: 'no_enviado',
-      date_creation: Date.now(),
-      payment_status: 'unpaid',
-      items: orderData.items,
-      clientInfo: orderData.clientInfo,
-      receipt_url: orderData.receipt_url,
-      total: orderData.items.reduce((acc, item) => acc + item.quantite * item.prix_unitaire, 0),
-    };
-    MOCK_ORDERS.push(newOrder);
-    notificationsService.publish('notifications_updated');
-    return simulateNetwork(newOrder);
+    return mapOrderRow(orderRow);
   },
 
   getCustomerOrderStatus: async (orderId: string): Promise<Order | null> => {
-    const order = MOCK_ORDERS.find(o => o.id === orderId);
-    return simulateNetwork(order || null);
+    return fetchOrderById(orderId);
   },
 
   validateTakeawayOrder: async (orderId: string): Promise<Order> => {
-    const orderIndex = MOCK_ORDERS.findIndex(o => o.id === orderId);
-    if (orderIndex === -1) throw new Error("Order not found");
+    const nowIso = new Date().toISOString();
+    await supabase
+      .from('orders')
+      .update({
+        statut: 'en_cours',
+        estado_cocina: 'recibido',
+        payment_status: 'paid',
+        date_envoi_cuisine: nowIso,
+      })
+      .eq('id', orderId);
 
-    const order = MOCK_ORDERS[orderIndex];
-    if (order.statut !== 'pendiente_validacion') throw new Error("Order cannot be validated");
+    await supabase
+      .from('order_items')
+      .update({ estado: 'enviado', date_envoi: nowIso })
+      .eq('order_id', orderId);
 
-    // Decrement stock
-    order.items.forEach(item => {
-      adjustIngredientStock(item.produitRef, item.quantite);
-    });
-
-    // Update order status
-    order.statut = 'en_cours';
-    order.estado_cocina = 'recibido';
-    order.payment_status = 'paid'; // Payment is confirmed
-    order.date_envoi_cuisine = Date.now();
-    order.items.forEach(i => i.estado = 'enviado');
     notificationsService.publish('notifications_updated');
-    return simulateNetwork(order);
+    const updatedOrder = await fetchOrderById(orderId);
+    if (!updatedOrder) {
+      throw new Error('Order not found after validation');
+    }
+    return updatedOrder;
   },
 
   markTakeawayAsDelivered: async (orderId: string): Promise<Order> => {
-    const orderIndex = MOCK_ORDERS.findIndex(o => o.id === orderId);
-    if (orderIndex === -1) throw new Error("Order not found");
-
-    const order = MOCK_ORDERS[orderIndex];
-    order.statut = 'finalisee';
-    order.estado_cocina = 'servido';
-    order.payment_method = 'transferencia'; // Takeaway are always transferencia
-    
-    const orderProfit = order.items.reduce((totalProfit, item) => {
-        const product = MOCK_PRODUCTS.find(p => p.id === item.produitRef);
-        if (!product) return totalProfit;
-        const unitCost = calculateCost(product.recipe);
-        return totalProfit + ((item.prix_unitaire - unitCost) * item.quantite);
-    }, 0);
-    order.profit = orderProfit;
-
-    createSaleEntriesForOrder(order);
+    await supabase
+      .from('orders')
+      .update({
+        statut: 'finalisee',
+        estado_cocina: 'servido',
+        payment_method: 'transferencia',
+      })
+      .eq('id', orderId);
 
     notificationsService.publish('notifications_updated');
-    return simulateNetwork(order);
+    const updatedOrder = await fetchOrderById(orderId);
+    if (!updatedOrder) {
+      throw new Error('Order not found after delivery');
+    }
+    await createSalesEntriesForOrder(updatedOrder);
+    return updatedOrder;
   },
 
   getNotificationCounts: async (): Promise<NotificationCounts> => {
-    const counts = {
-        pendingTakeaway: MOCK_ORDERS.filter(o => o.type === 'a_emporter' && o.statut === 'pendiente_validacion').length,
-        readyTakeaway: MOCK_ORDERS.filter(o => o.type === 'a_emporter' && o.estado_cocina === 'listo').length,
-        kitchenOrders: MOCK_ORDERS.filter(o => o.estado_cocina === 'recibido').length,
-        lowStockIngredients: MOCK_INGREDIENTS.filter(i => i.stock_actuel <= i.stock_minimum).length,
-        readyForService: MOCK_ORDERS.filter(o => o.type === 'sur_place' && o.estado_cocina === 'listo').length,
+    const response = await selectOrdersQuery();
+    const rows = unwrap<SupabaseOrderRow[]>(response as SupabaseResponse<SupabaseOrderRow[]>);
+    const orders = rows.map(mapOrderRow);
+
+    return {
+      pendingTakeaway: orders.filter(order => order.type === 'a_emporter' && order.statut === 'pendiente_validacion').length,
+      readyTakeaway: orders.filter(order => order.type === 'a_emporter' && order.estado_cocina === 'listo').length,
+      kitchenOrders: orders.filter(order => order.estado_cocina === 'recibido').length,
+      lowStockIngredients: (await fetchIngredients()).filter(
+        ingredient => ingredient.stock_actuel <= ingredient.stock_minimum,
+      ).length,
+      readyForService: orders.filter(order => order.type === 'sur_place' && order.estado_cocina === 'listo').length,
     };
-    return simulateNetwork(counts);
   },
 
   generateDailyReport: async (): Promise<DailyReport> => {
     const now = new Date();
-    const startTime = getBusinessDayStart(now);
-    const startTimeStamp = startTime.getTime();
-    const endTimeStamp = now.getTime();
+    const start = getBusinessDayStart(now);
+    const startIso = start.toISOString();
 
-    const relevantOrders = MOCK_ORDERS.filter(o => 
-      o.statut === 'finalisee' && 
-      o.date_creation >= startTimeStamp && 
-      o.date_creation <= endTimeStamp
+    const [ordersResponse, categories, ingredients, productRowsResponse] = await Promise.all([
+      selectOrdersQuery()
+        .eq('statut', 'finalisee')
+        .gte('date_creation', startIso)
+        .lte('date_creation', now.toISOString()),
+      fetchCategories(),
+      fetchIngredients(),
+      selectProductsQuery(),
+    ]);
+    const rows = unwrap<SupabaseOrderRow[]>(ordersResponse as SupabaseResponse<SupabaseOrderRow[]>);
+    const orders = rows.map(mapOrderRow);
+
+    const ventesDuJour = orders.reduce((sum, order) => sum + order.total, 0);
+    const clientsDuJour = orders.reduce((sum, order) => sum + order.couverts, 0);
+    const panierMoyen = orders.length > 0 ? ventesDuJour / orders.length : 0;
+
+    const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
+    const productRows = unwrap<SupabaseProductRow[]>(productRowsResponse as SupabaseResponse<SupabaseProductRow[]>);
+    const productMap = new Map(
+      productRows.map(row => {
+        const product = mapProductRow(row, ingredientMap);
+        return [product.id, product] as const;
+      }),
     );
 
-    const ventesDuJour = relevantOrders.reduce((acc, o) => acc + o.total, 0);
-    const clientsDuJour = relevantOrders.reduce((acc, o) => acc + o.couverts, 0);
-    const panierMoyen = relevantOrders.length > 0 ? ventesDuJour / relevantOrders.length : 0;
+    const categoryMap = new Map(categories.map(category => [category.id, category.nom]));
 
-    const soldProductsByCategory: { [key: string]: { categoryName: string, products: SoldProduct[] } } = {};
-
-    relevantOrders.forEach(order => {
+    const soldProductsByCategory = new Map<string, { categoryName: string; products: SoldProduct[] }>();
+    orders.forEach(order => {
       order.items.forEach(item => {
-        const product = MOCK_PRODUCTS.find(p => p.id === item.produitRef);
-        if (!product) return;
-
-        const category = MOCK_CATEGORIES.find(c => c.id === product.categoria_id);
-        const categoryId = category ? category.id : 'unknown';
-        const categoryName = category ? category.nom : 'Sans catégorie';
-
-        if (!soldProductsByCategory[categoryId]) {
-          soldProductsByCategory[categoryId] = {
-            categoryName: categoryName,
-            products: []
-          };
-        }
-
-        let productEntry = soldProductsByCategory[categoryId].products.find(p => p.id === product.id);
-        if (productEntry) {
-          productEntry.quantity += item.quantite;
-          productEntry.totalSales += (item.quantite * item.prix_unitaire);
+        const product = productMap.get(item.produitRef);
+        const categoryName = product ? categoryMap.get(product.categoria_id) ?? 'Sans catégorie' : 'Sans catégorie';
+        const categoryId = product ? product.categoria_id : 'unknown';
+        const entry = soldProductsByCategory.get(categoryId) ?? { categoryName, products: [] };
+        const existingProduct = entry.products.find(productItem => productItem.id === item.produitRef);
+        if (existingProduct) {
+          existingProduct.quantity += item.quantite;
+          existingProduct.totalSales += item.prix_unitaire * item.quantite;
         } else {
-          soldProductsByCategory[categoryId].products.push({
-            id: product.id,
-            name: product.nom_produit,
+          entry.products.push({
+            id: item.produitRef,
+            name: item.nom_produit,
             quantity: item.quantite,
-            totalSales: (item.quantite * item.prix_unitaire),
+            totalSales: item.prix_unitaire * item.quantite,
           });
         }
+        soldProductsByCategory.set(categoryId, entry);
       });
     });
-    
-    Object.values(soldProductsByCategory).forEach(category => {
+
+    soldProductsByCategory.forEach(category => {
       category.products.sort((a, b) => b.quantity - a.quantity);
     });
 
-    const soldProductsArray = Object.values(soldProductsByCategory);
-    
-    const ingredientsStockBas = MOCK_INGREDIENTS.filter(i => i.stock_actuel <= i.stock_minimum);
+    const ingredientsStockBas = ingredients.filter(
+      ingredient => ingredient.stock_actuel <= ingredient.stock_minimum,
+    );
 
-    const report: DailyReport = {
-      generatedAt: new Date().toISOString(),
-      startDate: startTime.toISOString(),
+    return {
+      generatedAt: now.toISOString(),
+      startDate: start.toISOString(),
       clientsDuJour,
       panierMoyen,
       ventesDuJour,
-      soldProducts: soldProductsArray,
+      soldProducts: Array.from(soldProductsByCategory.values()),
       lowStockIngredients: ingredientsStockBas,
     };
-
-    return simulateNetwork(report);
   },
 
   getSalesHistory: async (): Promise<Sale[]> => {
-    return simulateNetwork(MOCK_SALES);
+    const response = await supabase.from('sales').select('*').order('sale_date', { ascending: false });
+    const rows = unwrap<SupabaseSaleRow[]>(response as SupabaseResponse<SupabaseSaleRow[]>);
+    return rows.map(mapSaleRow);
   },
 
   getFinalizedOrders: async (): Promise<Order[]> => {
-    return simulateNetwork(MOCK_ORDERS.filter(o => o.statut === 'finalisee'));
+    const response = await selectOrdersQuery().eq('statut', 'finalisee');
+    const rows = unwrap<SupabaseOrderRow[]>(response as SupabaseResponse<SupabaseOrderRow[]>);
+    return rows.map(mapOrderRow);
   },
-};
 
-// Pre-process historical data to ensure consistency (profits, sales entries)
-const preProcessHistoricalData = () => {
-    const finalizedOrders = MOCK_ORDERS.filter(o => o.statut === 'finalisee');
+  addIngredient: async (
+    newIngredientData: Omit<Ingredient, 'id' | 'stock_actuel' | 'prix_unitaire'>,
+  ): Promise<Ingredient> => {
+    const response = await supabase
+      .from('ingredients')
+      .insert({
+        nom: newIngredientData.nom,
+        unite: newIngredientData.unite,
+        stock_minimum: newIngredientData.stock_minimum,
+        stock_actuel: 0,
+        prix_unitaire: 0,
+      })
+      .select('id, nom, unite, stock_minimum, stock_actuel, prix_unitaire')
+      .single();
+    const row = unwrap<SupabaseIngredientRow>(response as SupabaseResponse<SupabaseIngredientRow>);
+    notificationsService.publish('notifications_updated');
+    return mapIngredientRow(row);
+  },
 
-    // 1. Calculate and add profit to historical orders if it's missing
-    finalizedOrders.forEach(order => {
-        if (order.profit === undefined) {
-            const orderProfit = order.items.reduce((totalProfit, item) => {
-                const product = MOCK_PRODUCTS.find(p => p.id === item.produitRef);
-                if (!product) return totalProfit;
-                const unitCost = calculateCost(product.recipe);
-                return totalProfit + ((item.prix_unitaire - unitCost) * item.quantite);
-            }, 0);
-            order.profit = orderProfit;
-        }
+  updateIngredient: async (
+    ingredientId: string,
+    updates: Partial<Omit<Ingredient, 'id'>>,
+  ): Promise<Ingredient> => {
+    const response = await supabase
+      .from('ingredients')
+      .update(updates)
+      .eq('id', ingredientId)
+      .select('id, nom, unite, stock_minimum, stock_actuel, prix_unitaire')
+      .single();
+    const row = unwrap<SupabaseIngredientRow>(response as SupabaseResponse<SupabaseIngredientRow>);
+    notificationsService.publish('notifications_updated');
+    return mapIngredientRow(row);
+  },
+
+  deleteIngredient: async (ingredientId: string): Promise<{ success: boolean }> => {
+    await supabase.from('ingredients').delete().eq('id', ingredientId);
+    notificationsService.publish('notifications_updated');
+    return { success: true };
+  },
+
+  resupplyIngredient: async (ingredientId: string, quantity: number, unitPrice: number): Promise<Ingredient> => {
+    const ingredientResponse = await supabase
+      .from('ingredients')
+      .select('id, nom, unite, stock_minimum, stock_actuel, prix_unitaire')
+      .eq('id', ingredientId)
+      .maybeSingle();
+    const ingredientRow = unwrapMaybe<SupabaseIngredientRow>(
+      ingredientResponse as SupabaseResponse<SupabaseIngredientRow | null>,
+    );
+    if (!ingredientRow) {
+      throw new Error('Ingredient not found');
+    }
+
+    const currentStockValue = ingredientRow.prix_unitaire * ingredientRow.stock_actuel;
+    const totalCost = quantity * unitPrice;
+    const newStock = ingredientRow.stock_actuel + quantity;
+    const newWeightedPrice = newStock > 0 ? (currentStockValue + totalCost) / newStock : 0;
+
+    await supabase
+      .from('ingredients')
+      .update({
+        stock_actuel: newStock,
+        prix_unitaire: Number.isFinite(newWeightedPrice) ? newWeightedPrice : 0,
+      })
+      .eq('id', ingredientId);
+
+    await supabase.from('purchases').insert({
+      ingredient_id: ingredientId,
+      quantite_achetee: quantity,
+      prix_total: totalCost,
+      date_achat: new Date().toISOString(),
     });
 
-    // 2. Pre-populate sales history from these orders if it's empty
-    if (MOCK_SALES.length === 0) { // To avoid duplicates on hot reloads
-        finalizedOrders.forEach(createSaleEntriesForOrder);
+    notificationsService.publish('notifications_updated');
+    const refreshedIngredient = await supabase
+      .from('ingredients')
+      .select('id, nom, unite, stock_minimum, stock_actuel, prix_unitaire')
+      .eq('id', ingredientId)
+      .single();
+    const refreshedRow = unwrap<SupabaseIngredientRow>(refreshedIngredient as SupabaseResponse<SupabaseIngredientRow>);
+    return mapIngredientRow(refreshedRow);
+  },
+
+  addProduct: async (product: Omit<Product, 'id'>): Promise<Product> => {
+    const insertResponse = await supabase
+      .from('products')
+      .insert({
+        nom_produit: product.nom_produit,
+        description: product.description ?? null,
+        prix_vente: product.prix_vente,
+        categoria_id: product.categoria_id,
+        estado: product.estado,
+        image: product.image,
+      })
+      .select('id')
+      .single();
+    const insertedRow = unwrap<{ id: string }>(insertResponse as SupabaseResponse<{ id: string }>);
+
+    if (product.recipe.length > 0) {
+      await supabase.from('product_recipes').insert(
+        product.recipe.map(item => ({
+          product_id: insertedRow.id,
+          ingredient_id: item.ingredient_id,
+          qte_utilisee: item.qte_utilisee,
+        })),
+      );
     }
+
+    notificationsService.publish('notifications_updated');
+    const productsResponse = await selectProductsQuery().eq('id', insertedRow.id).single();
+    const productRow = unwrap<SupabaseProductRow>(productsResponse as SupabaseResponse<SupabaseProductRow>);
+    const ingredients = await fetchIngredients();
+    const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
+    return mapProductRow(productRow, ingredientMap);
+  },
+
+  updateProduct: async (productId: string, updates: Partial<Product>): Promise<Product> => {
+    const { recipe, ...rest } = updates;
+
+    if (Object.keys(rest).length > 0) {
+      await supabase
+        .from('products')
+        .update({
+          nom_produit: rest.nom_produit,
+          description: rest.description ?? null,
+          prix_vente: rest.prix_vente,
+          categoria_id: rest.categoria_id,
+          estado: rest.estado,
+          image: rest.image,
+        })
+        .eq('id', productId);
+    }
+
+    if (recipe) {
+      await supabase.from('product_recipes').delete().eq('product_id', productId);
+      if (recipe.length > 0) {
+        await supabase.from('product_recipes').insert(
+          recipe.map(item => ({
+            product_id: productId,
+            ingredient_id: item.ingredient_id,
+            qte_utilisee: item.qte_utilisee,
+          })),
+        );
+      }
+    }
+
+    notificationsService.publish('notifications_updated');
+    const productsResponse = await selectProductsQuery().eq('id', productId).single();
+    const productRow = unwrap<SupabaseProductRow>(productsResponse as SupabaseResponse<SupabaseProductRow>);
+    const ingredients = await fetchIngredients();
+    const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
+    return mapProductRow(productRow, ingredientMap);
+  },
+
+  deleteProduct: async (productId: string): Promise<void> => {
+    await supabase.from('product_recipes').delete().eq('product_id', productId);
+    await supabase.from('products').delete().eq('id', productId);
+    notificationsService.publish('notifications_updated');
+  },
+
+  addCategory: async (name: string): Promise<Category> => {
+    const response = await supabase
+      .from('categories')
+      .insert({ nom: name })
+      .select('id, nom')
+      .single();
+    const row = unwrap<SupabaseCategoryRow>(response as SupabaseResponse<SupabaseCategoryRow>);
+    notificationsService.publish('notifications_updated');
+    return mapCategoryRow(row);
+  },
+
+  deleteCategory: async (categoryId: string): Promise<void> => {
+    await supabase.from('categories').delete().eq('id', categoryId);
+    notificationsService.publish('notifications_updated');
+  },
 };
-preProcessHistoricalData();

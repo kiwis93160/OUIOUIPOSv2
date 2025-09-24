@@ -21,13 +21,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loadRoleFromStorage = async () => {
       try {
         const savedRole = localStorage.getItem('oui-oui-tacos-role');
-        if (!savedRole) {
+        const savedSession = localStorage.getItem('oui-oui-tacos-session');
+
+        if (!savedRole || !savedSession) {
+          localStorage.removeItem('oui-oui-tacos-role');
+          localStorage.removeItem('oui-oui-tacos-session');
           return;
         }
 
         const parsedRole: Role = JSON.parse(savedRole);
-        if (!parsedRole?.id) {
-          setRole(parsedRole);
+        const parsedSession: { roleId?: string } = JSON.parse(savedSession);
+
+        if (!parsedRole?.id || parsedSession.roleId !== parsedRole.id) {
+          localStorage.removeItem('oui-oui-tacos-role');
+          localStorage.removeItem('oui-oui-tacos-session');
+          setRole(null);
           return;
         }
 
@@ -35,13 +43,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (freshRole) {
           setRole(freshRole);
           localStorage.setItem('oui-oui-tacos-role', JSON.stringify(freshRole));
+          localStorage.setItem(
+            'oui-oui-tacos-session',
+            JSON.stringify({ roleId: freshRole.id, authenticatedAt: Date.now() })
+          );
         } else {
           localStorage.removeItem('oui-oui-tacos-role');
+          localStorage.removeItem('oui-oui-tacos-session');
           setRole(null);
         }
       } catch (error) {
         console.error("Failed to restore role:", error);
         localStorage.removeItem('oui-oui-tacos-role');
+        localStorage.removeItem('oui-oui-tacos-session');
         setRole(null);
       } finally {
         setLoading(false);
@@ -58,6 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userRole) {
         setRole(userRole);
         localStorage.setItem('oui-oui-tacos-role', JSON.stringify(userRole));
+        localStorage.setItem('oui-oui-tacos-session', JSON.stringify({ roleId: userRole.id, authenticatedAt: Date.now() }));
       } else {
         throw new Error("PIN invalide");
       }
@@ -69,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(() => {
     setRole(null);
     localStorage.removeItem('oui-oui-tacos-role');
+    localStorage.removeItem('oui-oui-tacos-session');
   }, []);
 
   const refreshRole = useCallback(async () => {
@@ -81,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (updatedRole) {
         setRole(updatedRole);
         localStorage.setItem('oui-oui-tacos-role', JSON.stringify(updatedRole));
+        localStorage.setItem('oui-oui-tacos-session', JSON.stringify({ roleId: updatedRole.id, authenticatedAt: Date.now() }));
       } else {
         logout();
       }

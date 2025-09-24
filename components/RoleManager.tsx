@@ -121,7 +121,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
     setFormState({
       id: role.id,
       name: role.name,
-      pin: role.pin,
+      pin: role.pin ?? '',
       permissions: ensureNavPermissions(role.permissions),
     });
     setStatusMessage(null);
@@ -188,7 +188,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
         setFormState({
           id: updatedRole.id,
           name: updatedRole.name,
-          pin: updatedRole.pin,
+          pin: updatedRole.pin ?? '',
           permissions: ensureNavPermissions(updatedRole.permissions),
         });
         await loadRoles();
@@ -253,7 +253,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
                   >
                     <div>
                       <p className="font-semibold text-gray-800">{role.name}</p>
-                      <p className="text-xs text-gray-500">PIN : {role.pin}</p>
+                    <p className="text-xs text-gray-500">PIN : {role.pin ?? '—'}</p>
                     </div>
                     <div className="flex space-x-2">
                       <button

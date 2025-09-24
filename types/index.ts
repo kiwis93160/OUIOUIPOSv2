@@ -3,7 +3,7 @@
 export interface Role {
   id: string;
   name: string;
-  pin: string;
+  pin?: string;
   permissions: {
     [key: string]: 'editor' | 'readonly' | 'none';
   };
