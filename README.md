@@ -15,10 +15,12 @@ View your app in AI Studio: https://ai.studio/apps/drive/1meoqOtR5vy-dbHklLN4Aqh
 
 1. Install dependencies:
    `npm install`
+
+> ℹ️ **Environnement hors-ligne** — le build local utilise un stub de `@supabase/supabase-js` lorsque la dépendance n'est pas installée et charge Tailwind CSS depuis le CDN. Pour un déploiement, installez les dépendances NPM complètes afin que le client Supabase réel et la chaîne Tailwind soient utilisés.
 2. Dupliquez [.env.example](.env.example) en `.env.local` et renseignez :
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-   - `GEMINI_API_KEY`
+   - `VITE_GEMINI_API_KEY`
 3. Run the app:
    `npm run dev`
 
@@ -62,11 +64,14 @@ Adaptez ces stratégies à vos contraintes (par exemple en combinant `auth.jwt()
 
 ### Déploiement Netlify
 
-Dans l'interface Netlify (`Site settings > Environment variables`), ajoutez :
+- **Commande de build** : `npm run build`
+- **Répertoire de publication** : `dist`
+
+Dans l'interface Netlify (`Site settings > Environment variables`), ajoutez les variables :
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
-- `GEMINI_API_KEY`
+- `VITE_GEMINI_API_KEY`
 
 Netlify redémarrera automatiquement après mise à jour. Vérifiez également que la configuration Supabase autorise le domaine Netlify (`Settings > API > Allowed Redirect URLs`) si vous activez l'authentification Supabase ultérieurement.
 
