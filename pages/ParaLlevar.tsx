@@ -9,7 +9,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
 
     return (
         <>
-            <div className="bg-white p-4 rounded-lg shadow-md space-y-3">
+            <div className="ui-card p-4 space-y-3">
                 <div className="flex justify-between items-start border-b pb-2">
                     <div>
                         <h4 className="font-bold text-lg text-gray-900">Commande #{order.id.slice(-6)}</h4>
@@ -36,10 +36,10 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     {order.statut === 'pendiente_validacion' && onValidate && (
                         <>
                             <button onClick={() => setIsReceiptModalOpen(true)} className="w-full text-sm text-blue-600 hover:underline flex items-center justify-center"><Eye size={16} className="mr-1"/> Voir Justificatif</button>
-                            <button 
-                                onClick={() => onValidate(order.id)} 
+                            <button
+                                onClick={() => onValidate(order.id)}
                                 disabled={isProcessing}
-                                className="w-full bg-blue-500 text-white font-bold py-3 rounded-lg uppercase hover:bg-blue-600 transition disabled:bg-gray-400"
+                                className="w-full ui-btn-info uppercase"
                             >
                                 {isProcessing ? 'Validation...' : 'Valider'}
                             </button>
@@ -48,10 +48,10 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     {order.estado_cocina === 'listo' && onDeliver && (
                          <>
                             <span className="text-sm text-green-600 flex items-center justify-center font-semibold"><Clock size={16} className="mr-1"/> Prête depuis {Math.round((Date.now() - (order.date_listo_cuisine || Date.now()))/60000)} min</span>
-                            <button 
+                            <button
                                 onClick={() => onDeliver(order.id)}
                                 disabled={isProcessing}
-                                className="w-full bg-green-500 text-white font-bold py-3 rounded-lg uppercase hover:bg-green-600 transition disabled:bg-gray-400"
+                                className="w-full ui-btn-success uppercase"
                             >
                                 {isProcessing ? '...' : 'Entregada'}
                             </button>
@@ -128,7 +128,7 @@ const ParaLlevar: React.FC = () => {
 
     return (
         <div>
-            <h1 className="text-3xl font-bold mb-6 text-gray-800">Commandes à Emporter</h1>
+            <h1 className="text-heading mb-6">Commandes à Emporter</h1>
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
                 {/* Column for validation */}
                 <div className="bg-gray-100 p-4 rounded-xl">

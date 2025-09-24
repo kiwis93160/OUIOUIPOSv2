@@ -233,15 +233,15 @@ const Commande: React.FC = () => {
         <>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-10rem)]">
             {/* Menu Section */}
-            <div className="lg:col-span-2 bg-white rounded-xl shadow-md flex flex-col">
+            <div className="lg:col-span-2 ui-card flex flex-col">
                 <div className="p-4 border-b">
                     <div className="flex justify-between items-center">
                          <div className="flex items-center gap-4">
-                            <button onClick={handleExitAttempt} className="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-gray-600 transition" title="Retour au plan de salle">
+                            <button onClick={handleExitAttempt} className="ui-btn-dark" title="Retour au plan de salle">
                                 <ArrowLeft size={20} />
                                 <span className="hidden sm:inline">Plan de Salle</span>
                             </button>
-                            <h2 className="text-2xl font-bold text-gray-900">Table {order.table_nom}</h2>
+                            <h2 className="text-2xl font-semibold text-brand-secondary">Table {order.table_nom}</h2>
                          </div>
                          {order.date_envoi_cuisine && <OrderTimer startTime={order.date_envoi_cuisine} />}
                     </div>
@@ -286,9 +286,9 @@ const Commande: React.FC = () => {
             </div>
 
             {/* Order Summary Section */}
-            <div className="bg-white rounded-xl shadow-md flex flex-col">
+            <div className="ui-card flex flex-col">
                 <div className="p-4 border-b">
-                    <h2 className="text-2xl font-bold text-gray-900">Commande</h2>
+                    <h2 className="text-2xl font-semibold text-brand-secondary">Commande</h2>
                 </div>
                 <div className="flex-1 p-4 space-y-3 overflow-y-auto">
                     {order.items.length === 0 ? <p className="text-gray-500">La commande est vide.</p> :
@@ -308,14 +308,14 @@ const Commande: React.FC = () => {
                             </div>
                              {item.estado === 'en_attente' && (
                                 (editingCommentId === item.id || item.commentaire) ? (
-                                    <input 
+                                    <input
                                         type="text"
                                         placeholder="Ajouter un commentaire..."
                                         value={item.commentaire}
                                         onChange={(e) => handleCommentChange(index, e.target.value)}
                                         onBlur={() => persistCommentChange(index)}
                                         autoFocus
-                                        className="mt-2 w-full text-sm border-gray-300 rounded-md p-1.5 focus:ring-brand-primary focus:border-brand-primary"
+                                        className="mt-2 ui-input text-sm"
                                     />
                                 ) : (
                                     <button onClick={() => setEditingCommentId(item.id)} className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1">
@@ -330,13 +330,13 @@ const Commande: React.FC = () => {
                     ))}
                 </div>
                 <div className="p-4 border-t space-y-4">
-                    <div className="flex justify-between text-2xl font-bold text-gray-900">
+                    <div className="flex justify-between text-2xl font-semibold text-brand-secondary">
                         <span>Total</span>
                         <span>{order.total.toFixed(2)} €</span>
                     </div>
 
                     {order.estado_cocina === 'listo' && (
-                         <button onClick={handleServeOrder} className="w-full bg-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center space-x-2 hover:bg-blue-600 transition">
+                        <button onClick={handleServeOrder} className="w-full ui-btn-info justify-center py-3">
                             <Check size={20} /><span>Entregada</span>
                         </button>
                     )}
@@ -344,12 +344,12 @@ const Commande: React.FC = () => {
                     <div className="flex space-x-2">
                         <button onClick={handleSendToKitchen}
                             disabled={!order.items.some(i => i.estado === 'en_attente')}
-                            className="flex-1 bg-orange-500 text-white font-bold py-3 rounded-lg flex items-center justify-center space-x-2 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                            className="flex-1 ui-btn-accent justify-center py-3 disabled:opacity-60">
                             <Send size={20} /><span>Envoyer en Cuisine</span>
                         </button>
-                         <button onClick={() => setIsPaymentModalOpen(true)}
-                                 disabled={order.estado_cocina !== 'servido'}
-                                 className="flex-1 bg-green-600 text-white font-bold py-3 rounded-lg flex items-center justify-center space-x-2 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                        <button onClick={() => setIsPaymentModalOpen(true)}
+                                disabled={order.estado_cocina !== 'servido'}
+                                className="flex-1 ui-btn-success justify-center py-3 disabled:opacity-60">
                             <DollarSign size={20} /><span>Finaliser</span>
                         </button>
                     </div>
@@ -369,10 +369,10 @@ const Commande: React.FC = () => {
         >
             <p className="text-gray-700">Vous avez des articles non envoyés en cuisine. Si vous quittez, ils seront annulés. Voulez-vous continuer ?</p>
             <div className="flex justify-end gap-4 mt-6">
-                <button onClick={() => setExitConfirmOpen(false)} className="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">
+                <button onClick={() => setExitConfirmOpen(false)} className="ui-btn-secondary">
                     Non, rester
                 </button>
-                <button onClick={handleConfirmExit} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">
+                <button onClick={handleConfirmExit} className="ui-btn-danger">
                     Oui, quitter
                 </button>
             </div>

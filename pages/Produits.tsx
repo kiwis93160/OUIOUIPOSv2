@@ -98,9 +98,9 @@ const Produits: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800">Gestion des Produits</h1>
+            <h1 className="text-heading">Gestion des Produits</h1>
             
-            <div className="bg-white p-4 rounded-xl shadow-md flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="ui-card p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="flex flex-col sm:flex-row gap-4 w-full">
                     <div className="relative flex-grow">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -109,13 +109,13 @@ const Produits: React.FC = () => {
                             placeholder="Rechercher un produit..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="pl-10 pr-4 py-2 border rounded-lg w-full text-gray-900"
+                            className="ui-input pl-10"
                         />
                     </div>
                     <select
                         value={categoryFilter}
                         onChange={e => setCategoryFilter(e.target.value)}
-                        className="border rounded-lg py-2 px-4 text-gray-900"
+                        className="ui-select sm:w-56"
                     >
                         <option value="all">Toutes les catégories</option>
                         {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.nom}</option>)}
@@ -123,10 +123,10 @@ const Produits: React.FC = () => {
                 </div>
                 {canEdit && (
                     <div className="flex gap-2 w-full sm:w-auto">
-                        <button onClick={() => setCategoryModalOpen(true)} className="flex-1 sm:flex-initial bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-300 transition">
+                        <button onClick={() => setCategoryModalOpen(true)} className="flex-1 sm:flex-initial ui-btn-secondary">
                             <Settings size={20} />
                         </button>
-                        <button onClick={() => handleOpenModal('product', 'add')} className="flex-1 sm:flex-initial bg-brand-primary text-brand-secondary font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-400 transition">
+                        <button onClick={() => handleOpenModal('product', 'add')} className="flex-1 sm:flex-initial ui-btn-primary">
                             <PlusCircle size={20} />
                             Ajouter Produit
                         </button>
@@ -190,7 +190,7 @@ const ProductCard: React.FC<{ product: Product; category?: Category; onEdit: () 
     const marginPercentage = product.prix_vente > 0 ? (margin / product.prix_vente) * 100 : 0;
 
     return (
-        <div className="bg-white rounded-xl shadow-md flex flex-col overflow-hidden">
+        <div className="ui-card flex flex-col overflow-hidden">
             <img src={product.image} alt={product.nom_produit} className="w-full h-40 object-cover" />
             <div className="p-4 flex flex-col flex-grow">
                 <div className="flex justify-between items-start">
@@ -297,21 +297,21 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Nom</label>
-                            <input type="text" value={formData.nom_produit} onChange={e => setFormData({...formData, nom_produit: e.target.value})} required className="mt-1 block w-full input-field"/>
+                            <input type="text" value={formData.nom_produit} onChange={e => setFormData({...formData, nom_produit: e.target.value})} required className="mt-1 ui-input"/>
                         </div>
-                         <div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-700">Prix de Vente (€)</label>
-                            <input type="number" step="0.01" min="0" value={formData.prix_vente} onChange={e => setFormData({...formData, prix_vente: parseFloat(e.target.value)})} required className="mt-1 block w-full input-field"/>
+                            <input type="number" step="0.01" min="0" value={formData.prix_vente} onChange={e => setFormData({...formData, prix_vente: parseFloat(e.target.value)})} required className="mt-1 ui-input"/>
                         </div>
-                         <div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-700">Catégorie</label>
-                            <select value={formData.categoria_id} onChange={e => setFormData({...formData, categoria_id: e.target.value})} required className="mt-1 block w-full input-field">
+                            <select value={formData.categoria_id} onChange={e => setFormData({...formData, categoria_id: e.target.value})} required className="mt-1 ui-select">
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                             </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Statut</label>
-                            <select value={formData.estado} onChange={e => setFormData({...formData, estado: e.target.value as Product['estado']})} required className="mt-1 block w-full input-field">
+                            <select value={formData.estado} onChange={e => setFormData({...formData, estado: e.target.value as Product['estado']})} required className="mt-1 ui-select">
                                 <option value="disponible">Disponible</option>
                                 <option value="agotado_temporal">Rupture (Temp.)</option>
                                 <option value="agotado_indefinido">Indisponible</option>
@@ -325,7 +325,7 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                             rows={3}
                             value={formData.description}
                             onChange={e => setFormData({...formData, description: e.target.value})}
-                            className="mt-1 block w-full input-field"
+                            className="mt-1 ui-textarea"
                             placeholder="Courte description du produit..."
                         />
                     </div>
@@ -356,10 +356,10 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                             {formData.recipe.map((item, index) => (
                                 <div key={index} className="flex items-center gap-2">
                                     <GripVertical className="text-gray-400 cursor-move" size={16}/>
-                                    <select value={item.ingredient_id} onChange={e => handleRecipeChange(index, 'ingredient_id', e.target.value)} className="input-field flex-grow">
+                                    <select value={item.ingredient_id} onChange={e => handleRecipeChange(index, 'ingredient_id', e.target.value)} className="ui-select flex-grow">
                                         {ingredients.map(i => <option key={i.id} value={i.id}>{i.nom}</option>)}
                                     </select>
-                                    <input type="number" placeholder="Qté" value={item.qte_utilisee} onChange={e => handleRecipeChange(index, 'qte_utilisee', e.target.value)} className="input-field w-24" />
+                                    <input type="number" placeholder="Qté" value={item.qte_utilisee} onChange={e => handleRecipeChange(index, 'qte_utilisee', e.target.value)} className="ui-input w-24" />
                                     <span className="text-gray-500 text-sm w-12">{ingredients.find(i => i.id === item.ingredient_id)?.unite === 'kg' ? 'g' : ingredients.find(i => i.id === item.ingredient_id)?.unite}</span>
                                     <button type="button" onClick={() => removeRecipeItem(index)} className="p-1 text-red-500 hover:bg-red-100 rounded-full"><Trash2 size={16}/></button>
                                 </div>
@@ -370,8 +370,8 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
-                    <button type="button" onClick={onClose} className="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition">Annuler</button>
-                    <button type="submit" disabled={isSubmitting || formData.recipe.length === 0} className="w-full sm:w-auto bg-brand-primary text-brand-secondary font-bold py-3 px-4 rounded-lg transition hover:bg-yellow-400 disabled:bg-gray-400 disabled:cursor-not-allowed">{isSubmitting ? 'Sauvegarde...' : 'Sauvegarder'}</button>
+                    <button type="button" onClick={onClose} className="w-full sm:w-auto ui-btn-secondary py-3">Annuler</button>
+                    <button type="submit" disabled={isSubmitting || formData.recipe.length === 0} className="w-full sm:w-auto ui-btn-primary py-3 disabled:opacity-60">{isSubmitting ? 'Sauvegarde...' : 'Sauvegarder'}</button>
                 </div>
             </form>
         </Modal>
@@ -406,8 +406,8 @@ const ManageCategoriesModal: React.FC<{ isOpen: boolean; onClose: () => void; on
         <Modal isOpen={isOpen} onClose={onClose} title="Gérer les Catégories">
             <div className="space-y-4">
                 <div className="flex gap-2">
-                    <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nom de la nouvelle catégorie" className="input-field flex-grow" />
-                    <button onClick={handleAdd} className="bg-brand-primary text-brand-secondary font-bold px-4 rounded-lg">Ajouter</button>
+                    <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nom de la nouvelle catégorie" className="ui-input flex-grow" />
+                    <button onClick={handleAdd} className="ui-btn-primary px-4">Ajouter</button>
                 </div>
                 {error && <p className="text-red-500 text-sm">{error}</p>}
                 <ul className="space-y-2 max-h-60 overflow-y-auto">
@@ -419,7 +419,7 @@ const ManageCategoriesModal: React.FC<{ isOpen: boolean; onClose: () => void; on
                     ))}
                 </ul>
                  <div className="pt-4 flex">
-                    <button type="button" onClick={onClose} className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition">Fermer</button>
+                    <button type="button" onClick={onClose} className="w-full ui-btn-secondary py-3">Fermer</button>
                 </div>
             </div>
         </Modal>
@@ -446,8 +446,8 @@ const DeleteProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuc
         <Modal isOpen={isOpen} onClose={onClose} title="Confirmer la Suppression">
             <p className="text-gray-700">Êtes-vous sûr de vouloir supprimer le produit <strong className="text-gray-900">{product.nom_produit}</strong> ? Cette action est irréversible.</p>
             <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6">
-                <button type="button" onClick={onClose} className="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition">Annuler</button>
-                <button onClick={handleDelete} disabled={isSubmitting} className="w-full sm:w-auto bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition hover:bg-red-700 disabled:bg-gray-300">{isSubmitting ? 'Suppression...' : 'Supprimer'}</button>
+                <button type="button" onClick={onClose} className="w-full sm:w-auto ui-btn-secondary py-3">Annuler</button>
+                <button onClick={handleDelete} disabled={isSubmitting} className="w-full sm:w-auto ui-btn-danger py-3">{isSubmitting ? 'Suppression...' : 'Supprimer'}</button>
             </div>
         </Modal>
     );
@@ -457,28 +457,6 @@ const DeleteProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuc
 const HelpCircle: React.FC<{ size: number }> = ({ size }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
 );
-
-
-// Add a general style for input fields in a global style or here for simplicity
-const globalStyles = `
-.input-field {
-    border: 1px solid #D1D5DB;
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    padding: 0.5rem 0.75rem;
-    color: #111827;
-    background-color: white;
-}
-.input-field:focus {
-    outline: none;
-    --tw-ring-color: #F9A826;
-    border-color: #F9A826;
-    box-shadow: 0 0 0 2px var(--tw-ring-color);
-}
-`;
-const styleSheet = document.createElement("style");
-styleSheet.innerText = globalStyles;
-document.head.appendChild(styleSheet);
 
 
 export default Produits;

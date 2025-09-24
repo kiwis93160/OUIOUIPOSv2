@@ -37,7 +37,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, order, onF
           <select
             value={paymentMethod}
             onChange={e => setPaymentMethod(e.target.value as Order['payment_method'])}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900"
+            className="mt-1 ui-select"
           >
             <option value="efectivo">Efectivo (Espèces)</option>
             <option value="transferencia">Transferencia (Virement)</option>
@@ -48,7 +48,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, order, onF
         {paymentMethod === 'transferencia' && (
           <div>
             <label className="block text-sm font-medium text-gray-700">Justificatif (optionnel)</label>
-            <label htmlFor="payment-receipt" className="mt-1 w-full border border-gray-300 p-2 rounded-md shadow-sm flex items-center gap-2 cursor-pointer bg-white text-gray-500">
+            <label htmlFor="payment-receipt" className="mt-1 flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white p-2 text-gray-500 shadow-sm hover:bg-gray-50">
               <Upload size={18} />
               <span>{receiptFile ? receiptFile.name : 'Choisir un fichier...'}</span>
             </label>
@@ -57,10 +57,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, order, onF
         )}
 
         <div className="pt-4 flex flex-col sm:flex-row gap-3">
-          <button type="button" onClick={onClose} className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition">
+          <button type="button" onClick={onClose} className="w-full ui-btn-secondary py-3">
             Annuler
           </button>
-          <button type="submit" disabled={isSubmitting} className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition disabled:bg-gray-400">
+          <button type="submit" disabled={isSubmitting} className="w-full ui-btn-success py-3 disabled:opacity-60">
             {isSubmitting ? 'Finalisation...' : 'Confirmer Paiement'}
           </button>
         </div>

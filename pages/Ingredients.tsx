@@ -59,7 +59,7 @@ const Ingredients: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800">Gestion des Ingrédients</h1>
+            <h1 className="text-heading">Gestion des Ingrédients</h1>
 
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="relative w-full sm:w-auto">
@@ -69,11 +69,11 @@ const Ingredients: React.FC = () => {
                         placeholder="Rechercher un ingrédient..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 border rounded-lg w-full sm:w-64 text-gray-900"
+                        className="ui-input pl-10 sm:w-64"
                     />
                 </div>
                 {canEdit && (
-                    <button onClick={() => handleOpenModal('add')} className="w-full sm:w-auto bg-brand-primary text-brand-secondary font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-400 transition">
+                    <button onClick={() => handleOpenModal('add')} className="w-full sm:w-auto ui-btn-primary">
                         <PlusCircle size={20} />
                         Ajouter un ingrédient
                     </button>
@@ -81,7 +81,7 @@ const Ingredients: React.FC = () => {
             </div>
 
             {loading ? <p className="text-gray-800">Chargement...</p> : error ? <p className="text-red-500">{error}</p> : (
-                <div className="bg-white p-4 rounded-xl shadow-md overflow-x-auto">
+                <div className="ui-card p-4 overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="border-b">
                             <tr>
@@ -186,11 +186,11 @@ const AddEditIngredientModal: React.FC<{ isOpen: boolean; onClose: () => void; o
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label htmlFor="nom" className="block text-sm font-medium text-gray-700">Nom</label>
-                    <input type="text" id="nom" value={formData.nom} onChange={e => setFormData({...formData, nom: e.target.value})} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900"/>
+                    <input type="text" id="nom" value={formData.nom} onChange={e => setFormData({...formData, nom: e.target.value})} required className="mt-1 ui-input"/>
                 </div>
                 <div>
                     <label htmlFor="unite" className="block text-sm font-medium text-gray-700">Unité</label>
-                    <select id="unite" value={formData.unite} onChange={e => setFormData({...formData, unite: e.target.value as Ingredient['unite']})} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900">
+                    <select id="unite" value={formData.unite} onChange={e => setFormData({...formData, unite: e.target.value as Ingredient['unite']})} required className="mt-1 ui-select">
                         <option value="g">Grammes (g)</option>
                         <option value="kg">Kilogrammes (kg)</option>
                         <option value="ml">Millilitres (ml)</option>
@@ -200,11 +200,11 @@ const AddEditIngredientModal: React.FC<{ isOpen: boolean; onClose: () => void; o
                 </div>
                  <div>
                     <label htmlFor="stock_minimum" className="block text-sm font-medium text-gray-700">Stock Minimum</label>
-                    <input type="number" id="stock_minimum" min="0" value={formData.stock_minimum} onChange={e => setFormData({...formData, stock_minimum: parseFloat(e.target.value)})} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900"/>
+                    <input type="number" id="stock_minimum" min="0" value={formData.stock_minimum} onChange={e => setFormData({...formData, stock_minimum: parseFloat(e.target.value)})} required className="mt-1 ui-input"/>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                    <button type="button" onClick={onClose} className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition">Annuler</button>
-                    <button type="submit" disabled={isSubmitting} className="w-full bg-brand-primary text-brand-secondary font-bold py-3 px-4 rounded-lg transition hover:bg-yellow-400 disabled:bg-gray-300">{isSubmitting ? 'Sauvegarde...' : 'Sauvegarder'}</button>
+                    <button type="button" onClick={onClose} className="w-full ui-btn-secondary py-3">Annuler</button>
+                    <button type="submit" disabled={isSubmitting} className="w-full ui-btn-primary py-3 disabled:opacity-60">{isSubmitting ? 'Sauvegarde...' : 'Sauvegarder'}</button>
                 </div>
             </form>
         </Modal>
@@ -234,17 +234,17 @@ const ResupplyModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess:
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Réapprovisionner: ${ingredient.nom}`}>
             <form onSubmit={handleSubmit} className="space-y-4">
-                 <div>
+                <div>
                     <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">Quantité Achetée ({ingredient.unite})</label>
-                    <input type="number" id="quantity" min="0.01" step="0.01" value={quantity} onChange={e => setQuantity(parseFloat(e.target.value))} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900"/>
+                    <input type="number" id="quantity" min="0.01" step="0.01" value={quantity} onChange={e => setQuantity(parseFloat(e.target.value))} required className="mt-1 ui-input"/>
                 </div>
                 <div>
                     <label htmlFor="unitPrice" className="block text-sm font-medium text-gray-700">Prix par Unité (€/{ingredient.unite})</label>
-                    <input type="number" id="unitPrice" min="0" step="0.01" value={unitPrice} onChange={e => setUnitPrice(parseFloat(e.target.value))} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900"/>
+                    <input type="number" id="unitPrice" min="0" step="0.01" value={unitPrice} onChange={e => setUnitPrice(parseFloat(e.target.value))} required className="mt-1 ui-input"/>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                    <button type="button" onClick={onClose} className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition">Annuler</button>
-                    <button type="submit" disabled={isSubmitting} className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition hover:bg-green-700 disabled:bg-gray-300">{isSubmitting ? 'Ajout...' : 'Ajouter au Stock'}</button>
+                    <button type="button" onClick={onClose} className="w-full ui-btn-secondary py-3">Annuler</button>
+                    <button type="submit" disabled={isSubmitting} className="w-full ui-btn-success py-3 disabled:opacity-60">{isSubmitting ? 'Ajout...' : 'Ajouter au Stock'}</button>
                 </div>
             </form>
         </Modal>
@@ -271,8 +271,8 @@ const DeleteModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess: (
         <Modal isOpen={isOpen} onClose={onClose} title="Confirmer la Suppression">
             <p className="text-gray-700">Êtes-vous sûr de vouloir supprimer l'ingrédient <strong className="text-gray-900">{ingredient.nom}</strong> ? Cette action est irréversible.</p>
             <div className="flex flex-col sm:flex-row gap-3 pt-6">
-                <button type="button" onClick={onClose} className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition">Annuler</button>
-                <button onClick={handleDelete} disabled={isSubmitting} className="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition hover:bg-red-700 disabled:bg-gray-300">{isSubmitting ? 'Suppression...' : 'Supprimer'}</button>
+                <button type="button" onClick={onClose} className="w-full ui-btn-secondary py-3">Annuler</button>
+                <button onClick={handleDelete} disabled={isSubmitting} className="w-full ui-btn-danger py-3 disabled:opacity-60">{isSubmitting ? 'Suppression...' : 'Supprimer'}</button>
             </div>
         </Modal>
     );

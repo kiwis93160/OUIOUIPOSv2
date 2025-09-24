@@ -7,7 +7,7 @@ import Modal from '../components/Modal';
 import RoleManager from '../components/RoleManager';
 
 const MainStatCard: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
-    <div className="bg-white p-6 rounded-xl shadow-md flex items-center space-x-4">
+    <div className="ui-card p-6 flex items-center space-x-4">
         <div className="p-4 bg-brand-primary/20 text-brand-primary rounded-full">
             {icon}
         </div>
@@ -19,7 +19,7 @@ const MainStatCard: React.FC<{ title: string; value: string; icon: React.ReactNo
 );
 
 const OpStatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; onClick?: () => void }> = ({ title, value, icon, onClick }) => (
-    <div className={`bg-white p-4 rounded-xl shadow-md flex items-center space-x-3 ${onClick ? 'cursor-pointer hover:bg-gray-50' : ''}`} onClick={onClick}>
+    <div className={`ui-card p-4 flex items-center space-x-3 ${onClick ? 'cursor-pointer hover:bg-gray-50' : ''}`} onClick={onClick}>
         <div className="p-3 bg-gray-100 text-gray-600 rounded-lg">
             {icon}
         </div>
@@ -68,7 +68,7 @@ const Dashboard: React.FC = () => {
             <div className="flex justify-end">
                 <button
                     onClick={() => setRoleManagerOpen(true)}
-                    className="inline-flex items-center rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-brand-primary/90"
+                    className="ui-btn-primary"
                 >
                     <Shield className="mr-2 h-4 w-4" />
                     Gestion des rôles
@@ -97,7 +97,7 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Block 3: Weekly Sales Chart */}
-            <div className="bg-white p-6 rounded-xl shadow-md">
+            <div className="ui-card p-6">
                 <h3 className="text-lg font-semibold mb-4 text-gray-900">Ventes Hebdomadaires</h3>
                 <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={stats.ventes7Jours}>
@@ -113,7 +113,7 @@ const Dashboard: React.FC = () => {
             </div>
             
             {/* Block 4: Sales Pie Chart */}
-            <div className="bg-white p-6 rounded-xl shadow-md">
+            <div className="ui-card p-6">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">Répartition des Ventes</h3>
                     <div className="flex p-1 bg-gray-200 rounded-lg">
