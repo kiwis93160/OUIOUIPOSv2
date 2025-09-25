@@ -45,13 +45,16 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
 
     const getCurrentStepIndex = useCallback((order: Order | null): number => {
         if (!order) return -1;
-        if (
+
+        const isDelivered =
             order.statut === 'finalisee' ||
             order.estado_cocina === 'servido' ||
-            (order.type === 'a_emporter' && order.estado_cocina === 'listo')
-        ) {
+            order.estado_cocina === 'entregada';
+
+        if (isDelivered) {
             return 3;
         }
+
         if (order.estado_cocina === 'listo') return 2;
         if (order.estado_cocina === 'recibido') return 1;
         if (order.statut === 'pendiente_validacion') return 0;
@@ -69,7 +72,11 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
                 const orderStatus = await api.getCustomerOrderStatus(orderId);
                 if (isMounted) {
                     setOrder(orderStatus);
-                    if (orderStatus?.statut === 'finalisee' || orderStatus?.estado_cocina === 'servido') {
+                    if (
+                        orderStatus?.statut === 'finalisee' ||
+                        orderStatus?.estado_cocina === 'servido' ||
+                        orderStatus?.estado_cocina === 'entregada'
+                    ) {
                         if (interval) clearInterval(interval);
                         saveOrderToHistory(orderStatus);
                         const servedAt = orderStatus.date_servido ?? Date.now();
@@ -101,7 +108,7 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
     const isOrderCompleted =
         order?.statut === 'finalisee' ||
         order?.estado_cocina === 'servido' ||
-        (order?.type === 'a_emporter' && order?.estado_cocina === 'listo');
+        order?.estado_cocina === 'entregada';
 
     const containerClasses = variant === 'page'
       ? "container mx-auto p-4 lg:p-8"
@@ -139,7 +146,8 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
                 <div className="flex justify-between items-start mb-10 px-2">
                     {steps.map((step, index) => {
                         const isActive = index === currentStep;
-                        const isCompleted = index < currentStep;
+                        const isFinalStep = index === steps.length - 1;
+                        const isCompleted = index < currentStep || (isFinalStep && isOrderCompleted);
                         const baseCircleClasses = "w-16 h-16 rounded-full flex items-center justify-center border-4 transition-all duration-300";
                         const circleClasses = [
                             baseCircleClasses,

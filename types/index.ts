@@ -71,7 +71,7 @@ export interface Order {
   table_nom?: string;
   couverts: number;
   statut: 'en_cours' | 'finalisee' | 'pendiente_validacion';
-  estado_cocina: 'no_enviado' | 'recibido' | 'listo' | 'servido';
+  estado_cocina: 'no_enviado' | 'recibido' | 'listo' | 'servido' | 'entregada';
   date_creation: number; // timestamp
   date_envoi_cuisine?: number; // timestamp
   date_listo_cuisine?: number; // timestamp
