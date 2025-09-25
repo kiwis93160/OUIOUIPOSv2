@@ -15,3 +15,5 @@ export const ROLES = {
     COCINA: 'cocina',
     MESERO: 'mesero'
 };
+
+export const ROLE_HOME_PAGE_META_KEY = '__home_page';

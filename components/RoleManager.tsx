@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Save, Trash2 } from 'lucide-react';
 import Modal from './Modal';
 import { api } from '../services/api';
-import { NAV_LINKS } from '../constants';
+import { NAV_LINKS, ROLE_HOME_PAGE_META_KEY } from '../constants';
 import { Role } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -17,11 +17,16 @@ interface RoleFormState {
   id?: string;
   name: string;
   pin: string;
+  homePage: string;
   permissions: Role['permissions'];
 }
 
+const DEFAULT_HOME_PAGE = NAV_LINKS[0]?.permissionKey ?? '/dashboard';
+const isPermissionGranted = (permission?: PermissionLevel) => permission === 'editor' || permission === 'readonly';
+
 const ensureNavPermissions = (permissions?: Role['permissions']): Role['permissions'] => {
-  const base: Role['permissions'] = { ...(permissions || {}) };
+  const base: Record<string, PermissionLevel> = { ...(permissions || {}) };
+  delete base[ROLE_HOME_PAGE_META_KEY];
   NAV_LINKS.forEach(link => {
     if (!(link.permissionKey in base)) {
       base[link.permissionKey] = 'none';
@@ -30,14 +35,25 @@ const ensureNavPermissions = (permissions?: Role['permissions']): Role['permissi
   return base;
 };
 
+const getDefaultHomePage = (permissions: Role['permissions']): string => {
+  const accessibleLink = NAV_LINKS.find(link => isPermissionGranted(permissions[link.permissionKey]));
+  return accessibleLink?.permissionKey ?? DEFAULT_HOME_PAGE;
+};
+
+const createEmptyFormState = (): RoleFormState => {
+  const permissions = ensureNavPermissions();
+  return {
+    name: '',
+    pin: '',
+    permissions,
+    homePage: getDefaultHomePage(permissions),
+  };
+};
+
 const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
   const { refreshRole, role: currentRole } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
-  const [formState, setFormState] = useState<RoleFormState>(() => ({
-    name: '',
-    pin: '',
-    permissions: ensureNavPermissions(),
-  }));
+  const [formState, setFormState] = useState<RoleFormState>(createEmptyFormState);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [isFetching, setIsFetching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,6 +67,9 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
 
     roles.forEach(role => {
       Object.keys(role.permissions).forEach(key => {
+        if (key === ROLE_HOME_PAGE_META_KEY) {
+          return;
+        }
         if (!navKeys.includes(key)) {
           extraKeys.add(key);
         }
@@ -59,6 +78,11 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
 
     return [...navKeys, ...Array.from(extraKeys)];
   }, [roles]);
+
+  const hasAccessibleHomePage = useMemo(
+    () => NAV_LINKS.some(link => isPermissionGranted(formState.permissions[link.permissionKey])),
+    [formState.permissions],
+  );
 
   const loadRoles = useCallback(async () => {
     setIsFetching(true);
@@ -76,11 +100,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
 
   const resetForm = useCallback(() => {
     setMode('create');
-    setFormState({
-      name: '',
-      pin: '',
-      permissions: ensureNavPermissions(),
-    });
+    setFormState(createEmptyFormState());
   }, []);
 
   useEffect(() => {
@@ -92,6 +112,25 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
     resetForm();
     loadRoles();
   }, [isOpen, loadRoles, resetForm]);
+
+  useEffect(() => {
+    setFormState(prev => {
+      const currentHomePage = prev.homePage;
+      if (isPermissionGranted(prev.permissions[currentHomePage])) {
+        return prev;
+      }
+
+      const fallbackHomePage = getDefaultHomePage(prev.permissions);
+      if (fallbackHomePage === currentHomePage) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        homePage: fallbackHomePage,
+      };
+    });
+  }, [formState.permissions]);
 
   const getPermissionLabel = useCallback((key: string) => {
     const navLink = NAV_LINKS.find(link => link.permissionKey === key);
@@ -116,13 +155,22 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
     }));
   };
 
+  const handleHomePageChange = (value: string) => {
+    setFormState(prev => ({
+      ...prev,
+      homePage: value,
+    }));
+  };
+
   const handleSelectRole = (role: Role) => {
+    const permissions = ensureNavPermissions(role.permissions);
     setMode('edit');
     setFormState({
       id: role.id,
       name: role.name,
       pin: role.pin ?? '',
-      permissions: ensureNavPermissions(role.permissions),
+      permissions,
+      homePage: role.homePage ?? getDefaultHomePage(permissions),
     });
     setStatusMessage(null);
     setErrorMessage(null);
@@ -168,11 +216,17 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
     setIsSubmitting(true);
 
     try {
+      const permissions = ensureNavPermissions(formState.permissions);
+      const resolvedHomePage = isPermissionGranted(permissions[formState.homePage])
+        ? formState.homePage
+        : getDefaultHomePage(permissions);
+
       if (mode === 'create') {
         await api.createRole({
           name: formState.name.trim(),
           pin: formState.pin.trim(),
-          permissions: ensureNavPermissions(formState.permissions),
+          permissions,
+          homePage: resolvedHomePage,
         });
         setStatusMessage('Rôle créé avec succès.');
         await loadRoles();
@@ -182,14 +236,17 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
         const updatedRole = await api.updateRole(formState.id, {
           name: formState.name.trim(),
           pin: formState.pin.trim(),
-          permissions: ensureNavPermissions(formState.permissions),
+          permissions,
+          homePage: resolvedHomePage,
         });
         setStatusMessage('Rôle mis à jour avec succès.');
+        const nextPermissions = ensureNavPermissions(updatedRole.permissions);
         setFormState({
           id: updatedRole.id,
           name: updatedRole.name,
           pin: updatedRole.pin ?? '',
-          permissions: ensureNavPermissions(updatedRole.permissions),
+          permissions: nextPermissions,
+          homePage: updatedRole.homePage ?? getDefaultHomePage(nextPermissions),
         });
         await loadRoles();
         if (currentRole?.id === updatedRole.id) {
@@ -253,7 +310,10 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
                   >
                     <div>
                       <p className="font-semibold text-gray-800">{role.name}</p>
-                    <p className="text-xs text-gray-500">PIN : {role.pin ?? '—'}</p>
+                      <p className="text-xs text-gray-500">PIN : {role.pin ?? '—'}</p>
+                      {role.homePage && (
+                        <p className="text-xs text-gray-500">Accueil : {getPermissionLabel(role.homePage)}</p>
+                      )}
                     </div>
                     <div className="flex space-x-2">
                       <button
@@ -309,6 +369,33 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
                   placeholder="Ex. 1234"
                 />
+              </div>
+              <div>
+                <label htmlFor="role-home-page" className="mb-1 block text-sm font-medium text-gray-700">
+                  Page d'accueil par défaut
+                </label>
+                <select
+                  id="role-home-page"
+                  name="homePage"
+                  value={formState.homePage}
+                  onChange={event => handleHomePageChange(event.target.value)}
+                  disabled={!hasAccessibleHomePage}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary disabled:cursor-not-allowed disabled:bg-gray-100"
+                >
+                  {NAV_LINKS.map(link => {
+                    const canAccess = isPermissionGranted(formState.permissions[link.permissionKey]);
+                    return (
+                      <option key={link.permissionKey} value={link.permissionKey} disabled={!canAccess}>
+                        {getPermissionLabel(link.permissionKey)}{!canAccess ? ' (accès requis)' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+                {hasAccessibleHomePage ? (
+                  <p className="mt-1 text-xs text-gray-500">Les pages sans permission sont désactivées.</p>
+                ) : (
+                  <p className="mt-1 text-xs text-red-600">Accordez au moins une permission pour choisir une page d'accueil.</p>
+                )}
               </div>
               <div>
                 <p className="mb-2 text-sm font-semibold text-gray-800">Permissions par page</p>
