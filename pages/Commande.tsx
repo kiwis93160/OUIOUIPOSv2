@@ -114,6 +114,9 @@ const Commande: React.FC = () => {
     
     type OrderItemsUpdater = OrderItem[] | ((items: OrderItem[]) => OrderItem[]);
 
+    const isPersistedItemId = (value?: string) =>
+        !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
     const updateOrderItems = async (updater: OrderItemsUpdater, options?: {isLocalUpdate?: boolean}) => {
         const currentOrder = orderRef.current;
         if (!currentOrder) return;
@@ -122,20 +125,35 @@ const Commande: React.FC = () => {
             ? (updater as (prevItems: OrderItem[]) => OrderItem[])(items)
             : updater;
 
-        const newItems = computeItems(currentOrder.items);
-        const tempOrder: Order = {
+        const optimisticSourceItems = currentOrder.items.map(item => ({ ...item }));
+        const optimisticItems = computeItems(optimisticSourceItems);
+        const optimisticOrder: Order = {
             ...currentOrder,
-            items: newItems,
-            total: newItems.reduce((acc, item) => acc + item.quantite * item.prix_unitaire, 0),
+            items: optimisticItems,
+            total: optimisticItems.reduce((acc, item) => acc + item.quantite * item.prix_unitaire, 0),
         };
 
-        setOrder(tempOrder);
-        orderRef.current = tempOrder;
+        setOrder(optimisticOrder);
+        orderRef.current = optimisticOrder;
 
         if (options?.isLocalUpdate) return;
 
         try {
-            const updatedOrder = await api.updateOrder(currentOrder.id, { items: newItems });
+            const latestOrder = await api.getOrderById(currentOrder.id);
+            const baseOrder = latestOrder ?? currentOrder;
+            const baseItemsForComputation = typeof updater === 'function'
+                ? baseOrder.items.map(item => ({ ...item }))
+                : baseOrder.items;
+
+            const finalItems = computeItems(baseItemsForComputation);
+            const removedItemIds = currentOrder.items
+                .filter(item => isPersistedItemId(item.id) && !optimisticItems.some(finalItem => finalItem.id === item.id))
+                .map(item => item.id);
+
+            const updatedOrder = await api.updateOrder(currentOrder.id, {
+                items: finalItems,
+                removedItemIds,
+            });
             const ingredientsData = await api.getIngredients();
 
             setOrder(updatedOrder);

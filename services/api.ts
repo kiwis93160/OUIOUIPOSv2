@@ -1105,7 +1105,7 @@ export const api = {
     publishOrderChange();
   },
 
-  updateOrder: async (orderId: string, updates: Partial<Order>): Promise<Order> => {
+  updateOrder: async (orderId: string, updates: Partial<Order> & { removedItemIds?: string[] }): Promise<Order> => {
     const existingOrder = await fetchOrderById(orderId);
     if (!existingOrder) {
       throw new Error('Order not found');
@@ -1133,27 +1133,13 @@ export const api = {
         return payloadItem;
       });
 
-      if (payload.length === 0) {
-        await supabase.from('order_items').delete().eq('order_id', orderId);
-      } else {
-        const existingPersistedIds = existingOrder.items
-          .filter(item => isUuid(item.id))
-          .map(item => item.id);
-        const incomingPersistedIds = updates.items
-          .filter(item => isUuid(item.id))
-          .map(item => item.id);
-
+      if (payload.length > 0) {
         await supabase.from('order_items').upsert(payload, { defaultToNull: false });
-
-        const idsToDelete = existingPersistedIds.filter(id => !incomingPersistedIds.includes(id));
-        if (idsToDelete.length > 0) {
-          await supabase.from('order_items').delete().in('id', idsToDelete);
-        }
       }
       items = updates.items;
     }
 
-    const { items: _, clientInfo, ...rest } = updates;
+    const { items: _, clientInfo, removedItemIds = [], ...rest } = updates;
     const payload: Record<string, unknown> = {};
 
     if (rest.type) payload.type = rest.type;
@@ -1176,6 +1162,11 @@ export const api = {
 
     if (updates.items) {
       payload.total = updates.items.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0);
+    }
+
+    const persistedIdsToDelete = removedItemIds.filter(id => isUuid(id));
+    if (persistedIdsToDelete.length > 0) {
+      await supabase.from('order_items').delete().in('id', persistedIdsToDelete);
     }
 
     if (clientInfo) {
