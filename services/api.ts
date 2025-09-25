@@ -933,9 +933,22 @@ export const api = {
         return payloadItem;
       });
 
-      await supabase.from('order_items').delete().eq('order_id', orderId);
-      if (payload.length > 0) {
-        await supabase.from('order_items').insert(payload);
+      if (payload.length === 0) {
+        await supabase.from('order_items').delete().eq('order_id', orderId);
+      } else {
+        const existingPersistedIds = existingOrder.items
+          .filter(item => isUuid(item.id))
+          .map(item => item.id);
+        const incomingPersistedIds = updates.items
+          .filter(item => isUuid(item.id))
+          .map(item => item.id);
+
+        await supabase.from('order_items').upsert(payload, { defaultToNull: false });
+
+        const idsToDelete = existingPersistedIds.filter(id => !incomingPersistedIds.includes(id));
+        if (idsToDelete.length > 0) {
+          await supabase.from('order_items').delete().in('id', idsToDelete);
+        }
       }
       items = updates.items;
     }
@@ -1134,6 +1147,7 @@ export const api = {
 
           return payloadItem;
         }),
+        { defaultToNull: false },
       );
     }
 
