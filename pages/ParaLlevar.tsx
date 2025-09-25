@@ -4,72 +4,98 @@ import { Order, OrderItem } from '../types';
 import { Eye, User, MapPin } from 'lucide-react';
 import Modal from '../components/Modal';
 import OrderTimer from '../components/OrderTimer';
+import { getOrderUrgencyClass } from '../utils/orderUrgency';
 
 const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => void, onDeliver?: (orderId: string) => void, isProcessing?: boolean }> = ({ order, onValidate, onDeliver, isProcessing }) => {
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
     const displayName = order.table_nom || `Commande #${order.id.slice(-6)}`;
     const timerStart = order.date_envoi_cuisine || order.date_creation;
+    const urgencyClass = getOrderUrgencyClass(timerStart);
 
     return (
         <>
-            <div className="ui-card p-4 space-y-3">
-                <div className="border-b pb-3 space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                        <h4 className="font-bold text-lg text-gray-900 flex-1">{displayName}</h4>
-                        <span className="text-gray-800 font-extrabold text-lg whitespace-nowrap">{order.total.toFixed(2)} €</span>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="flex items-center text-sm text-gray-600">
-                            <User size={14} className="mr-2"/> <span>{order.clientInfo?.nom}</span>
-                        </div>
-                        <div className="flex items-center text-sm text-gray-500">
-                            <MapPin size={14} className="mr-2"/> <span>{order.clientInfo?.adresse}</span>
-                        </div>
+            <div className={`rounded-lg border shadow-md flex flex-col h-full overflow-hidden ${urgencyClass}`}>
+                <header className="bg-brand-secondary text-white p-3 rounded-t-lg">
+                    <div className="flex flex-col gap-3">
+                        <h4 className="text-xl font-bold leading-tight">{displayName}</h4>
                         <OrderTimer startTime={timerStart} className="w-full justify-center" />
                     </div>
-                </div>
-                
-                <div className="space-y-1">
-                    <h5 className="text-sm font-semibold text-gray-800">Articles :</h5>
-                    {order.items.map((item: OrderItem) => (
-                        <div key={item.id} className="text-sm text-gray-600 pl-2">
-                            {item.quantite}x {item.nom_produit}
+                </header>
+
+                <div className="p-4 space-y-4 flex-1 bg-white/80">
+                    <div className="flex items-center justify-between text-gray-900 font-semibold text-lg">
+                        <span>Total</span>
+                        <span>{order.total.toFixed(2)} €</span>
+                    </div>
+
+                    {order.clientInfo && (
+                        <div className="space-y-1 text-sm text-gray-700">
+                            {order.clientInfo.nom && (
+                                <div className="flex items-center gap-2">
+                                    <User size={14} />
+                                    <span className="font-medium">{order.clientInfo.nom}</span>
+                                </div>
+                            )}
+                            {order.clientInfo.adresse && (
+                                <div className="flex items-start gap-2 text-sm text-gray-600">
+                                    <MapPin size={14} className="mt-0.5" />
+                                    <span>{order.clientInfo.adresse}</span>
+                                </div>
+                            )}
                         </div>
-                    ))}
+                    )}
+
+                    <div className="space-y-2">
+                        <h5 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">Articles</h5>
+                        <ul className="space-y-1">
+                            {order.items.map((item: OrderItem) => (
+                                <li key={item.id} className="text-sm text-gray-700 bg-gray-50 rounded-md px-3 py-2">
+                                    <span className="font-semibold text-gray-900">{item.quantite}x</span> {item.nom_produit}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 </div>
-                
-                <div className="pt-2 border-t mt-2 space-y-2">
+
+                <footer className="p-4 border-t bg-white space-y-3">
                     {order.statut === 'pendiente_validacion' && onValidate && (
-                        <>
-                            <button onClick={() => setIsReceiptModalOpen(true)} className="w-full text-sm text-blue-600 hover:underline flex items-center justify-center"><Eye size={16} className="mr-1"/> Voir Justificatif</button>
+                        <div className="space-y-2">
+                            <button
+                                onClick={() => setIsReceiptModalOpen(true)}
+                                className="w-full ui-btn ui-btn-secondary"
+                                type="button"
+                            >
+                                <Eye size={16} /> {order.receipt_url ? 'Voir le justificatif' : 'Justificatif indisponible'}
+                            </button>
                             <button
                                 onClick={() => onValidate(order.id)}
                                 disabled={isProcessing}
-                                className="w-full ui-btn-info uppercase"
+                                className="w-full ui-btn ui-btn-info uppercase"
+                                type="button"
                             >
                                 {isProcessing ? 'Validation...' : 'Valider'}
                             </button>
-                        </>
+                        </div>
                     )}
                     {order.estado_cocina === 'listo' && onDeliver && (
-                         <>
-                            <button
-                                onClick={() => onDeliver(order.id)}
-                                disabled={isProcessing}
-                                className="w-full ui-btn-success uppercase"
-                            >
-                                {isProcessing ? '...' : 'Entregada'}
-                            </button>
-                         </>
+                        <button
+                            onClick={() => onDeliver(order.id)}
+                            disabled={isProcessing}
+                            className="w-full ui-btn ui-btn-success uppercase"
+                            type="button"
+                        >
+                            {isProcessing ? '...' : 'Entregada'}
+                        </button>
                     )}
-                </div>
+                </footer>
             </div>
             <Modal isOpen={isReceiptModalOpen} onClose={() => setIsReceiptModalOpen(false)} title="Justificatif de Paiement">
-                {order.receipt_url ? 
-                    <img src={order.receipt_url} alt="Justificatif" className="w-full h-auto rounded-md" /> :
+                {order.receipt_url ? (
+                    <img src={order.receipt_url} alt="Justificatif" className="w-full h-auto rounded-md" />
+                ) : (
                     <p>Aucun justificatif fourni.</p>
-                }
+                )}
             </Modal>
         </>
     );
