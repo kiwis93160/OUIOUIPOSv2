@@ -259,11 +259,23 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     
     const generateWhatsAppMessage = (order: Order) => {
         const header = `*Nouvelle Commande OUIOUITACOS #${order.id.slice(-6)}*`;
-        const items = order.items.map(item => `- ${item.quantite}x ${item.nom_produit}`).join('\n');
+        const items = order.items.map(item => {
+            const baseLine = `- ${item.quantite}x ${item.nom_produit} (${item.prix_unitaire.toFixed(2)}€) → ${(item.prix_unitaire * item.quantite).toFixed(2)}€`;
+            const details: string[] = [];
+            if (item.commentaire) {
+                details.push(`Commentaire: ${item.commentaire}`);
+            }
+            if (item.excluded_ingredients && item.excluded_ingredients.length > 0) {
+                details.push(`Sans: ${item.excluded_ingredients.join(', ')}`);
+            }
+            return details.length > 0 ? `${baseLine}\n  ${details.join('\n  ')}` : baseLine;
+        }).join('\n');
         const totalMsg = `*Total: ${order.total.toFixed(2)}€*`;
+        const paymentMethod = order.payment_method ? `Paiement: ${order.payment_method}` : undefined;
         const client = `Client: ${order.clientInfo?.nom} (${order.clientInfo?.telephone})\nAdresse: ${order.clientInfo?.adresse}`;
-        const fullMessage = [header, items, totalMsg, client, "Justificatif de paiement ci-joint."].join('\n\n');
-        return encodeURIComponent(fullMessage);
+        const footer = "Justificatif de paiement ci-joint.";
+        const messageParts = [header, items, totalMsg, paymentMethod, client, footer].filter(Boolean);
+        return encodeURIComponent(messageParts.join('\n\n'));
     };
     
     if (loading) return <div className="h-screen flex items-center justify-center">Chargement du menu...</div>;

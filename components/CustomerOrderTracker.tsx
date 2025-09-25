@@ -140,10 +140,18 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
                     {steps.map((step, index) => {
                         const isActive = index === currentStep;
                         const isCompleted = index < currentStep;
+                        const baseCircleClasses = "w-16 h-16 rounded-full flex items-center justify-center border-4 transition-all duration-300";
+                        const circleClasses = [
+                            baseCircleClasses,
+                            isCompleted ? 'bg-green-500 border-green-500 text-white' : '',
+                            !isCompleted && isActive && index === 0 ? 'waiting-status-indicator' : '',
+                            !isCompleted && isActive && index !== 0 ? 'bg-brand-primary border-brand-primary text-brand-secondary animate-pulse' : '',
+                            !isCompleted && !isActive ? 'bg-gray-200 border-gray-300 text-gray-500' : '',
+                        ].filter(Boolean).join(' ');
                         return (
                             <React.Fragment key={step.name}>
                                 <div className="flex flex-col items-center text-center w-24">
-                                     <div className={`w-16 h-16 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${isCompleted ? 'bg-green-500 border-green-500 text-white' : ''} ${isActive ? 'bg-brand-primary border-brand-primary text-brand-secondary animate-pulse' : ''} ${!isCompleted && !isActive ? 'bg-gray-200 border-gray-300 text-gray-500' : ''}`}>
+                                    <div className={circleClasses}>
                                         <step.icon size={32} />
                                     </div>
                                     <p className={`mt-2 text-sm md:text-base font-semibold break-words ${isActive ? `font-bold ${variant === 'hero' ? 'text-brand-primary' : 'text-brand-primary'}` : `${variant === 'hero' ? 'text-gray-300' : 'text-gray-600'}`}`}>{step.name}</p>
