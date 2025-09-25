@@ -234,7 +234,7 @@ body {
 }
 
 .app-content__inner .section-title {
-  color: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  color: #f8fafc;
 }
 
 .app-content__inner .section-text,
@@ -662,13 +662,17 @@ body {
 }
 
 .status--preparing {
-  border-color: color-mix(in srgb, var(--color-info) 45%, var(--color-border));
-  background: color-mix(in srgb, var(--color-info) 16%, var(--color-surface));
-  color: color-mix(in srgb, var(--color-info) 60%, var(--color-heading));
+  border-color: rgba(249, 115, 22, 0.45);
+  background: linear-gradient(160deg, rgba(249, 115, 22, 0.24) 0%, rgba(251, 146, 60, 0.12) 100%);
+  color: #c2410c;
 }
 
 .status--preparing .status-card__icon {
-  color: var(--color-info);
+  color: #f97316;
+}
+
+.status--preparing .status-card__state {
+  color: #ea580c;
 }
 
 .status--ready {
@@ -682,13 +686,17 @@ body {
 }
 
 .status--payment {
-  border-color: color-mix(in srgb, var(--color-danger) 50%, var(--color-border));
-  background: color-mix(in srgb, var(--color-danger) 14%, var(--color-surface));
-  color: color-mix(in srgb, var(--color-danger) 65%, var(--color-heading));
+  border-color: rgba(37, 99, 235, 0.45);
+  background: linear-gradient(160deg, rgba(37, 99, 235, 0.22) 0%, rgba(59, 130, 246, 0.1) 100%);
+  color: #1d4ed8;
 }
 
 .status--payment .status-card__icon {
-  color: var(--color-danger);
+  color: #2563eb;
+}
+
+.status--payment .status-card__state {
+  color: #1d4ed8;
 }
 
 .status--unknown {
@@ -1339,6 +1347,6 @@ p {
 .text-heading {
   font-size: var(--font-size-2xl);
   font-weight: 700;
-  color: var(--color-heading);
+  color: #f8fafc;
   line-height: var(--line-height-snug);
 }

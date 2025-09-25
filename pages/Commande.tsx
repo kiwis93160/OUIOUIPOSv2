@@ -279,16 +279,20 @@ const Commande: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-10rem)]">
             {/* Menu Section */}
             <div className="lg:col-span-2 ui-card flex flex-col">
-                <div className="p-4 border-b">
-                    <div className="flex justify-between items-center">
-                         <div className="flex items-center gap-4">
+            <div className="p-4 border-b">
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-4">
                             <button onClick={handleExitAttempt} className="ui-btn-dark" title="Retour au plan de salle">
                                 <ArrowLeft size={20} />
                                 <span className="hidden sm:inline">Plan de Salle</span>
                             </button>
-                            <h2 className="text-2xl font-semibold text-brand-secondary">Table {order.table_nom}</h2>
-                         </div>
-                         {order.date_envoi_cuisine && <OrderTimer startTime={order.date_envoi_cuisine} />}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <h2 className="text-2xl font-semibold text-white">Table {order.table_nom}</h2>
+                            {order.date_envoi_cuisine && (
+                                <OrderTimer startTime={order.date_envoi_cuisine} className="w-full justify-center sm:w-auto sm:self-start" />
+                            )}
+                        </div>
                     </div>
                     <div className="flex space-x-2 mt-4 overflow-x-auto pb-2">
                         <button onClick={() => setActiveCategoryId('all')}

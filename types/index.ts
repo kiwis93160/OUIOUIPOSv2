@@ -152,6 +152,7 @@ export interface DailyReport {
     ventesDuJour: number;
     soldProducts: SoldProductsByCategory[];
     lowStockIngredients: Ingredient[];
+    roleLogins: RoleLogin[];
 }
 
 export interface Sale {
@@ -169,4 +170,10 @@ export interface Sale {
   profit: number;
   paymentMethod?: Order['payment_method'];
   saleDate: number; // timestamp
+}
+
+export interface RoleLogin {
+  roleId: string;
+  roleName: string;
+  loginAt: string;
 }

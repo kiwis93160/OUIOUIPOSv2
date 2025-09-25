@@ -3,24 +3,33 @@ import { api } from '../services/api';
 import { Order, OrderItem } from '../types';
 import { Clock, Eye, User, MapPin } from 'lucide-react';
 import Modal from '../components/Modal';
+import OrderTimer from '../components/OrderTimer';
+import { formatElapsedSince } from '../utils/time';
 
 const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => void, onDeliver?: (orderId: string) => void, isProcessing?: boolean }> = ({ order, onValidate, onDeliver, isProcessing }) => {
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
+    const displayName = order.table_nom || `Commande #${order.id.slice(-6)}`;
+    const timerStart = order.date_envoi_cuisine || order.date_creation;
+    const readySince = order.date_listo_cuisine ? formatElapsedSince(order.date_listo_cuisine) : null;
+
     return (
         <>
             <div className="ui-card p-4 space-y-3">
-                <div className="flex justify-between items-start border-b pb-2">
-                    <div>
-                        <h4 className="font-bold text-lg text-gray-900">Commande #{order.id.slice(-6)}</h4>
-                        <div className="flex items-center text-sm text-gray-600 mt-1">
+                <div className="border-b pb-3 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                        <h4 className="font-bold text-lg text-gray-900 flex-1">{displayName}</h4>
+                        <span className="text-gray-800 font-extrabold text-lg whitespace-nowrap">{order.total.toFixed(2)} €</span>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="flex items-center text-sm text-gray-600">
                             <User size={14} className="mr-2"/> <span>{order.clientInfo?.nom}</span>
                         </div>
-                         <div className="flex items-center text-sm text-gray-500 mt-1">
+                        <div className="flex items-center text-sm text-gray-500">
                             <MapPin size={14} className="mr-2"/> <span>{order.clientInfo?.adresse}</span>
                         </div>
+                        <OrderTimer startTime={timerStart} className="w-full justify-center" />
                     </div>
-                    <span className="text-gray-800 font-extrabold text-lg">{order.total.toFixed(2)} €</span>
                 </div>
                 
                 <div className="space-y-1">
@@ -47,7 +56,9 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     )}
                     {order.estado_cocina === 'listo' && onDeliver && (
                          <>
-                            <span className="text-sm text-green-600 flex items-center justify-center font-semibold"><Clock size={16} className="mr-1"/> Prête depuis {Math.round((Date.now() - (order.date_listo_cuisine || Date.now()))/60000)} min</span>
+                            {readySince && (
+                                <span className="text-sm text-green-600 flex items-center justify-center font-semibold"><Clock size={16} className="mr-1"/> Prête depuis {readySince}</span>
+                            )}
                             <button
                                 onClick={() => onDeliver(order.id)}
                                 disabled={isProcessing}

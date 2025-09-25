@@ -16,6 +16,7 @@ import {
   DailyReport,
   SoldProduct,
   Sale,
+  RoleLogin,
 } from '../types';
 import { ROLE_HOME_PAGE_META_KEY } from '../constants';
 
@@ -122,6 +123,13 @@ type SupabaseSaleRow = {
   profit: number;
   payment_method: Order['payment_method'] | null;
   sale_date: string;
+};
+
+type SupabaseRoleLoginRow = {
+  id: string;
+  role_id: string;
+  login_at: string;
+  roles?: { id: string; name: string } | null;
 };
 
 type SupabaseResponse<T> = {
@@ -540,6 +548,27 @@ const fetchTablesWithMeta = async (): Promise<Table[]> => {
   return tableRows.map(row => mapTableRow(row, orderMeta));
 };
 
+const fetchRoleLoginsSince = async (startIso: string): Promise<RoleLogin[]> => {
+  const [loginsResponse, rolesResponse] = await Promise.all([
+    supabase
+      .from('role_logins')
+      .select('id, role_id, login_at')
+      .gte('login_at', startIso)
+      .order('login_at', { ascending: true }),
+    supabase.from('roles').select('id, name, permissions'),
+  ]);
+
+  const loginRows = unwrap<SupabaseRoleLoginRow[]>(loginsResponse as SupabaseResponse<SupabaseRoleLoginRow[]>);
+  const roleRows = unwrap<SupabaseRoleRow[]>(rolesResponse as SupabaseResponse<SupabaseRoleRow[]>);
+  const roleNameMap = new Map(roleRows.map(role => [role.id, role.name]));
+
+  return loginRows.map(row => ({
+    roleId: row.role_id,
+    roleName: roleNameMap.get(row.role_id) ?? 'Rôle inconnu',
+    loginAt: row.login_at,
+  }));
+};
+
 const getBusinessDayStart = (now: Date = new Date()): Date => {
   const startTime = new Date(now);
   startTime.setHours(5, 0, 0, 0);
@@ -709,7 +738,19 @@ export const api = {
       .eq('pin', pin)
       .maybeSingle();
     const row = unwrapMaybe<SupabaseRoleRow>(response as SupabaseResponse<SupabaseRoleRow | null>);
-    return row ? mapRoleRow(row, false) : null;
+    if (!row) {
+      return null;
+    }
+
+    const role = mapRoleRow(row, false);
+
+    try {
+      await supabase.from('role_logins').insert({ role_id: role.id, login_at: new Date().toISOString() });
+    } catch (error) {
+      console.warn('Failed to enregistrer la connexion du rôle', error);
+    }
+
+    return role;
   },
 
   getDashboardStats: async (): Promise<DashboardStats> => {
@@ -1366,7 +1407,7 @@ export const api = {
     const start = getBusinessDayStart(now);
     const startIso = start.toISOString();
 
-    const [ordersResponse, categories, ingredients, productRowsResponse] = await Promise.all([
+    const [ordersResponse, categories, ingredients, productRowsResponse, roleLogins] = await Promise.all([
       selectOrdersQuery()
         .eq('statut', 'finalisee')
         .gte('date_creation', startIso)
@@ -1374,6 +1415,7 @@ export const api = {
       fetchCategories(),
       fetchIngredients(),
       selectProductsQuery(),
+      fetchRoleLoginsSince(startIso),
     ]);
     const rows = unwrap<SupabaseOrderRow[]>(ordersResponse as SupabaseResponse<SupabaseOrderRow[]>);
     const orders = rows.map(mapOrderRow);
@@ -1432,6 +1474,7 @@ export const api = {
       ventesDuJour,
       soldProducts: Array.from(soldProductsByCategory.values()),
       lowStockIngredients: ingredientsStockBas,
+      roleLogins,
     };
   },
 
