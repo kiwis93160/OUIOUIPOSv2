@@ -693,44 +693,48 @@ body {
 }
 
 .status-card.status--preparing {
-  border-color: rgba(249, 115, 22, 0.45);
-  background: linear-gradient(160deg, rgba(249, 115, 22, 0.24) 0%, rgba(251, 146, 60, 0.12) 100%);
-  background-color: rgba(249, 115, 22, 0.24);
-  color: #c2410c;
+  border-color: rgba(250, 204, 21, 0.45);
+  background: linear-gradient(160deg, rgba(250, 204, 21, 0.24) 0%, rgba(253, 224, 71, 0.12) 100%);
+  background-color: rgba(250, 204, 21, 0.24);
+  color: #a16207;
 }
 
 .status-card.status--preparing .status-card__icon {
-  color: #f97316;
+  color: #facc15;
 }
 
 .status-card.status--preparing .status-card__state {
-  color: #ea580c;
+  color: #ca8a04;
 }
 
 .status-card.status--ready {
-  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
-  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
-  background-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
-  color: color-mix(in srgb, var(--color-accent) 62%, var(--color-heading));
-}
-
-.status-card.status--ready .status-card__icon {
-  color: var(--color-accent);
-}
-
-.status-card.status--payment {
   border-color: rgba(37, 99, 235, 0.45);
   background: linear-gradient(160deg, rgba(37, 99, 235, 0.22) 0%, rgba(59, 130, 246, 0.1) 100%);
   background-color: rgba(37, 99, 235, 0.22);
   color: #1d4ed8;
 }
 
-.status-card.status--payment .status-card__icon {
+.status-card.status--ready .status-card__icon {
   color: #2563eb;
 }
 
-.status-card.status--payment .status-card__state {
+.status-card.status--ready .status-card__state {
   color: #1d4ed8;
+}
+
+.status-card.status--payment {
+  border-color: rgba(139, 92, 246, 0.45);
+  background: linear-gradient(160deg, rgba(139, 92, 246, 0.22) 0%, rgba(167, 139, 250, 0.1) 100%);
+  background-color: rgba(139, 92, 246, 0.22);
+  color: #6d28d9;
+}
+
+.status-card.status--payment .status-card__icon {
+  color: #8b5cf6;
+}
+
+.status-card.status--payment .status-card__state {
+  color: #7c3aed;
 }
 
 .status-card.status--unknown {
