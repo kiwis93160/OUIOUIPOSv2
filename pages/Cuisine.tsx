@@ -72,7 +72,11 @@ const Cuisine: React.FC = () => {
     useEffect(() => {
         fetchOrders();
         const interval = setInterval(fetchOrders, 5000); // Refresh every 5 seconds
-        return () => clearInterval(interval);
+        const unsubscribe = api.notifications.subscribe('orders_updated', fetchOrders);
+        return () => {
+            clearInterval(interval);
+            unsubscribe();
+        };
     }, [fetchOrders]);
 
     const handleMarkAsReady = async (orderId: string) => {

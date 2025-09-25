@@ -134,6 +134,38 @@ type EventCallback = () => void;
 
 const eventListeners: Record<string, EventCallback[]> = {};
 
+const publishEvent = (event: string) => {
+  if (eventListeners[event]) {
+    eventListeners[event].forEach(callback => callback());
+  }
+};
+
+let ordersRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+
+const ensureOrdersRealtimeSubscription = () => {
+  if (ordersRealtimeChannel || typeof (supabase as { channel?: unknown }).channel !== 'function') {
+    return;
+  }
+
+  try {
+    ordersRealtimeChannel = supabase
+      .channel('orders-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => publishEvent('orders_updated'))
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'order_items' },
+        () => publishEvent('orders_updated'),
+      )
+      .subscribe(status => {
+        if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
+          ordersRealtimeChannel = null;
+        }
+      });
+  } catch (error) {
+    console.warn('Failed to subscribe to real-time order updates', error);
+  }
+};
+
 const unwrap = <T>(response: SupabaseResponse<T>): T => {
   if (response.error) {
     throw new Error(response.error.message);
@@ -545,15 +577,30 @@ const notificationsService = {
       eventListeners[event] = [];
     }
     eventListeners[event].push(callback);
+
+    if (event === 'orders_updated') {
+      ensureOrdersRealtimeSubscription();
+    }
+
     return () => {
-      eventListeners[event] = eventListeners[event].filter(cb => cb !== callback);
+      eventListeners[event] = (eventListeners[event] ?? []).filter(cb => cb !== callback);
+
+      if (event === 'orders_updated' && eventListeners[event]?.length === 0 && ordersRealtimeChannel) {
+        if (typeof (supabase as { removeChannel?: (channel: unknown) => void }).removeChannel === 'function') {
+          supabase.removeChannel(ordersRealtimeChannel);
+        }
+        ordersRealtimeChannel = null;
+      }
     };
   },
   publish: (event: string) => {
-    if (eventListeners[event]) {
-      eventListeners[event].forEach(callback => callback());
-    }
+    publishEvent(event);
   },
+};
+
+const publishOrderChange = () => {
+  notificationsService.publish('notifications_updated');
+  notificationsService.publish('orders_updated');
 };
 
 export const api = {
@@ -901,7 +948,7 @@ export const api = {
       })
       .eq('id', tableId);
 
-    notificationsService.publish('notifications_updated');
+    publishOrderChange();
     return mapOrderRow(insertedRow);
   },
 
@@ -988,7 +1035,7 @@ export const api = {
       await supabase.from('orders').update(payload).eq('id', orderId);
     }
 
-    notificationsService.publish('notifications_updated');
+    publishOrderChange();
     const updatedOrder = await fetchOrderById(orderId);
     if (!updatedOrder) {
       throw new Error('Order not found after update');
@@ -1019,7 +1066,7 @@ export const api = {
       .update({ estado_cocina: 'recibido', date_envoi_cuisine: nowIso })
       .eq('id', orderId);
 
-    notificationsService.publish('notifications_updated');
+    publishOrderChange();
     const updatedOrder = await fetchOrderById(orderId);
     if (!updatedOrder) {
       throw new Error('Order not found after sending to kitchen');
@@ -1042,7 +1089,7 @@ export const api = {
         .eq('id', order.table_id);
     }
 
-    notificationsService.publish('notifications_updated');
+    publishOrderChange();
     const updatedOrder = await fetchOrderById(orderId);
     if (!updatedOrder) {
       throw new Error('Order not found after ready update');
@@ -1057,7 +1104,7 @@ export const api = {
       .update({ estado_cocina: 'servido', date_servido: nowIso })
       .eq('id', orderId);
 
-    notificationsService.publish('notifications_updated');
+    publishOrderChange();
     const updatedOrder = await fetchOrderById(orderId);
     if (!updatedOrder) {
       throw new Error('Order not found after serve update');
@@ -1090,7 +1137,7 @@ export const api = {
         .eq('id', order.table_id);
     }
 
-    notificationsService.publish('notifications_updated');
+    publishOrderChange();
     const updatedOrder = await fetchOrderById(orderId);
     if (!updatedOrder) {
       throw new Error('Order not found after finalization');
@@ -1151,7 +1198,7 @@ export const api = {
       );
     }
 
-    notificationsService.publish('notifications_updated');
+    publishOrderChange();
     return mapOrderRow(orderRow);
   },
 
@@ -1176,7 +1223,7 @@ export const api = {
       .update({ estado: 'enviado', date_envoi: nowIso })
       .eq('order_id', orderId);
 
-    notificationsService.publish('notifications_updated');
+    publishOrderChange();
     const updatedOrder = await fetchOrderById(orderId);
     if (!updatedOrder) {
       throw new Error('Order not found after validation');
@@ -1194,7 +1241,7 @@ export const api = {
       })
       .eq('id', orderId);
 
-    notificationsService.publish('notifications_updated');
+    publishOrderChange();
     const updatedOrder = await fetchOrderById(orderId);
     if (!updatedOrder) {
       throw new Error('Order not found after delivery');
