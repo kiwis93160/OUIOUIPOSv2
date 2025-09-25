@@ -25,6 +25,7 @@ const Commande: React.FC = () => {
 
     const orderRef = useRef<Order | null>(order);
     const originalOrderRef = useRef<Order | null>(originalOrder);
+    const pendingServerOrderRef = useRef<Order | null>(null);
 
     useEffect(() => {
         orderRef.current = order;
@@ -42,6 +43,19 @@ const Commande: React.FC = () => {
         return JSON.stringify(referenceOrder.items) === JSON.stringify(currentOrder.items);
     }, []);
 
+    const applyPendingServerSnapshot = useCallback(() => {
+        const pendingOrder = pendingServerOrderRef.current;
+        if (!pendingOrder) return;
+
+        pendingServerOrderRef.current = null;
+        orderRef.current = pendingOrder;
+        setOrder(pendingOrder);
+
+        const originalSnapshot = JSON.parse(JSON.stringify(pendingOrder));
+        originalOrderRef.current = originalSnapshot;
+        setOriginalOrder(originalSnapshot);
+    }, []);
+
     const fetchOrderData = useCallback(async (isRefresh = false) => {
         if (!tableId) return;
         try {
@@ -49,10 +63,18 @@ const Commande: React.FC = () => {
 
             if (isRefresh) {
                 const orderData = await api.createOrGetOrderByTableId(tableId);
-                const shouldSyncOriginal = isOrderSynced();
-                setOrder(orderData);
-                if (shouldSyncOriginal) {
-                    setOriginalOrder(JSON.parse(JSON.stringify(orderData)));
+                const shouldSyncState = isOrderSynced();
+
+                if (shouldSyncState) {
+                    pendingServerOrderRef.current = null;
+                    setOrder(orderData);
+                    orderRef.current = orderData;
+
+                    const originalSnapshot = JSON.parse(JSON.stringify(orderData));
+                    originalOrderRef.current = originalSnapshot;
+                    setOriginalOrder(originalSnapshot);
+                } else {
+                    pendingServerOrderRef.current = orderData;
                 }
                 return;
             }
@@ -64,10 +86,14 @@ const Commande: React.FC = () => {
                 api.getIngredients(),
             ]);
             setOrder(orderData);
-            setOriginalOrder(JSON.parse(JSON.stringify(orderData)));
+            orderRef.current = orderData;
+            const originalSnapshot = JSON.parse(JSON.stringify(orderData));
+            setOriginalOrder(originalSnapshot);
+            originalOrderRef.current = originalSnapshot;
             setProducts(productsData);
             setCategories(categoriesData);
             setIngredients(ingredientsData);
+            pendingServerOrderRef.current = null;
         } catch (error) {
             console.error("Failed to load order data", error);
             navigate('/ventes');
@@ -81,6 +107,12 @@ const Commande: React.FC = () => {
         const interval = setInterval(() => fetchOrderData(true), 5000);
         return () => clearInterval(interval);
     }, [fetchOrderData]);
+
+    useEffect(() => {
+        if (isOrderSynced()) {
+            applyPendingServerSnapshot();
+        }
+    }, [applyPendingServerSnapshot, isOrderSynced, order, originalOrder]);
 
     useEffect(() => {
         const unsubscribe = api.notifications.subscribe('orders_updated', () => fetchOrderData(true));
@@ -158,8 +190,11 @@ const Commande: React.FC = () => {
 
             setOrder(updatedOrder);
             orderRef.current = updatedOrder;
-            setOriginalOrder(JSON.parse(JSON.stringify(updatedOrder)));
+            const updatedOriginalSnapshot = JSON.parse(JSON.stringify(updatedOrder));
+            setOriginalOrder(updatedOriginalSnapshot);
+            originalOrderRef.current = updatedOriginalSnapshot;
             setIngredients(ingredientsData);
+            applyPendingServerSnapshot();
         } catch (error) {
             console.error("Failed to update order:", error);
             alert("Une erreur est survenue lors de la mise à jour de la commande.");
