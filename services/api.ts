@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
-import { normalizeProductImageInput, resolveProductImageUrl } from './productImage';
+import { normalizeCloudinaryImageUrl, resolveProductImageUrl } from './cloudinary';
+
 import {
   Role,
   Table,
@@ -216,7 +217,8 @@ const mapProductRow = (row: SupabaseProductRow, ingredientMap?: Map<string, Ingr
     prix_vente: row.prix_vente,
     categoria_id: row.categoria_id,
     estado: row.estado,
-    image: resolveProductImageUrl(row.image, row.nom_produit),
+    image: resolveProductImageUrl(row.image),
+
     recipe,
   };
 
@@ -1345,7 +1347,8 @@ export const api = {
         prix_vente: product.prix_vente,
         categoria_id: product.categoria_id,
         estado: product.estado,
-        image: normalizedImage,
+        image: normalizeCloudinaryImageUrl(product.image),
+
       })
       .select('id')
       .single();
@@ -1395,7 +1398,9 @@ export const api = {
     }
 
     if (rest.image !== undefined) {
-      updatePayload.image = normalizeProductImageInput(rest.image, rest.nom_produit);
+
+      updatePayload.image = normalizeCloudinaryImageUrl(rest.image);
+
     }
 
     if (Object.keys(updatePayload).length > 0) {
@@ -1445,3 +1450,4 @@ export const api = {
     notificationsService.publish('notifications_updated');
   },
 };
+
