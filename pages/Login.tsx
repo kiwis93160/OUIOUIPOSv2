@@ -8,36 +8,46 @@ import { Mail, MapPin, Phone, Menu, X } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 
 const PinInput: React.FC<{ pin: string; onPinChange: (pin: string) => void; pinLength: number }> = ({ pin, onPinChange, pinLength }) => {
-    const handleKeyClick = (key: string) => {
-        if (pin.length < pinLength) {
-            onPinChange(pin + key);
-        }
-    };
-    const handleDelete = () => {
-        onPinChange(pin.slice(0, -1));
-    };
+  const handleKeyClick = (key: string) => {
+    if (pin.length < pinLength) {
+      onPinChange(pin + key);
+    }
+  };
 
-    return (
-        <div className="flex flex-col items-center">
-            <div className="flex space-x-2 md:space-x-4 mb-4">
-                {Array.from({ length: pinLength }).map((_, i) => (
-                    <div key={i} className="w-10 h-12 md:w-12 md:h-14 bg-gray-200 rounded-md flex items-center justify-center text-2xl font-bold">
-                        {pin[i] ? '•' : ''}
-                    </div>
-                ))}
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-                {[...Array(9)].map((_, i) => (
-                    <button type="button" key={i + 1} onClick={() => handleKeyClick(String(i + 1))} className="w-16 h-16 rounded-full bg-gray-100 text-2xl font-bold hover:bg-gray-200 transition">
-                        {i + 1}
-                    </button>
-                ))}
-                <div /> 
-                <button type="button" onClick={() => handleKeyClick('0')} className="w-16 h-16 rounded-full bg-gray-100 text-2xl font-bold hover:bg-gray-200 transition">0</button>
-                <button type="button" onClick={handleDelete} className="w-16 h-16 rounded-full bg-gray-100 text-xl font-bold hover:bg-gray-200 transition flex items-center justify-center">DEL</button>
-            </div>
-        </div>
-    );
+  const handleDelete = () => {
+    onPinChange(pin.slice(0, -1));
+  };
+
+  return (
+    <div className="pin-input" aria-label="Clavier numérique">
+      <div className="pin-indicator" role="presentation">
+        {Array.from({ length: pinLength }).map((_, index) => (
+          <div key={index} className="pin-indicator__slot" aria-hidden="true">
+            {pin[index] ? '•' : ''}
+          </div>
+        ))}
+      </div>
+      <div className="pin-pad">
+        {[...Array(9)].map((_, index) => (
+          <button
+            type="button"
+            key={index + 1}
+            onClick={() => handleKeyClick(String(index + 1))}
+            className="pin-pad__button"
+          >
+            {index + 1}
+          </button>
+        ))}
+        <div aria-hidden="true" />
+        <button type="button" onClick={() => handleKeyClick('0')} className="pin-pad__button">
+          0
+        </button>
+        <button type="button" onClick={handleDelete} className="pin-pad__button pin-pad__button--muted">
+          DEL
+        </button>
+      </div>
+    </div>
+  );
 };
 
 
@@ -104,141 +114,147 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="bg-gray-100 text-brand-secondary">
-      <header className="sticky top-0 z-50 p-4 text-white bg-brand-secondary/90 backdrop-blur-sm transition-all duration-300">
-        <div className="container mx-auto flex justify-between items-center">
-            <a href="#accueil" className="text-3xl font-bold text-brand-primary">OUIOUITACOS</a>
-            <nav className="hidden md:flex space-x-6 items-center">
-                <a href="#accueil" className="hover:text-brand-primary transition">Accueil</a>
-                <a href="#apropos" className="hover:text-brand-primary transition">A Propos</a>
-                <a href="#menu" className="hover:text-brand-primary transition">Menu</a>
-                <a href="#contact" className="hover:text-brand-primary transition">Contact</a>
-                <button onClick={() => setIsModalOpen(true)} className="bg-brand-primary text-brand-secondary font-bold py-2 px-4 rounded-full hover:bg-yellow-400 transition">
-                Staff Login
-                </button>
-            </nav>
-            <div className="md:hidden">
-                <button onClick={() => setMobileMenuOpen(true)} className="p-2">
-                    <Menu size={28} />
-                </button>
-            </div>
+    <div className="login-page">
+      <header className="login-header">
+        <div className="layout-container login-header__inner">
+          <a href="#accueil" className="login-brand">OUIOUITACOS</a>
+          <nav className="login-nav" aria-label="Navigation principale">
+            <a href="#accueil" className="login-nav__link">Accueil</a>
+            <a href="#apropos" className="login-nav__link">À propos</a>
+            <a href="#menu" className="login-nav__link">Menu</a>
+            <a href="#contact" className="login-nav__link">Contact</a>
+            <button type="button" onClick={() => setIsModalOpen(true)} className="ui-btn ui-btn-accent login-nav__cta">
+              Staff Login
+            </button>
+          </nav>
+          <button type="button" onClick={() => setMobileMenuOpen(true)} className="login-header__menu" aria-label="Ouvrir le menu">
+            <Menu size={24} />
+          </button>
         </div>
       </header>
-      
+
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-brand-secondary text-white flex flex-col items-center justify-center md:hidden">
-            <button onClick={() => setMobileMenuOpen(false)} className="absolute top-4 right-4 p-2">
-                <X size={32} />
+        <div className="login-menu-overlay" role="dialog" aria-modal="true">
+          <button type="button" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__close" aria-label="Fermer le menu">
+            <X size={28} />
+          </button>
+          <nav className="login-menu-overlay__nav" aria-label="Navigation mobile">
+            <a href="#accueil" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">Accueil</a>
+            <a href="#apropos" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">À propos</a>
+            <a href="#menu" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">Menu</a>
+            <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">Contact</a>
+            <button
+              type="button"
+              onClick={() => {
+                setIsModalOpen(true);
+                setMobileMenuOpen(false);
+              }}
+              className="ui-btn ui-btn-accent hero-cta"
+            >
+              Staff Login
             </button>
-            <nav className="flex flex-col items-center space-y-8">
-                <a href="#accueil" onClick={() => setMobileMenuOpen(false)} className="text-3xl hover:text-brand-primary transition">Accueil</a>
-                <a href="#apropos" onClick={() => setMobileMenuOpen(false)} className="text-3xl hover:text-brand-primary transition">A Propos</a>
-                <a href="#menu" onClick={() => setMobileMenuOpen(false)} className="text-3xl hover:text-brand-primary transition">Menu</a>
-                <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="text-3xl hover:text-brand-primary transition">Contact</a>
-                <button 
-                    onClick={() => {
-                        setIsModalOpen(true);
-                        setMobileMenuOpen(false);
-                    }} 
-                    className="mt-8 bg-brand-primary text-brand-secondary font-bold py-3 px-6 rounded-full hover:bg-yellow-400 transition text-2xl"
-                >
-                    Staff Login
-                </button>
-            </nav>
+          </nav>
         </div>
       )}
 
       <main>
-        <section id="accueil" className="h-screen bg-cover bg-center flex flex-col" style={{ backgroundImage: "url('https://picsum.photos/seed/tacosbg/1920/1080')" }}>
+        <section
+          id="accueil"
+          className="section section-hero"
+          style={{ backgroundImage: "url('https://picsum.photos/seed/tacosbg/1920/1080')" }}
+        >
+          <div className="section-hero__inner">
             {activeOrderId ? (
-                <CustomerOrderTracker orderId={activeOrderId} onNewOrderClick={handleNewOrder} variant="hero" />
+              <CustomerOrderTracker orderId={activeOrderId} onNewOrderClick={handleNewOrder} variant="hero" />
             ) : (
-                <div className="flex-1 flex flex-col justify-center items-center text-center text-white p-4 bg-black bg-opacity-60">
-                    <h2 className="text-5xl md:text-6xl font-extrabold mb-4 drop-shadow-lg">Le Goût Authentique du Mexique</h2>
-                    <p className="text-lg md:text-xl max-w-2xl mb-8 drop-shadow-md">Des tacos préparés avec passion, des ingrédients frais et une touche de tradition.</p>
-                    <button onClick={() => navigate('/commande-client')} className="bg-brand-accent text-white font-bold py-4 px-8 rounded-full text-lg hover:bg-red-700 transition transform hover:scale-105">
-                        Commander en ligne
-                    </button>
-                </div>
+              <div className="hero-content">
+                <h2 className="hero-title">Le Goût Authentique du Mexique</h2>
+                <p className="hero-subtitle">
+                  Des tacos préparés avec passion, des ingrédients frais et une touche de tradition pour un voyage gustatif inoubliable.
+                </p>
+                <button onClick={() => navigate('/commande-client')} className="ui-btn ui-btn-accent hero-cta">
+                  Commander en ligne
+                </button>
+              </div>
             )}
+          </div>
         </section>
 
-        <section id="apropos" className="py-20 bg-white">
-          <div className="container mx-auto text-center max-w-4xl px-4">
-            <h2 className="text-4xl font-bold mb-4 text-brand-secondary">Notre Histoire</h2>
-            <p className="text-lg text-gray-600 leading-relaxed">
-              Fondé par des passionnés de la cuisine mexicaine, OUIOUITACOS est né d'un désir simple : partager le goût authentique des tacos faits maison. Chaque recette est un héritage familial, chaque ingrédient est choisi avec soin, et chaque plat est préparé avec le cœur. Venez découvrir une explosion de saveurs qui vous transportera directement dans les rues de Mexico.
+        <section id="apropos" className="section section-surface">
+          <div className="section-inner section-inner--center">
+            <h2 className="section-title">Notre Histoire</h2>
+            <p className="section-text section-text--muted">
+              Fondé par des passionnés de la cuisine mexicaine, OUIOUITACOS est né d'un désir simple : partager le goût authentique des tacos faits maison.
+              Chaque recette est un héritage familial, chaque ingrédient est choisi avec soin, et chaque plat est préparé avec le cœur. Venez découvrir une explosion de saveurs qui vous transportera directement dans les rues de Mexico.
             </p>
           </div>
         </section>
 
-        <section id="menu" className="py-20 bg-gray-50">
-            <div className="container mx-auto text-center px-4">
-                <h2 className="text-4xl font-bold mb-8 text-brand-secondary">Nos Best-Sellers</h2>
-                {menuLoading ? <p>Chargement du menu...</p> : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {products.map(product => (
-                    <div key={product.id} className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
-                        <img src={product.image} alt={product.nom_produit} className="w-full h-48 object-cover"/>
-                        <div className="p-4 flex flex-col flex-grow">
-                        <h3 className="text-xl font-bold mb-2 text-gray-900">{product.nom_produit}</h3>
-                        <p className="text-gray-600 text-sm mb-4 flex-grow">{product.description}</p>
-                        <p className="text-lg font-bold text-brand-primary mt-auto">{product.prix_vente.toFixed(2)} €</p>
-                        </div>
+        <section id="menu" className="section section-muted">
+          <div className="section-inner section-inner--wide section-inner--center">
+            <h2 className="section-title">Nos Best-sellers</h2>
+            {menuLoading ? (
+              <p className="section-text section-text--muted">Chargement du menu...</p>
+            ) : (
+              <div className="menu-grid">
+                {products.map(product => (
+                  <article key={product.id} className="ui-card menu-card">
+                    <img src={product.image} alt={product.nom_produit} className="menu-card__media" />
+                    <div className="menu-card__body">
+                      <h3 className="menu-card__title">{product.nom_produit}</h3>
+                      <p className="menu-card__description">{product.description}</p>
+                      <p className="menu-card__price">{product.prix_vente.toFixed(2)} €</p>
                     </div>
-                    ))}
-                </div>
-                )}
-                <button onClick={() => navigate('/commande-client')} className="mt-12 bg-brand-primary text-brand-secondary font-bold py-3 px-8 rounded-full text-lg hover:bg-yellow-400 transition transform hover:scale-105">
-                    Voir le Menu Complet & Commander
-                </button>
+                  </article>
+                ))}
+              </div>
+            )}
+            <div className="section-actions">
+              <button onClick={() => navigate('/commande-client')} className="ui-btn ui-btn-primary hero-cta">
+                Voir le menu complet & Commander
+              </button>
             </div>
+          </div>
         </section>
 
-        <section id="contact" className="py-20 bg-white">
-            <div className="container mx-auto text-center max-w-4xl px-4">
-                <h2 className="text-4xl font-bold mb-8 text-brand-secondary">Contactez-nous</h2>
-                <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16">
-                    <div className="flex items-center gap-4">
-                        <MapPin size={40} className="text-brand-accent"/>
-                        <div>
-                            <h3 className="text-xl font-semibold">Adresse</h3>
-                            <p className="text-gray-600">123 Rue du Taco, 75000 Paris</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <Phone size={40} className="text-brand-accent"/>
-                        <div>
-                            <h3 className="text-xl font-semibold">Téléphone</h3>
-                            <p className="text-gray-600">01 23 45 67 89</p>
-                        </div>
-                    </div>
-                     <div className="flex items-center gap-4">
-                        <Mail size={40} className="text-brand-accent"/>
-                        <div>
-                            <h3 className="text-xl font-semibold">Email</h3>
-                            <p className="text-gray-600">contact@ouiouitacos.fr</p>
-                        </div>
-                    </div>
-                </div>
+        <section id="contact" className="section section-surface">
+          <div className="section-inner section-inner--wide section-inner--center">
+            <h2 className="section-title">Contactez-nous</h2>
+            <div className="contact-grid">
+              <div className="contact-card">
+                <MapPin className="contact-card__icon" />
+                <h3 className="contact-card__title">Adresse</h3>
+                <p className="contact-card__text">123 Rue du Taco, 75000 Paris</p>
+              </div>
+              <div className="contact-card">
+                <Phone className="contact-card__icon" />
+                <h3 className="contact-card__title">Téléphone</h3>
+                <p className="contact-card__text">01 23 45 67 89</p>
+              </div>
+              <div className="contact-card">
+                <Mail className="contact-card__icon" />
+                <h3 className="contact-card__title">Email</h3>
+                <p className="contact-card__text">contact@ouiouitacos.fr</p>
+              </div>
             </div>
+          </div>
         </section>
       </main>
 
-      <footer className="bg-brand-secondary text-white py-8">
-        <div className="container mx-auto text-center">
-            <p>&copy; {new Date().getFullYear()} OUIOUITACOS. Tous droits réservés.</p>
+      <footer className="site-footer">
+        <div className="layout-container site-footer__inner">
+          <p>&copy; {new Date().getFullYear()} OUIOUITACOS. Tous droits réservés.</p>
         </div>
       </footer>
 
       <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setPin(''); setError(''); }} title="Entrez votre PIN">
-         <form onSubmit={handleFormSubmit} className="space-y-6">
-            <PinInput pin={pin} onPinChange={setPin} pinLength={6} />
-            {error && <p className="text-red-500 text-center h-5">{error}</p>}
-            <button type="submit" disabled={loading || pin.length !== 6} className="w-full bg-brand-primary text-brand-secondary font-bold py-3 px-4 rounded-lg hover:bg-yellow-400 transition disabled:bg-gray-300">
-              {loading ? 'Connexion...' : 'Valider'}
-            </button>
-          </form>
+        <form onSubmit={handleFormSubmit} className="modal-form">
+          <PinInput pin={pin} onPinChange={setPin} pinLength={6} />
+          <p className="modal-form__error" role="alert" aria-live="assertive">{error}</p>
+          <button type="submit" disabled={loading || pin.length !== 6} className="ui-btn ui-btn-primary ui-btn--block" data-state={loading ? 'loading' : 'idle'}>
+            {loading ? 'Connexion...' : 'Valider'}
+          </button>
+        </form>
       </Modal>
     </div>
   );
