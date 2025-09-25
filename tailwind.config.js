@@ -14,16 +14,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        'brand-primary': '#F9A826',
-        'brand-primary-dark': '#DD8C00',
-        'brand-secondary': '#2D2D2D',
-        'brand-accent': '#E63946',
-        'brand-surface': '#FFFFFF',
-        'status-ready': '#2E7D32',
-        'status-cooking': '#F9A826',
-        'status-waiting': '#1976D2',
-        'status-paid': '#388E3C',
-        'status-unpaid': '#D32F2F'
+        'brand-background': '#f2f4f8',
+        'brand-background-muted': '#e6eaf3',
+        'brand-surface': '#ffffff',
+        'brand-surface-elevated': '#f9fafc',
+        'brand-border': '#d1d7e3',
+        'brand-border-strong': '#9aa5b8',
+        'brand-text': '#1f2933',
+        'brand-text-muted': '#52616f',
+        'brand-heading': '#111827',
+        'brand-accent': '#2563eb',
+        'brand-accent-hover': '#1d4ed8',
+        'brand-accent-soft': '#eff4ff',
+        'status-success': '#059669',
+        'status-success-hover': '#047857',
+        'status-info': '#0ea5e9',
+        'status-info-hover': '#0284c7',
+        'status-warning': '#f59e0b',
+        'status-danger': '#dc2626',
+        'status-danger-hover': '#b91c1c',
+        'brand-dark': '#0f172a'
       }
     }
   },
