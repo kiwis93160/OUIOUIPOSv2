@@ -55,29 +55,31 @@ const ProtectedLayout: React.FC = () => {
 
   return (
     <>
-      <div className="flex min-h-[100dvh] bg-gray-100">
+      <div className="app-shell">
         <Sidebar
           isOpen={isSidebarOpen}
           onClose={closeSidebar}
           notifications={notifications}
           onReportClick={() => setIsReportModalOpen(true)}
         />
-        <div className="flex min-h-[100dvh] flex-1 flex-col overflow-hidden">
-          <header className="flex items-center justify-between gap-4 border-b border-gray-200 bg-white px-4 py-3 shadow-md md:px-6 md:py-4">
+        <div className="app-main">
+          <header className="app-header">
             <button
               type="button"
               onClick={openSidebar}
-              className="inline-flex items-center justify-center rounded-md p-2 text-gray-700 transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-primary md:hidden"
+              className="app-header__menu-button md:hidden"
               aria-label="Ouvrir le menu"
             >
               <Menu size={24} />
             </button>
-            <h1 className="text-xl font-bold text-gray-800 md:text-2xl">Bienvenue, {role?.name}</h1>
-            <div className="h-8 w-8 md:hidden" aria-hidden="true" />
+            <h1 className="app-header__title">Bienvenue, {role?.name}</h1>
+            <div className="app-header__spacer md:hidden" aria-hidden="true" />
             {/* Add other header elements like user menu here */}
           </header>
-          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200 p-4 md:p-6">
-            <Outlet />
+          <main className="app-content">
+            <div className="app-content__inner">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>

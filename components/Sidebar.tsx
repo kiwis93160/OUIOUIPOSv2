@@ -99,79 +99,108 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
       />
       <aside
         ref={sidebarRef}
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-brand-secondary text-white shadow-xl transition-transform duration-300 ease-in-out md:static md:z-auto md:w-64 md:translate-x-0 md:shadow-none ${
+        className={`app-sidebar fixed inset-y-0 left-0 z-50 flex w-72 flex-col transition-transform duration-300 ease-in-out md:static md:z-auto md:w-64 md:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
         aria-label="Navigation principale"
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <span className="text-2xl font-bold text-brand-primary">OUIOUI</span>
-          <button
-            onClick={onClose}
-            className="rounded-full p-2 text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white md:hidden"
-            aria-label="Fermer le menu"
-          >
+        <div className="app-sidebar__header">
+          <span className="app-sidebar__brand">OUIOUI</span>
+          <button onClick={onClose} className="app-sidebar__close md:hidden" aria-label="Fermer le menu">
             <X size={20} />
           </button>
         </div>
 
-        <nav className="flex-1 space-y-2 overflow-y-auto px-3 py-4">
-          {visibleNavLinks.map(link => {
-            let notificationContent = null;
-            if (notifications) {
-                if (link.href === '/para-llevar' && (notifications.pendingTakeaway > 0 || notifications.readyTakeaway > 0)) {
+        <div className="app-sidebar__content">
+          <div className="app-sidebar__scroll-region">
+            <nav className="app-sidebar__nav">
+              {visibleNavLinks.map(link => {
+                let notificationContent: React.ReactNode = null;
+
+                if (notifications) {
+                  if (link.href === '/para-llevar' && (notifications.pendingTakeaway > 0 || notifications.readyTakeaway > 0)) {
                     notificationContent = (
-                        <div className="flex items-center space-x-1">
-                            {notifications.pendingTakeaway > 0 && <span className="bg-blue-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" title={`${notifications.pendingTakeaway} à valider`}>{notifications.pendingTakeaway}</span>}
-                            {notifications.readyTakeaway > 0 && <span className="bg-green-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" title={`${notifications.readyTakeaway} prête(s)`}>{notifications.readyTakeaway}</span>}
-                        </div>
+                      <span className="app-sidebar__badge-group">
+                        {notifications.pendingTakeaway > 0 && (
+                          <span
+                            className="app-sidebar__badge app-sidebar__badge--info"
+                            title={`${notifications.pendingTakeaway} à valider`}
+                          >
+                            {notifications.pendingTakeaway}
+                          </span>
+                        )}
+                        {notifications.readyTakeaway > 0 && (
+                          <span
+                            className="app-sidebar__badge app-sidebar__badge--success"
+                            title={`${notifications.readyTakeaway} prête(s)`}
+                          >
+                            {notifications.readyTakeaway}
+                          </span>
+                        )}
+                      </span>
                     );
-                } else if (link.href === '/ventes' && notifications.readyForService > 0) {
-                     notificationContent = <span className="bg-blue-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full" title={`${notifications.readyForService} commande(s) prête(s)`}>{notifications.readyForService}</span>;
-                } else if (link.href === '/cocina' && notifications.kitchenOrders > 0) {
-                    notificationContent = <span className="bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">{notifications.kitchenOrders}</span>;
-                } else if (link.href === '/ingredients' && notifications.lowStockIngredients > 0) {
-                    notificationContent = <span className="bg-orange-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">{notifications.lowStockIngredients}</span>;
+                  } else if (link.href === '/ventes' && notifications.readyForService > 0) {
+                    notificationContent = (
+                      <span className="app-sidebar__badge-group">
+                        <span
+                          className="app-sidebar__badge app-sidebar__badge--info"
+                          title={`${notifications.readyForService} commande(s) prête(s)`}
+                        >
+                          {notifications.readyForService}
+                        </span>
+                      </span>
+                    );
+                  } else if (link.href === '/cocina' && notifications.kitchenOrders > 0) {
+                    notificationContent = (
+                      <span className="app-sidebar__badge-group">
+                        <span className="app-sidebar__badge app-sidebar__badge--danger">
+                          {notifications.kitchenOrders}
+                        </span>
+                      </span>
+                    );
+                  } else if (link.href === '/ingredients' && notifications.lowStockIngredients > 0) {
+                    notificationContent = (
+                      <span className="app-sidebar__badge-group">
+                        <span className="app-sidebar__badge app-sidebar__badge--warning">
+                          {notifications.lowStockIngredients}
+                        </span>
+                      </span>
+                    );
+                  }
                 }
-            }
 
-            return (
-              <NavLink
-                key={link.name}
-                to={link.href}
-                onClick={handleNavLinkClick}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-lg px-4 py-3 font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/40 ${
-                    isActive ? 'bg-white text-brand-secondary' : 'hover:bg-white/10'
-                  }`
-                }
-              >
-                <link.icon size={22} />
-                <span>{link.name}</span>
-                {notificationContent && <span className="ml-auto">{notificationContent}</span>}
-              </NavLink>
-            );
-        })}
-        </nav>
+                return (
+                  <NavLink
+                    key={link.name}
+                    to={link.href}
+                    onClick={handleNavLinkClick}
+                    className={({ isActive }) => `app-sidebar__nav-link${isActive ? ' is-active' : ''}`}
+                  >
+                    <link.icon size={22} />
+                    <span>{link.name}</span>
+                    {notificationContent}
+                  </NavLink>
+                );
+              })}
+            </nav>
+          </div>
 
-        <div className="space-y-2 border-t border-white/10 px-3 py-4">
-          <button
-            onClick={() => {
-              onReportClick();
-              handleNavLinkClick();
-            }}
-            className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40"
-          >
-            <FileText size={22} />
-            <span className="font-semibold">Rapport</span>
-          </button>
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-red-300 transition hover:bg-red-500/20 hover:text-red-100 focus:outline-none focus:ring-2 focus:ring-red-200/80"
-          >
-            <LogOut size={22} />
-            <span className="font-semibold">Déconnexion</span>
-          </button>
+          <div className="app-sidebar__section">
+            <button
+              onClick={() => {
+                onReportClick();
+                handleNavLinkClick();
+              }}
+              className="app-sidebar__action"
+            >
+              <FileText size={22} />
+              <span className="font-semibold">Rapport</span>
+            </button>
+            <button onClick={handleLogout} className="app-sidebar__action app-sidebar__action--logout">
+              <LogOut size={22} />
+              <span className="font-semibold">Déconnexion</span>
+            </button>
+          </div>
         </div>
       </aside>
     </>
