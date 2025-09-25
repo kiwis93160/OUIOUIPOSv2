@@ -674,81 +674,97 @@ body {
 
 
 .status-card.status--free {
-  border-color: #16a34a;
-  background-color: #ecfdf5;
-  color: #065f46;
+  border-color: #34d399;
+  background: linear-gradient(160deg, #064e3b 0%, #047857 100%);
+  color: #ecfdf5;
 }
 
 .status-card.status--free .status-card__icon {
-  color: #047857;
+  color: #bbf7d0;
 }
 
 .status-card.status--free .status-card__state {
-  color: #047857;
+  color: #dcfce7;
 }
 
 .status-card.status--preparing {
-  border-color: #d97706;
-  background-color: #fef3c7;
-  color: #92400e;
+  border-color: #fbbf24;
+  background: linear-gradient(160deg, #78350f 0%, #b45309 100%);
+  color: #fef3c7;
 }
 
 .status-card.status--preparing .status-card__icon {
-  color: #f59e0b;
+  color: #fde68a;
 }
 
 .status-card.status--preparing .status-card__state {
-  color: #b45309;
+  color: #fcd34d;
 }
 
 .status-card.status--ready {
-  border-color: #2563eb;
-  background-color: #dbeafe;
-  color: #1d4ed8;
+  border-color: #60a5fa;
+  background: linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 100%);
+  color: #e0f2fe;
 }
 
 .status-card.status--ready .status-card__icon {
-  color: #2563eb;
+  color: #bfdbfe;
 }
 
 .status-card.status--ready .status-card__state {
-  color: #1d4ed8;
+  color: #bfdbfe;
 }
 
 .status-card.status--payment {
-  border-color: #7c3aed;
-  background-color: #ede9fe;
-  color: #5b21b6;
+  border-color: #c4b5fd;
+  background: linear-gradient(160deg, #4c1d95 0%, #6d28d9 100%);
+  color: #ede9fe;
 }
 
 .status-card.status--payment .status-card__icon {
-  color: #6d28d9;
+  color: #ddd6fe;
 }
 
 .status-card.status--payment .status-card__state {
-  color: #5b21b6;
+  color: #ddd6fe;
 }
 
 .status-card.status--unknown {
-  border-color: color-mix(in srgb, var(--color-border-strong) 70%, var(--color-border));
-  background: color-mix(in srgb, var(--color-border) 20%, var(--color-surface));
-  background-color: color-mix(in srgb, var(--color-border) 20%, var(--color-surface));
-  color: var(--color-text-muted);
+  border-color: #475569;
+  background: linear-gradient(160deg, #1f2937 0%, #334155 100%);
+  color: #e2e8f0;
 }
 
 .status-card.status--unknown .status-card__icon {
-  color: var(--color-text-muted);
+  color: #cbd5f5;
 }
 
 .status-card.status--free .status-card__meta,
 .status-card.status--preparing .status-card__meta,
 .status-card.status--ready .status-card__meta,
 .status-card.status--payment .status-card__meta {
-  color: color-mix(in srgb, currentColor 62%, var(--color-heading));
+  color: color-mix(in srgb, currentColor 80%, rgba(255, 255, 255, 0.9));
 }
 
 .status-card.status--unknown .status-card__meta {
-  color: var(--color-text-muted);
+  color: color-mix(in srgb, currentColor 75%, rgba(255, 255, 255, 0.85));
+}
+
+.status-card.status--free .ui-btn-accent,
+.status-card.status--preparing .ui-btn-accent,
+.status-card.status--ready .ui-btn-accent,
+.status-card.status--payment .ui-btn-accent,
+.status-card.status--unknown .ui-btn-accent {
+  color: #0f172a;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.32);
+}
+
+.status-card.status--free .ui-btn-accent:not(:disabled):hover,
+.status-card.status--preparing .ui-btn-accent:not(:disabled):hover,
+.status-card.status--ready .ui-btn-accent:not(:disabled):hover,
+.status-card.status--payment .ui-btn-accent:not(:disabled):hover,
+.status-card.status--unknown .ui-btn-accent:not(:disabled):hover {
+  color: #020617;
 }
 
 @media (min-width: 768px) {
