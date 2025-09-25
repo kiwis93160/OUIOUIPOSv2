@@ -314,6 +314,46 @@ const mapOrderItemRow = (row: SupabaseOrderItemRow): OrderItem => ({
   date_envoi: toTimestamp(row.date_envoi),
 });
 
+const areArraysEqual = (a: string[], b: string[]): boolean => {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  return a.every((value, index) => value === b[index]);
+};
+
+const areOrderItemsEquivalent = (a: OrderItem, b: OrderItem): boolean => {
+  if (
+    a.produitRef !== b.produitRef ||
+    a.nom_produit !== b.nom_produit ||
+    a.prix_unitaire !== b.prix_unitaire ||
+    a.quantite !== b.quantite ||
+    a.commentaire !== b.commentaire ||
+    a.estado !== b.estado
+  ) {
+    return false;
+  }
+
+  const excludedIngredientsA = [...a.excluded_ingredients].sort();
+  const excludedIngredientsB = [...b.excluded_ingredients].sort();
+
+  return areArraysEqual(excludedIngredientsA, excludedIngredientsB);
+};
+
+const reorderOrderItems = (referenceItems: OrderItem[], itemsToReorder: OrderItem[]): OrderItem[] => {
+  const remaining = [...itemsToReorder];
+  const ordered: OrderItem[] = [];
+
+  referenceItems.forEach(referenceItem => {
+    const matchIndex = remaining.findIndex(item => areOrderItemsEquivalent(item, referenceItem));
+    if (matchIndex !== -1) {
+      ordered.push(remaining.splice(matchIndex, 1)[0]);
+    }
+  });
+
+  return [...ordered, ...remaining];
+};
+
 const mapOrderRow = (row: SupabaseOrderRow): Order => {
   const items = (row.order_items ?? []).map(mapOrderItemRow);
   const order: Order = {
@@ -1040,6 +1080,14 @@ export const api = {
     if (!updatedOrder) {
       throw new Error('Order not found after update');
     }
+
+    if (updates.items) {
+      return {
+        ...updatedOrder,
+        items: reorderOrderItems(updates.items, updatedOrder.items),
+      };
+    }
+
     return updatedOrder;
   },
 
