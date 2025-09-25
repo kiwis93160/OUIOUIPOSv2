@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { normalizeCloudinaryImageUrl, resolveProductImageUrl } from './cloudinary';
+
 import {
   Role,
   Table,
@@ -226,6 +227,9 @@ const mapProductRow = (row: SupabaseProductRow, ingredientMap?: Map<string, Ingr
 
   return product;
 };
+
+const isUuid = (value?: string | null): value is string =>
+  !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 const mapOrderItemRow = (row: SupabaseOrderItemRow): OrderItem => ({
   id: row.id,
@@ -870,18 +874,25 @@ export const api = {
 
     let items = existingOrder.items;
     if (updates.items) {
-      const payload = updates.items.map(item => ({
-        id: item.id,
-        order_id: orderId,
-        produit_id: item.produitRef,
-        nom_produit: item.nom_produit,
-        prix_unitaire: item.prix_unitaire,
-        quantite: item.quantite,
-        excluded_ingredients: item.excluded_ingredients,
-        commentaire: item.commentaire,
-        estado: item.estado,
-        date_envoi: toIsoString(item.date_envoi) ?? null,
-      }));
+      const payload = updates.items.map(item => {
+        const payloadItem: Record<string, unknown> = {
+          order_id: orderId,
+          produit_id: item.produitRef,
+          nom_produit: item.nom_produit,
+          prix_unitaire: item.prix_unitaire,
+          quantite: item.quantite,
+          excluded_ingredients: item.excluded_ingredients,
+          commentaire: item.commentaire,
+          estado: item.estado,
+          date_envoi: toIsoString(item.date_envoi) ?? null,
+        };
+
+        if (isUuid(item.id)) {
+          payloadItem.id = item.id;
+        }
+
+        return payloadItem;
+      });
 
       await supabase.from('order_items').delete().eq('order_id', orderId);
       if (payload.length > 0) {
@@ -1065,18 +1076,25 @@ export const api = {
 
     if (orderData.items.length > 0) {
       await supabase.from('order_items').insert(
-        orderData.items.map(item => ({
-          id: item.id,
-          order_id: orderRow.id,
-          produit_id: item.produitRef,
-          nom_produit: item.nom_produit,
-          prix_unitaire: item.prix_unitaire,
-          quantite: item.quantite,
-          excluded_ingredients: item.excluded_ingredients,
-          commentaire: item.commentaire,
-          estado: item.estado,
-          date_envoi: item.date_envoi ? new Date(item.date_envoi).toISOString() : null,
-        })),
+        orderData.items.map(item => {
+          const payloadItem: Record<string, unknown> = {
+            order_id: orderRow.id,
+            produit_id: item.produitRef,
+            nom_produit: item.nom_produit,
+            prix_unitaire: item.prix_unitaire,
+            quantite: item.quantite,
+            excluded_ingredients: item.excluded_ingredients,
+            commentaire: item.commentaire,
+            estado: item.estado,
+            date_envoi: item.date_envoi ? new Date(item.date_envoi).toISOString() : null,
+          };
+
+          if (isUuid(item.id)) {
+            payloadItem.id = item.id;
+          }
+
+          return payloadItem;
+        }),
       );
     }
 
@@ -1318,6 +1336,8 @@ export const api = {
   },
 
   addProduct: async (product: Omit<Product, 'id'>): Promise<Product> => {
+    const normalizedImage = normalizeProductImageInput(product.image, product.nom_produit);
+
     const insertResponse = await supabase
       .from('products')
       .insert({
@@ -1327,6 +1347,7 @@ export const api = {
         categoria_id: product.categoria_id,
         estado: product.estado,
         image: normalizeCloudinaryImageUrl(product.image),
+
       })
       .select('id')
       .single();
@@ -1377,6 +1398,7 @@ export const api = {
 
     if (rest.image !== undefined) {
       updatePayload.image = normalizeCloudinaryImageUrl(rest.image);
+
     }
 
     if (Object.keys(updatePayload).length > 0) {
@@ -1426,3 +1448,4 @@ export const api = {
     notificationsService.publish('notifications_updated');
   },
 };
+

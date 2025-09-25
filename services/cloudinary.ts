@@ -36,6 +36,7 @@ const getEnv = (key: string): string | undefined => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+
 const ensureEnv = (key: string, context: string): string => {
   const value = getEnv(key);
   if (!value) {
