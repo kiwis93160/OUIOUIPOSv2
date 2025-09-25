@@ -93,7 +93,11 @@ const ParaLlevar: React.FC = () => {
         setLoading(true);
         fetchOrders();
         const interval = setInterval(fetchOrders, 10000); // Poll for new orders
-        return () => clearInterval(interval);
+        const unsubscribe = api.notifications.subscribe('orders_updated', fetchOrders);
+        return () => {
+            clearInterval(interval);
+            unsubscribe();
+        };
     }, [fetchOrders]);
     
     const handleValidate = async (orderId: string) => {

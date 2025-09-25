@@ -99,7 +99,11 @@ const Ventes: React.FC = () => {
         setLoading(true);
         fetchTables();
         const interval = setInterval(fetchTables, 10000); // Refresh every 10 seconds
-        return () => clearInterval(interval);
+        const unsubscribe = api.notifications.subscribe('orders_updated', fetchTables);
+        return () => {
+            clearInterval(interval);
+            unsubscribe();
+        };
     }, [fetchTables]);
 
     const handleServeOrder = async (orderId: string) => {

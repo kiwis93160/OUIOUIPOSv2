@@ -81,6 +81,11 @@ const Commande: React.FC = () => {
         const interval = setInterval(() => fetchOrderData(true), 5000);
         return () => clearInterval(interval);
     }, [fetchOrderData]);
+
+    useEffect(() => {
+        const unsubscribe = api.notifications.subscribe('orders_updated', () => fetchOrderData(true));
+        return () => unsubscribe();
+    }, [fetchOrderData]);
     
     const hasUnsentChanges = useMemo(() => !isOrderSynced(), [isOrderSynced, order, originalOrder]);
 
@@ -222,7 +227,6 @@ const Commande: React.FC = () => {
                 receiptUrl = await uploadPaymentReceipt(receiptFile, { orderId: order.id });
             }
             await api.finalizeOrder(order.id, paymentMethod, receiptUrl);
-            alert("Commande finalisée avec succès !");
             navigate('/ventes');
         } catch (error) {
             console.error("Failed to finalize order", error);
