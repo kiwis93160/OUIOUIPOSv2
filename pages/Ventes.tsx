@@ -10,18 +10,20 @@ const getTableStatus = (table: Table) => {
     return { text: 'Libre', statusClass: 'status--free', Icon: Armchair };
   }
 
-  if (table.statut === 'a_payer') {
-    if (table.estado_cocina === 'servido') {
-      return { text: 'À encaisser', statusClass: 'status--payment', Icon: DollarSign };
-    }
+  if (table.estado_cocina === 'servido') {
+    return { text: 'Para pagar', statusClass: 'status--payment', Icon: DollarSign };
+  }
+
+  if (table.estado_cocina === 'listo') {
     return { text: 'À servir', statusClass: 'status--ready', Icon: HandPlatter };
   }
 
-  if (table.statut === 'occupee') {
-    if (table.estado_cocina === 'recibido') {
-      return { text: 'En cuisine', statusClass: 'status--preparing', Icon: Utensils };
-    }
-    return { text: 'En service', statusClass: 'status--serving', Icon: Utensils };
+  if (table.estado_cocina === 'recibido' || table.estado_cocina === 'no_enviado' || table.statut === 'occupee') {
+    return { text: 'En cuisine', statusClass: 'status--preparing', Icon: Utensils };
+  }
+
+  if (table.statut === 'a_payer') {
+    return { text: 'Para pagar', statusClass: 'status--payment', Icon: DollarSign };
   }
 
   return { text: 'Inconnu', statusClass: 'status--unknown', Icon: Armchair };
