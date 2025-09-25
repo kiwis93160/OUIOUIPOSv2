@@ -290,7 +290,8 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
             onClose();
         } catch (error) {
             console.error("Failed to save product", error);
-            alert("Échec du téléversement de l'image du produit. Vérifiez votre connexion et réessayez.");
+            const message = error instanceof Error ? error.message : "Une erreur inconnue s'est produite.";
+            alert(`Échec du téléversement de l'image du produit : ${message}`);
         } finally {
             setSubmitting(false);
         }

@@ -95,6 +95,9 @@ Dans l'interface Netlify (`Site settings > Environment variables`), ajoutez les 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_GEMINI_API_KEY`
+- `VITE_CLOUDINARY_CLOUD_NAME`
+- `VITE_CLOUDINARY_UPLOAD_PRESET` (et, si nécessaire, `VITE_CLOUDINARY_UPLOAD_PRESET_PRODUCTS` / `VITE_CLOUDINARY_UPLOAD_PRESET_RECEIPTS`)
+- `VITE_CLOUDINARY_PRODUCTS_FOLDER`, `VITE_CLOUDINARY_RECEIPTS_FOLDER`, `VITE_CLOUDINARY_DEFAULT_PRODUCT_IMAGE`
 
 Netlify redémarrera automatiquement après mise à jour. Vérifiez également que la configuration Supabase autorise le domaine Netlify (`Settings > API > Allowed Redirect URLs`) si vous activez l'authentification Supabase ultérieurement.
 
