@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { DEFAULT_PRODUCT_IMAGE } from './storage';
 import {
   Role,
   Table,
@@ -215,7 +216,7 @@ const mapProductRow = (row: SupabaseProductRow, ingredientMap?: Map<string, Ingr
     prix_vente: row.prix_vente,
     categoria_id: row.categoria_id,
     estado: row.estado,
-    image: row.image ?? '',
+    image: row.image && row.image.trim() ? row.image : DEFAULT_PRODUCT_IMAGE,
     recipe,
   };
 
@@ -1325,7 +1326,7 @@ export const api = {
         prix_vente: product.prix_vente,
         categoria_id: product.categoria_id,
         estado: product.estado,
-        image: product.image,
+        image: product.image && product.image.trim() ? product.image : DEFAULT_PRODUCT_IMAGE,
       })
       .select('id')
       .single();
@@ -1352,18 +1353,34 @@ export const api = {
   updateProduct: async (productId: string, updates: Partial<Product>): Promise<Product> => {
     const { recipe, ...rest } = updates;
 
-    if (Object.keys(rest).length > 0) {
-      await supabase
-        .from('products')
-        .update({
-          nom_produit: rest.nom_produit,
-          description: rest.description ?? null,
-          prix_vente: rest.prix_vente,
-          categoria_id: rest.categoria_id,
-          estado: rest.estado,
-          image: rest.image,
-        })
-        .eq('id', productId);
+    const updatePayload: Record<string, unknown> = {};
+
+    if (rest.nom_produit !== undefined) {
+      updatePayload.nom_produit = rest.nom_produit;
+    }
+
+    if (rest.description !== undefined) {
+      updatePayload.description = rest.description ?? null;
+    }
+
+    if (rest.prix_vente !== undefined) {
+      updatePayload.prix_vente = rest.prix_vente;
+    }
+
+    if (rest.categoria_id !== undefined) {
+      updatePayload.categoria_id = rest.categoria_id;
+    }
+
+    if (rest.estado !== undefined) {
+      updatePayload.estado = rest.estado;
+    }
+
+    if (rest.image !== undefined) {
+      updatePayload.image = rest.image && rest.image.trim() ? rest.image : DEFAULT_PRODUCT_IMAGE;
+    }
+
+    if (Object.keys(updatePayload).length > 0) {
+      await supabase.from('products').update(updatePayload).eq('id', productId);
     }
 
     if (recipe) {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { uploadPaymentReceipt } from '../services/storage';
 import { Product, Category, Ingredient, OrderItem, Order } from '../types';
 import Modal from '../components/Modal';
 import { ArrowLeft, ShoppingCart, Plus, Minus, X, Upload, MessageCircle, CheckCircle, RefreshCw, History } from 'lucide-react';
@@ -207,10 +208,17 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
         if (!clientInfo.nom || !clientInfo.telephone || !clientInfo.adresse || !paymentProof) return;
         setSubmitting(true);
         try {
+            let receiptUrl: string | undefined;
+            if (paymentProof) {
+                receiptUrl = await uploadPaymentReceipt(paymentProof, {
+                    customerReference: clientInfo.telephone || clientInfo.nom,
+                });
+            }
+
             const orderData = {
                 items: cart,
                 clientInfo,
-                receipt_url: `https://picsum.photos/seed/${Date.now()}/400/600` // Mocked URL
+                receipt_url: receiptUrl,
             };
             const newOrder = await api.submitCustomerOrder(orderData);
             setSubmittedOrder(newOrder);
@@ -219,7 +227,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
             setClientInfo({nom: '', adresse: '', telephone: ''});
             setPaymentProof(null);
         } catch (err) {
-            alert("Une erreur est survenue lors de la soumission de la commande.");
+            alert("Une erreur est survenue lors de la soumission ou du téléversement du justificatif.");
             console.error(err);
         } finally {
             setSubmitting(false);

@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
+import { uploadProductImage, DEFAULT_PRODUCT_IMAGE } from '../services/storage';
 import { Product, Category, Ingredient, RecipeItem } from '../types';
 import Modal from '../components/Modal';
-import { PlusCircle, Edit, Trash2, Search, Settings, GripVertical, CheckCircle, Clock, XCircle, MoreVertical, Upload } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Settings, GripVertical, CheckCircle, Clock, XCircle, MoreVertical, Upload, HelpCircle } from 'lucide-react';
 
 const getStatusInfo = (status: Product['estado']) => {
     switch (status) {
@@ -240,7 +241,7 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
         prix_vente: product?.prix_vente || 0,
         categoria_id: product?.categoria_id || (categories[0]?.id ?? ''),
         estado: product?.estado || 'disponible',
-        image: product?.image || 'https://picsum.photos/seed/newitem/400',
+        image: product?.image || DEFAULT_PRODUCT_IMAGE,
         description: product?.description || '',
         recipe: product?.recipe || [],
     });
@@ -272,9 +273,14 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
         }
         setSubmitting(true);
         try {
-            // In a real app, you'd upload `imageFile` to cloud storage and get a URL
-            // For this mock, we'll just use the existing or a new picsum URL
-            const finalData = { ...formData, image: imageFile ? URL.createObjectURL(imageFile) : formData.image };
+            let imageUrl = formData.image;
+            if (imageFile) {
+                imageUrl = await uploadProductImage(imageFile, formData.nom_produit);
+            } else if (!imageUrl || !imageUrl.trim()) {
+                imageUrl = DEFAULT_PRODUCT_IMAGE;
+            }
+
+            const finalData = { ...formData, image: imageUrl };
 
             if (mode === 'edit' && product) {
                 await api.updateProduct(product.id, finalData);
@@ -282,9 +288,11 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                 await api.addProduct(finalData as Omit<Product, 'id'>);
             }
             onSuccess();
+            setImageFile(null);
             onClose();
         } catch (error) {
             console.error("Failed to save product", error);
+            alert("Échec du téléversement de l'image du produit. Vérifiez votre connexion et réessayez.");
         } finally {
             setSubmitting(false);
         }
@@ -333,7 +341,7 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Image du produit</label>
                          <div className="mt-1 flex items-center gap-4">
-                            <img src={imageFile ? URL.createObjectURL(imageFile) : formData.image} alt="Aperçu" className="w-20 h-20 object-cover rounded-md bg-gray-100" />
+                            <img src={imageFile ? URL.createObjectURL(imageFile) : (formData.image || DEFAULT_PRODUCT_IMAGE)} alt="Aperçu" className="w-20 h-20 object-cover rounded-md bg-gray-100" />
                              <label htmlFor="product-image-upload" className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary">
                                  <div className="flex items-center gap-2">
                                      <Upload size={16} />
