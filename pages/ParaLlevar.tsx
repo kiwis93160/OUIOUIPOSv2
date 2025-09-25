@@ -23,9 +23,12 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     </div>
                 </header>
 
-                <div className={`p-4 space-y-4 flex-1 transition-colors duration-300 ${urgencyStyles.content}`}>
+
+              <div className="p-3 space-y-3 flex-1 overflow-y-auto">
+
+                
                     {order.clientInfo && (
-                        <div className="space-y-1 text-sm text-gray-700">
+                        <div className="space-y-1 text-sm text-gray-800 bg-white/90 rounded-md p-3 shadow-sm">
                             {order.clientInfo.nom && (
                                 <div className="flex items-center gap-2">
                                     <User size={14} />
@@ -33,7 +36,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                                 </div>
                             )}
                             {order.clientInfo.adresse && (
-                                <div className="flex items-start gap-2 text-sm text-gray-600">
+                                <div className="flex items-start gap-2 text-sm text-gray-700">
                                     <MapPin size={14} className="mt-0.5" />
                                     <span>{order.clientInfo.adresse}</span>
                                 </div>
