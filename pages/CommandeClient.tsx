@@ -259,7 +259,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     
     const generateWhatsAppMessage = (order: Order) => {
         const header = `*Nouvelle Commande OUIOUITACOS #${order.id.slice(-6)}*`;
-        const items = order.items.map(item => {
+        const itemLines = (order.items ?? []).map(item => {
             const baseLine = `- ${item.quantite}x ${item.nom_produit} (${item.prix_unitaire.toFixed(2)}€) → ${(item.prix_unitaire * item.quantite).toFixed(2)}€`;
             const details: string[] = [];
             if (item.commentaire) {
@@ -269,8 +269,10 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                 details.push(`Sans: ${item.excluded_ingredients.join(', ')}`);
             }
             return details.length > 0 ? `${baseLine}\n  ${details.join('\n  ')}` : baseLine;
-        }).join('\n');
-        const totalMsg = `*Total: ${order.total.toFixed(2)}€*`;
+        });
+        const items = itemLines.length > 0 ? itemLines.join('\n') : 'Aucun article';
+        const totalValue = order.total ?? order.items.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0);
+        const totalMsg = `*Total: ${totalValue.toFixed(2)}€*`;
         const paymentMethod = order.payment_method ? `Paiement: ${order.payment_method}` : undefined;
         const client = `Client: ${order.clientInfo?.nom} (${order.clientInfo?.telephone})\nAdresse: ${order.clientInfo?.adresse}`;
         const footer = "Justificatif de paiement ci-joint.";
