@@ -112,18 +112,35 @@ const Commande: React.FC = () => {
         return true;
     }, [ingredients]);
     
-    const updateOrderItems = async (newItems: OrderItem[], options?: {isLocalUpdate?: boolean}) => {
-        if (!order) return;
-        const tempOrder = { ...order, items: newItems, total: newItems.reduce((acc, item) => acc + item.quantite * item.prix_unitaire, 0) };
+    type OrderItemsUpdater = OrderItem[] | ((items: OrderItem[]) => OrderItem[]);
+
+    const updateOrderItems = async (updater: OrderItemsUpdater, options?: {isLocalUpdate?: boolean}) => {
+        const currentOrder = orderRef.current;
+        if (!currentOrder) return;
+
+        const computeItems = (items: OrderItem[]) => typeof updater === 'function'
+            ? (updater as (prevItems: OrderItem[]) => OrderItem[])(items)
+            : updater;
+
+        const newItems = computeItems(currentOrder.items);
+        const tempOrder: Order = {
+            ...currentOrder,
+            items: newItems,
+            total: newItems.reduce((acc, item) => acc + item.quantite * item.prix_unitaire, 0),
+        };
+
         setOrder(tempOrder);
-        
+        orderRef.current = tempOrder;
+
         if (options?.isLocalUpdate) return;
 
         try {
-            const updatedOrder = await api.updateOrder(order.id, { items: newItems });
+            const updatedOrder = await api.updateOrder(currentOrder.id, { items: newItems });
             const ingredientsData = await api.getIngredients();
-            
+
             setOrder(updatedOrder);
+            orderRef.current = updatedOrder;
+            setOriginalOrder(JSON.parse(JSON.stringify(updatedOrder)));
             setIngredients(ingredientsData);
         } catch (error) {
             console.error("Failed to update order:", error);
@@ -133,15 +150,19 @@ const Commande: React.FC = () => {
     };
 
     const addProductToOrder = (product: Product) => {
-        if (!order) return;
-        const existingItemIndex = order.items.findIndex(
-            item => item.produitRef === product.id && item.estado === 'en_attente' && !item.commentaire
-        );
-        let newItems;
-        if (existingItemIndex > -1) {
-            newItems = JSON.parse(JSON.stringify(order.items));
-            newItems[existingItemIndex].quantite += 1;
-        } else {
+        updateOrderItems(items => {
+            const existingItemIndex = items.findIndex(
+                item => item.produitRef === product.id && item.estado === 'en_attente' && !item.commentaire
+            );
+
+            if (existingItemIndex > -1) {
+                return items.map((item, index) => (
+                    index === existingItemIndex
+                        ? { ...item, quantite: item.quantite + 1 }
+                        : item
+                ));
+            }
+
             const newItem: OrderItem = {
                 id: `oi${Date.now()}`,
                 produitRef: product.id,
@@ -152,47 +173,54 @@ const Commande: React.FC = () => {
                 commentaire: '',
                 estado: 'en_attente',
             };
-            newItems = [...order.items, newItem];
-        }
-        updateOrderItems(newItems);
+
+            return [...items, newItem];
+        });
     };
     
     const handleQuantityChange = (itemIndex: number, change: number) => {
-        if (!order) return;
-        const newItems = JSON.parse(JSON.stringify(order.items));
-        const newQuantity = newItems[itemIndex].quantite + change;
-        if (newQuantity <= 0) {
-            newItems.splice(itemIndex, 1);
-        } else {
-            newItems[itemIndex].quantite = newQuantity;
-        }
-        updateOrderItems(newItems);
+        updateOrderItems(items => {
+            if (!items[itemIndex]) return items;
+            const updatedItems = items.map(item => ({ ...item }));
+            const newQuantity = updatedItems[itemIndex].quantite + change;
+
+            if (newQuantity <= 0) {
+                updatedItems.splice(itemIndex, 1);
+            } else {
+                updatedItems[itemIndex].quantite = newQuantity;
+            }
+
+            return updatedItems;
+        });
     };
 
     const handleCommentChange = (itemIndex: number, newComment: string) => {
-        if (!order) return;
-        const newItems = JSON.parse(JSON.stringify(order.items));
-        const itemToUpdate = newItems[itemIndex];
-    
-        if (itemToUpdate.quantite > 1 && !itemToUpdate.commentaire && newComment) {
-            itemToUpdate.quantite -= 1; 
-            const newItemWithComment = {
-                ...itemToUpdate,
-                id: `oi${Date.now()}`,
-                quantite: 1,
-                commentaire: newComment,
-            };
-            newItems.push(newItemWithComment);
-            setEditingCommentId(newItemWithComment.id);
-        } else {
-            itemToUpdate.commentaire = newComment;
-        }
-        updateOrderItems(newItems, { isLocalUpdate: true });
+        updateOrderItems(items => {
+            if (!items[itemIndex]) return items;
+            const updatedItems = items.map(item => ({ ...item }));
+            const itemToUpdate = updatedItems[itemIndex];
+
+            if (itemToUpdate.quantite > 1 && !itemToUpdate.commentaire && newComment) {
+                itemToUpdate.quantite -= 1;
+                const newItemWithComment = {
+                    ...itemToUpdate,
+                    id: `oi${Date.now()}`,
+                    quantite: 1,
+                    commentaire: newComment,
+                };
+                updatedItems.push(newItemWithComment);
+                setEditingCommentId(newItemWithComment.id);
+            } else {
+                itemToUpdate.commentaire = newComment;
+            }
+
+            return updatedItems;
+        }, { isLocalUpdate: true });
     };
 
     const persistCommentChange = (itemIndex: number) => {
-        if (!order) return;
-        updateOrderItems(order.items);
+        if (!orderRef.current) return;
+        updateOrderItems(orderRef.current.items.map(item => ({ ...item })));
         setEditingCommentId(null);
     }
 
