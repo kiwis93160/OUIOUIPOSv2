@@ -1372,7 +1372,11 @@ export const api = {
     }
 
     publishOrderChange();
-    return mapOrderRow(orderRow);
+    const enrichedOrder = await fetchOrderById(orderRow.id);
+    if (!enrichedOrder) {
+      throw new Error('Order not found after creation');
+    }
+    return enrichedOrder;
   },
 
   getCustomerOrderStatus: async (orderId: string): Promise<Order | null> => {
