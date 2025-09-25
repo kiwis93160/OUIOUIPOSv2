@@ -687,20 +687,6 @@ body {
   color: #047857;
 }
 
-.status-card.status--serving {
-  border-color: #ea580c;
-  background-color: #fff7ed;
-  color: #7c2d12;
-}
-
-.status-card.status--serving .status-card__icon {
-  color: #f97316;
-}
-
-.status-card.status--serving .status-card__state {
-  color: #c2410c;
-}
-
 .status-card.status--preparing {
   border-color: #d97706;
   background-color: #fef3c7;
@@ -755,7 +741,6 @@ body {
 }
 
 .status-card.status--free .status-card__meta,
-.status-card.status--serving .status-card__meta,
 .status-card.status--preparing .status-card__meta,
 .status-card.status--ready .status-card__meta,
 .status-card.status--payment .status-card__meta {
