@@ -4,18 +4,18 @@ import { Order, OrderItem } from '../types';
 import { Eye, User, MapPin } from 'lucide-react';
 import Modal from '../components/Modal';
 import OrderTimer from '../components/OrderTimer';
-import { getOrderUrgencyClass } from '../utils/orderUrgency';
+import { getOrderUrgencyStyles } from '../utils/orderUrgency';
 
 const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => void, onDeliver?: (orderId: string) => void, isProcessing?: boolean }> = ({ order, onValidate, onDeliver, isProcessing }) => {
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
     const displayName = order.table_nom || `Commande #${order.id.slice(-6)}`;
     const timerStart = order.date_envoi_cuisine || order.date_creation;
-    const urgencyClass = getOrderUrgencyClass(timerStart);
+    const urgencyStyles = getOrderUrgencyStyles(timerStart);
 
     return (
         <>
-            <div className={`rounded-lg border shadow-md flex flex-col h-full overflow-hidden ${urgencyClass}`}>
+            <div className={`rounded-lg border shadow-md flex flex-col h-full overflow-hidden transition-colors duration-300 ${urgencyStyles.container}`}>
                 <header className="bg-brand-secondary text-white p-3 rounded-t-lg">
                     <div className="flex flex-col gap-3">
                         <h4 className="text-xl font-bold leading-tight">{displayName}</h4>
@@ -23,7 +23,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     </div>
                 </header>
 
-                <div className="p-4 space-y-4 flex-1 bg-white/80">
+                <div className={`p-4 space-y-4 flex-1 transition-colors duration-300 ${urgencyStyles.content}`}>
                     {order.clientInfo && (
                         <div className="space-y-1 text-sm text-gray-700">
                             {order.clientInfo.nom && (
@@ -58,7 +58,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     </div>
                 </div>
 
-                <footer className="p-4 border-t bg-white space-y-3">
+                <footer className={`p-4 border-t space-y-3 transition-colors duration-300 ${urgencyStyles.content}`}>
                     {order.statut === 'pendiente_validacion' && onValidate && (
                         <div className="space-y-2">
                             <button

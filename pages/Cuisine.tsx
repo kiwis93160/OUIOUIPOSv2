@@ -4,12 +4,14 @@ import { api } from '../services/api';
 import { KitchenTicket as KitchenTicketOrder, OrderItem } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import OrderTimer from '../components/OrderTimer';
-import { getOrderUrgencyClass } from '../utils/orderUrgency';
+import { getOrderUrgencyStyles } from '../utils/orderUrgency';
 
 const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId: string) => void; canMarkReady: boolean }> = ({ order, onReady, canMarkReady }) => {
 
+    const urgencyStyles = getOrderUrgencyStyles(order.date_envoi_cuisine || Date.now());
+
     return (
-        <div className={`rounded-lg border shadow-md flex flex-col h-full ${getOrderUrgencyClass(order.date_envoi_cuisine || Date.now())}`}>
+        <div className={`rounded-lg border shadow-md flex flex-col h-full overflow-hidden transition-colors duration-300 ${urgencyStyles.container}`}>
             <header className="bg-brand-secondary text-white p-3 rounded-t-lg">
                 <div className="flex flex-col gap-2">
                     <h3 className="text-xl font-bold w-full">{order.table_nom || `À emporter #${order.id.slice(-4)}`}</h3>
@@ -21,7 +23,7 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
                     </div>
                 </div>
             </header>
-            <div className="p-3 space-y-2 flex-1 overflow-y-auto">
+            <div className={`p-3 space-y-2 flex-1 overflow-y-auto transition-colors duration-300 ${urgencyStyles.content}`}>
                 {order.items.map((item: OrderItem) => (
                     <div key={item.id} className="p-2 bg-gray-50 rounded">
                         <p className="font-bold text-lg text-gray-900">{item.quantite}x {item.nom_produit}</p>
@@ -30,7 +32,7 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
                 ))}
             </div>
             {canMarkReady && (
-                <footer className="p-3 border-t">
+                <footer className={`p-3 border-t transition-colors duration-300 ${urgencyStyles.content}`}>
                     <button onClick={() => onReady(order.id)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg text-lg flex items-center justify-center space-x-2 hover:bg-green-700 transition">
                         <ChefHat size={24}/>
                         <span>PRÊT</span>
