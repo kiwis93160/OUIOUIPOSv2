@@ -28,6 +28,7 @@ type SupabaseRoleRow = {
   name: string;
   pin?: string | null;
   permissions: SupabasePermissions | null;
+
 };
 
 type SupabaseTableRow = {
@@ -217,6 +218,7 @@ const mapRoleRow = (row: SupabaseRoleRow, includePin: boolean): Role => {
     name: row.name,
     homePage,
     permissions,
+
   };
 
   if (includePin && row.pin) {
@@ -559,6 +561,7 @@ export const api = {
 
   getRoles: async (): Promise<Role[]> => {
     const response = await supabase.from('roles').select('id, name, pin, permissions').order('name');
+
     const rows = unwrap<SupabaseRoleRow[]>(response as SupabaseResponse<SupabaseRoleRow[]>);
     return rows.map(row => mapRoleRow(row, true));
   },
@@ -566,7 +569,7 @@ export const api = {
   getRoleById: async (roleId: string): Promise<Role | null> => {
     const response = await supabase
       .from('roles')
-      .select('id, name, permissions')
+      .select('id, name, permissions, home_page')
       .eq('id', roleId)
       .maybeSingle();
     const row = unwrapMaybe<SupabaseRoleRow>(response as SupabaseResponse<SupabaseRoleRow | null>);
@@ -580,8 +583,9 @@ export const api = {
         name: payload.name,
         pin: payload.pin,
         permissions: mergeHomePageIntoPermissions(payload.permissions, payload.homePage),
+
       })
-      .select('id, name, pin, permissions')
+      .select('id, name, pin, permissions, home_page')
       .single();
     const row = unwrap<SupabaseRoleRow>(response as SupabaseResponse<SupabaseRoleRow>);
     notificationsService.publish('notifications_updated');
@@ -595,9 +599,10 @@ export const api = {
         name: updates.name,
         pin: updates.pin,
         permissions: mergeHomePageIntoPermissions(updates.permissions, updates.homePage),
+
       })
       .eq('id', roleId)
-      .select('id, name, pin, permissions')
+      .select('id, name, pin, permissions, home_page')
       .single();
     const row = unwrap<SupabaseRoleRow>(response as SupabaseResponse<SupabaseRoleRow>);
     notificationsService.publish('notifications_updated');
@@ -613,7 +618,7 @@ export const api = {
   loginWithPin: async (pin: string): Promise<Role | null> => {
     const response = await supabase
       .from('roles')
-      .select('id, name, permissions')
+      .select('id, name, permissions, home_page')
       .eq('pin', pin)
       .maybeSingle();
     const row = unwrapMaybe<SupabaseRoleRow>(response as SupabaseResponse<SupabaseRoleRow | null>);
