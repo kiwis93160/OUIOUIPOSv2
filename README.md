@@ -21,8 +21,31 @@ View your app in AI Studio: https://ai.studio/apps/drive/1meoqOtR5vy-dbHklLN4Aqh
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
    - `VITE_GEMINI_API_KEY`
+   - les variables Cloudinary décrites ci-dessous
 3. Run the app:
    `npm run dev`
+
+## Hébergement des images avec Cloudinary
+
+1. **Créer un compte Cloudinary** (gratuit) et récupérer votre `Cloud name` dans le tableau de bord.
+2. **Configurer un ou plusieurs _upload presets_** dans _Settings → Upload_.
+   - Activez un preset non signé pour les produits (`Unsigned uploading`).
+   - Activez un second preset pour les justificatifs de paiement si vous souhaitez séparer les quotas, sinon réutilisez le même.
+3. (Optionnel) **Créer des dossiers** `products` et `receipts` dans la médiathèque Cloudinary pour garder les assets organisés.
+4. **Téléverser votre image de placeholder** (logo ou photo générique) et copiez son URL sécurisée (`https://res.cloudinary.com/...`).
+5. **Renseigner les variables d'environnement** dans `.env.local` :
+   - `VITE_CLOUDINARY_CLOUD_NAME`
+   - `VITE_CLOUDINARY_UPLOAD_PRESET` (preset principal, utilisé par défaut)
+   - `VITE_CLOUDINARY_UPLOAD_PRESET_PRODUCTS` / `VITE_CLOUDINARY_UPLOAD_PRESET_RECEIPTS` (facultatifs si vous souhaitez des presets distincts)
+   - `VITE_CLOUDINARY_PRODUCTS_FOLDER` / `VITE_CLOUDINARY_RECEIPTS_FOLDER` (nom des dossiers cibles)
+   - `VITE_CLOUDINARY_DEFAULT_PRODUCT_IMAGE` (URL sécurisée du placeholder téléversé à l'étape 4)
+6. **Redémarrer le serveur de dev** (`npm run dev`) pour prendre en compte la configuration.
+
+Une fois ces étapes terminées :
+
+- chaque ajout/modification de produit qui inclut une image la téléversera automatiquement dans Cloudinary avant d'enregistrer l'URL publique en base ;
+- les justificatifs de paiement transmis depuis l'interface staff ou client sont également envoyés sur Cloudinary et liés à la commande concernée ;
+- si un produit n'a pas encore d'image, l'application affichera le placeholder hébergé sur votre compte Cloudinary (plus aucun lien cassé ou image d'exemple).
 
 ## Configuration Supabase
 
