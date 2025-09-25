@@ -1409,7 +1409,7 @@ export const api = {
       .from('orders')
       .update({
         statut: 'finalisee',
-        estado_cocina: 'servido',
+        estado_cocina: 'entregada',
         payment_method: 'transferencia',
       })
       .eq('id', orderId);
@@ -1444,18 +1444,24 @@ export const api = {
     const start = getBusinessDayStart(now);
     const startIso = start.toISOString();
 
-    const [ordersResponse, categories, ingredients, productRowsResponse, roleLogins] = await Promise.all([
-      selectOrdersQuery()
-        .eq('statut', 'finalisee')
-        .gte('date_creation', startIso)
-        .lte('date_creation', now.toISOString()),
+    const [ordersResponse, categories, ingredients, productRowsResponse, roleLoginsResult] = await Promise.all([
+      selectOrdersQuery().eq('statut', 'finalisee'),
       fetchCategories(),
       fetchIngredients(),
       selectProductsQuery(),
-      fetchRoleLoginsSince(startIso),
+      fetchRoleLoginsSince(startIso).catch(error => {
+        console.error('Failed to fetch role logins for daily report', error);
+        return [] as RoleLogin[];
+      }),
     ]);
     const rows = unwrap<SupabaseOrderRow[]>(ordersResponse as SupabaseResponse<SupabaseOrderRow[]>);
-    const orders = rows.map(mapOrderRow);
+    const allOrders = rows.map(mapOrderRow);
+    const startTime = start.getTime();
+    const endTime = now.getTime();
+    const orders = allOrders.filter(order => {
+      const referenceDate = order.date_servido ?? order.date_listo_cuisine ?? order.date_creation;
+      return referenceDate >= startTime && referenceDate <= endTime;
+    });
 
     const ventesDuJour = orders.reduce((sum, order) => sum + order.total, 0);
     const clientsDuJour = orders.reduce((sum, order) => sum + order.couverts, 0);
@@ -1511,7 +1517,7 @@ export const api = {
       ventesDuJour,
       soldProducts: Array.from(soldProductsByCategory.values()),
       lowStockIngredients: ingredientsStockBas,
-      roleLogins,
+      roleLogins: roleLoginsResult,
     };
   },
 
