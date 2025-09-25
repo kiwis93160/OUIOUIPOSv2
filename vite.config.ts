@@ -1,12 +1,16 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const resolveSupabaseFallbackAlias = (): Record<string, string> => {
   const supabaseModulePath = path.resolve(
     __dirname,
-    'node_modules/@supabase/supabase-js'
+    'node_modules/@supabase/supabase-js',
   );
 
   if (fs.existsSync(supabaseModulePath)) {
@@ -14,11 +18,19 @@ const resolveSupabaseFallbackAlias = (): Record<string, string> => {
   }
 
   return {
-    '@supabase/supabase-js': path.resolve(__dirname, 'stubs/supabase-js.ts'),
+    '@supabase/supabase-js': path.resolve(
+      __dirname,
+      'stubs/supabase-js.ts',
+    ),
   };
 };
 
-      },
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './'),
+      ...resolveSupabaseFallbackAlias(),
     },
-  };
+  },
 });
