@@ -240,6 +240,11 @@ const Commande: React.FC = () => {
     };
     
     const handleExitAttempt = () => {
+        if (order && order.estado_cocina === 'no_enviado' && order.items.length > 0) {
+            setExitConfirmOpen(true);
+            return;
+        }
+
         if (hasUnsentChanges) {
             setExitConfirmOpen(true);
         } else {
@@ -248,11 +253,18 @@ const Commande: React.FC = () => {
     };
 
     const handleConfirmExit = async () => {
-        if (originalOrder && !isOrderSynced(originalOrder)) {
-            await updateOrderItems(originalOrder.items);
+        try {
+            if (order && order.estado_cocina === 'no_enviado') {
+                await api.cancelUnsentTableOrder(order.id);
+            } else if (originalOrder && !isOrderSynced(originalOrder)) {
+                await updateOrderItems(originalOrder.items);
+            }
+        } catch (error) {
+            console.error('Failed to cancel unsent order before exiting', error);
+        } finally {
+            setExitConfirmOpen(false);
+            navigate('/ventes');
         }
-        setExitConfirmOpen(false);
-        navigate('/ventes');
     };
 
     if (loading) return <div className="text-center p-10 text-gray-800">Chargement de la commande...</div>;

@@ -992,6 +992,32 @@ export const api = {
     return mapOrderRow(insertedRow);
   },
 
+  cancelUnsentTableOrder: async (orderId: string): Promise<void> => {
+    const existingOrder = await fetchOrderById(orderId);
+    if (!existingOrder) {
+      return;
+    }
+
+    const hasBeenSent = existingOrder.estado_cocina !== 'no_enviado'
+      || existingOrder.items.some(item => item.estado !== 'en_attente');
+
+    if (hasBeenSent) {
+      return;
+    }
+
+    await supabase.from('order_items').delete().eq('order_id', orderId);
+    await supabase.from('orders').delete().eq('id', orderId);
+
+    if (existingOrder.table_id) {
+      await supabase
+        .from('restaurant_tables')
+        .update({ statut: 'libre', commande_id: null, couverts: null })
+        .eq('id', existingOrder.table_id);
+    }
+
+    publishOrderChange();
+  },
+
   updateOrder: async (orderId: string, updates: Partial<Order>): Promise<Order> => {
     const existingOrder = await fetchOrderById(orderId);
     if (!existingOrder) {

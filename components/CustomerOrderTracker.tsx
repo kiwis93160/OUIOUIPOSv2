@@ -2,6 +2,12 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { api } from '../services/api';
 import { Order } from '../types';
 import { CheckCircle, ChefHat, FileText, PackageCheck, User, MapPin, Receipt, Phone } from 'lucide-react';
+import {
+    clearActiveCustomerOrder,
+    getActiveCustomerOrder,
+    ONE_DAY_IN_MS,
+    storeActiveCustomerOrder,
+} from '../services/customerOrderStorage';
 import Modal from './Modal';
 
 const saveOrderToHistory = (order: Order) => {
@@ -39,7 +45,7 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
 
     const getCurrentStepIndex = useCallback((order: Order | null): number => {
         if (!order) return -1;
-        if (order.statut === 'finalisee') return 3;
+        if (order.statut === 'finalisee' || order.estado_cocina === 'servido') return 3;
         if (order.estado_cocina === 'listo') return 2;
         if (order.estado_cocina === 'recibido') return 1;
         if (order.statut === 'pendiente_validacion') return 0;
@@ -57,9 +63,17 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
                 const orderStatus = await api.getCustomerOrderStatus(orderId);
                 if (isMounted) {
                     setOrder(orderStatus);
-                    if (orderStatus?.statut === 'finalisee') {
+                    if (orderStatus?.statut === 'finalisee' || orderStatus?.estado_cocina === 'servido') {
                         if (interval) clearInterval(interval);
                         saveOrderToHistory(orderStatus);
+                        const servedAt = orderStatus.date_servido ?? Date.now();
+                        storeActiveCustomerOrder(orderStatus.id, servedAt + ONE_DAY_IN_MS);
+                    }
+                    if (!orderStatus) {
+                        const active = getActiveCustomerOrder();
+                        if (active?.orderId === orderId) {
+                            clearActiveCustomerOrder();
+                        }
                     }
                 }
             } catch (e) {
@@ -77,6 +91,8 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
             clearInterval(interval);
         };
     }, [orderId]);
+
+    const isOrderCompleted = order?.statut === 'finalisee' || order?.estado_cocina === 'servido';
 
     const containerClasses = variant === 'page'
       ? "container mx-auto p-4 lg:p-8"
@@ -156,7 +172,14 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
                     </div>
                 </div>
 
-                <div className="mt-8 text-center">
+                <div className="mt-8 text-center space-y-4">
+                    {isOrderCompleted && (
+                        <div className="flex justify-center">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700">
+                                <CheckCircle size={16} /> Terminée
+                            </span>
+                        </div>
+                    )}
                     {order.statut === 'finalisee' ? (
                         <button onClick={onNewOrderClick} className={`${variant === 'hero' ? 'bg-gray-200 text-gray-800' : 'bg-brand-primary text-brand-secondary'} font-bold py-3 px-6 rounded-lg hover:bg-gray-300 transition`}>
                             Passer une nouvelle commande
