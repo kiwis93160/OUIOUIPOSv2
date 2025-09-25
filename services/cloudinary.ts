@@ -66,6 +66,7 @@ const uploadToCloudinary = async (
 ): Promise<string> => {
   const cloudName = ensureEnv('VITE_CLOUDINARY_CLOUD_NAME', 'les téléversements de médias');
   const preset = uploadPreset ?? ensureEnv('VITE_CLOUDINARY_UPLOAD_PRESET', 'les téléversements de médias');
+  const presetName = preset;
 
   const formData = new FormData();
   formData.append('file', file);
@@ -91,9 +92,16 @@ const uploadToCloudinary = async (
   const payload = (await response.json()) as CloudinaryUploadResponse;
 
   if (!response.ok || payload.error) {
-    throw new Error(
-      payload.error?.message ?? `Échec du téléversement Cloudinary (statut ${response.status}).`,
-    );
+    const cloudinaryMessage = payload.error?.message;
+
+    if (cloudinaryMessage && /upload preset/i.test(cloudinaryMessage)) {
+      throw new Error(
+        `Le preset Cloudinary "${presetName}" est introuvable ou ne permet pas les téléversements non signés. ` +
+          'Vérifiez sa configuration dans votre console Cloudinary (Settings → Upload → Upload presets).',
+      );
+    }
+
+    throw new Error(cloudinaryMessage ?? `Échec du téléversement Cloudinary (statut ${response.status}).`);
   }
 
   if (!payload.secure_url && !payload.url) {
