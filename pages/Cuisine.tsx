@@ -4,18 +4,12 @@ import { api } from '../services/api';
 import { Order, OrderItem } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import OrderTimer from '../components/OrderTimer';
+import { getOrderUrgencyClass } from '../utils/orderUrgency';
 
 const KitchenTicket: React.FC<{ order: Order; onReady: (orderId: string) => void; canMarkReady: boolean }> = ({ order, onReady, canMarkReady }) => {
 
-    const getBackgroundColor = () => {
-        const minutes = (Date.now() - (order.date_envoi_cuisine || Date.now())) / 60000;
-        if (minutes > 15) return 'bg-red-200 border-red-500';
-        if (minutes > 8) return 'bg-yellow-200 border-yellow-500';
-        return 'bg-white border-gray-300';
-    };
-
     return (
-        <div className={`rounded-lg border shadow-md flex flex-col h-full ${getBackgroundColor()}`}>
+        <div className={`rounded-lg border shadow-md flex flex-col h-full ${getOrderUrgencyClass(order.date_envoi_cuisine || Date.now())}`}>
             <header className="bg-brand-secondary text-white p-3 rounded-t-lg">
                 <div className="flex flex-col gap-2">
                     <h3 className="text-xl font-bold w-full">{order.table_nom || `À emporter #${order.id.slice(-4)}`}</h3>

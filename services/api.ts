@@ -195,6 +195,19 @@ const toTimestamp = (value?: string | null): number | undefined => {
   return new Date(value).getTime();
 };
 
+const toNumber = (value: number | string | null | undefined): number | undefined => {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
 const toIsoString = (value: number | undefined | null): string | null | undefined => {
   if (value === undefined) {
     return undefined;
@@ -314,7 +327,7 @@ const mapOrderItemRow = (row: SupabaseOrderItemRow): OrderItem => ({
   id: row.id,
   produitRef: row.produit_id,
   nom_produit: row.nom_produit,
-  prix_unitaire: row.prix_unitaire,
+  prix_unitaire: toNumber(row.prix_unitaire) ?? 0,
   quantite: row.quantite,
   excluded_ingredients: row.excluded_ingredients ?? [],
   commentaire: row.commentaire ?? '',
@@ -364,6 +377,8 @@ const reorderOrderItems = (referenceItems: OrderItem[], itemsToReorder: OrderIte
 
 const mapOrderRow = (row: SupabaseOrderRow): Order => {
   const items = (row.order_items ?? []).map(mapOrderItemRow);
+  const total = toNumber(row.total);
+  const profit = toNumber(row.profit);
   const order: Order = {
     id: row.id,
     type: row.type,
@@ -378,10 +393,8 @@ const mapOrderRow = (row: SupabaseOrderRow): Order => {
     date_servido: toTimestamp(row.date_servido),
     payment_status: row.payment_status,
     items,
-    total:
-      row.total ??
-      items.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0),
-    profit: row.profit ?? undefined,
+    total: total ?? items.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0),
+    profit: profit,
     payment_method: row.payment_method ?? undefined,
     payment_receipt_url: row.payment_receipt_url ?? undefined,
     receipt_url: row.receipt_url ?? undefined,

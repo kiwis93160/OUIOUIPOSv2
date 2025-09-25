@@ -17,7 +17,7 @@ const ResumeVentes: React.FC = () => {
         const fetchOrders = async () => {
             try {
                 const ordersData = await api.getFinalizedOrders();
-                setOrders(ordersData.sort((a, b) => b.date_creation - a.date_creation));
+                setOrders([...ordersData].sort((a, b) => b.date_creation - a.date_creation));
             } catch (error) {
                 console.error("Failed to fetch finalized orders", error);
             } finally {
@@ -136,12 +136,13 @@ const ResumeVentes: React.FC = () => {
                                         </td>
                                         <td className="p-3 text-sm text-gray-700 whitespace-nowrap">{new Date(order.date_creation).toLocaleString('fr-FR')}</td>
                                         <td className="p-3 text-sm">
-                                            {order.type === 'sur_place' ? 
-                                                <span className="inline-flex items-center gap-1.5 py-1 px-2 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><User size={12}/> Sur Place</span> :
-                                                <span className="inline-flex items-center gap-1.5 py-1 px-2 rounded-full text-xs font-medium bg-purple-100 text-purple-800"><ShoppingBag size={12}/>À Emporter</span>
-                                            }
+                                            {order.type === 'sur_place' ? (
+                                                <span className="inline-flex items-center gap-1.5 py-1 px-2 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><User size={12}/> Sur Place</span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 py-1 px-2 rounded-full text-xs font-medium bg-purple-100 text-purple-800"><ShoppingBag size={12}/> À Emporter</span>
+                                            )}
                                         </td>
-                                        <td className="p-3 font-semibold text-gray-900">{order.type === 'sur_place' ? order.table_nom : order.clientInfo?.nom}</td>
+                                        <td className="p-3 font-semibold text-gray-900">{order.type === 'sur_place' ? (order.table_nom || 'N/A') : (order.clientInfo?.nom || 'N/A')}</td>
                                         <td className="p-3 text-gray-800 font-bold text-right">{order.total.toFixed(2)} €</td>
                                         <td className="p-3 font-semibold text-green-600 text-right">{(order.profit || 0).toFixed(2)} €</td>
                                         <td className="p-3 text-gray-700 capitalize">{order.payment_method || 'N/A'}</td>
