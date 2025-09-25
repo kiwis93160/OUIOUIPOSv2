@@ -26,7 +26,16 @@ const sanitizeSegment = (value: string | undefined, fallback: string): string =>
   return slug || fallback;
 };
 
-const getEnv = (key: string): string | undefined => env[key]?.trim();
+const getEnv = (key: string): string | undefined => {
+  const raw = env[key];
+  if (typeof raw !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
 
 const ensureEnv = (key: string, context: string): string => {
   const value = getEnv(key);

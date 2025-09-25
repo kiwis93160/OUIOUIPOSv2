@@ -218,7 +218,6 @@ const mapProductRow = (row: SupabaseProductRow, ingredientMap?: Map<string, Ingr
     categoria_id: row.categoria_id,
     estado: row.estado,
     image: resolveProductImageUrl(row.image),
-
     recipe,
   };
 
@@ -1398,7 +1397,6 @@ export const api = {
     }
 
     if (rest.image !== undefined) {
-
       updatePayload.image = normalizeCloudinaryImageUrl(rest.image);
 
     }
