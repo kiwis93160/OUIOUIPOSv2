@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { normalizeCloudinaryImageUrl, resolveProductImageUrl } from './cloudinary';
+import { normalizeProductImageInput } from './productImage';
 
 import {
   Role,
