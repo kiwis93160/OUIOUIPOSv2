@@ -1,17 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../services/api';
 import { Order, OrderItem } from '../types';
-import { Clock, Eye, User, MapPin } from 'lucide-react';
+import { Eye, User, MapPin } from 'lucide-react';
 import Modal from '../components/Modal';
 import OrderTimer from '../components/OrderTimer';
-import { formatElapsedSince } from '../utils/time';
 
 const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => void, onDeliver?: (orderId: string) => void, isProcessing?: boolean }> = ({ order, onValidate, onDeliver, isProcessing }) => {
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
     const displayName = order.table_nom || `Commande #${order.id.slice(-6)}`;
     const timerStart = order.date_envoi_cuisine || order.date_creation;
-    const readySince = order.date_listo_cuisine ? formatElapsedSince(order.date_listo_cuisine) : null;
 
     return (
         <>
@@ -56,9 +54,6 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     )}
                     {order.estado_cocina === 'listo' && onDeliver && (
                          <>
-                            {readySince && (
-                                <span className="text-sm text-green-600 flex items-center justify-center font-semibold"><Clock size={16} className="mr-1"/> Prête depuis {readySince}</span>
-                            )}
                             <button
                                 onClick={() => onDeliver(order.id)}
                                 disabled={isProcessing}

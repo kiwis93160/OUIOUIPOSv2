@@ -45,7 +45,13 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
 
     const getCurrentStepIndex = useCallback((order: Order | null): number => {
         if (!order) return -1;
-        if (order.statut === 'finalisee' || order.estado_cocina === 'servido') return 3;
+        if (
+            order.statut === 'finalisee' ||
+            order.estado_cocina === 'servido' ||
+            (order.type === 'a_emporter' && order.estado_cocina === 'listo')
+        ) {
+            return 3;
+        }
         if (order.estado_cocina === 'listo') return 2;
         if (order.estado_cocina === 'recibido') return 1;
         if (order.statut === 'pendiente_validacion') return 0;
@@ -92,7 +98,10 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
         };
     }, [orderId]);
 
-    const isOrderCompleted = order?.statut === 'finalisee' || order?.estado_cocina === 'servido';
+    const isOrderCompleted =
+        order?.statut === 'finalisee' ||
+        order?.estado_cocina === 'servido' ||
+        (order?.type === 'a_emporter' && order?.estado_cocina === 'listo');
 
     const containerClasses = variant === 'page'
       ? "container mx-auto p-4 lg:p-8"

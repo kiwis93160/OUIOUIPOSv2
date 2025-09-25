@@ -61,7 +61,9 @@ const TableCard: React.FC<{ table: Table; onServe: (orderId: string) => void }> 
       <div className="status-card__header">
         <h3 className="status-card__title">{table.nom}</h3>
         {table.date_envoi_cuisine && table.statut !== 'libre' && (
-          <OrderTimer startTime={table.date_envoi_cuisine} />
+          <div className="status-card__timer">
+            <OrderTimer startTime={table.date_envoi_cuisine} className="w-full justify-center" />
+          </div>
         )}
       </div>
 
