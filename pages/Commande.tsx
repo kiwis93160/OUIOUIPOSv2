@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { uploadPaymentReceipt } from '../services/cloudinary';
 import { Order, Product, Category, OrderItem, Ingredient } from '../types';
 import { PlusCircle, MinusCircle, Send, DollarSign, AlertTriangle, Check, ArrowLeft, MessageSquare } from 'lucide-react';
 import OrderTimer from '../components/OrderTimer';
@@ -204,13 +205,16 @@ const Commande: React.FC = () => {
     const handleFinalizeOrder = async (paymentMethod: Order['payment_method'], receiptFile?: File | null) => {
         if (!order) return;
         try {
-            const receiptUrl = receiptFile ? `https://fake-storage.com/${receiptFile.name}` : undefined;
+            let receiptUrl = order.payment_receipt_url ?? undefined;
+            if (receiptFile) {
+                receiptUrl = await uploadPaymentReceipt(receiptFile, { orderId: order.id });
+            }
             await api.finalizeOrder(order.id, paymentMethod, receiptUrl);
             alert("Commande finalisée avec succès !");
             navigate('/ventes');
         } catch (error) {
             console.error("Failed to finalize order", error);
-            alert("Erreur lors de la finalisation.");
+            alert("Erreur lors de la finalisation ou du téléversement du justificatif.");
         }
     };
     
