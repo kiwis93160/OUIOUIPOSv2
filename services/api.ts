@@ -17,13 +17,18 @@ import {
   SoldProduct,
   Sale,
 } from '../types';
+import { ROLE_HOME_PAGE_META_KEY } from '../constants';
+
+type SupabasePermissions = Role['permissions'] & {
+  [key in typeof ROLE_HOME_PAGE_META_KEY]?: string;
+};
 
 type SupabaseRoleRow = {
   id: string;
   name: string;
   pin?: string | null;
-  permissions: Role['permissions'] | null;
-  home_page?: string | null;
+  permissions: SupabasePermissions | null;
+
 };
 
 type SupabaseTableRow = {
@@ -176,12 +181,44 @@ const calculateCost = (recipe: RecipeItem[], ingredientMap: Map<string, Ingredie
   }, 0);
 };
 
+const extractPermissions = (
+  permissions: SupabaseRoleRow['permissions'],
+): { permissions: Role['permissions']; homePage?: string } => {
+  if (!permissions) {
+    return { permissions: {}, homePage: undefined };
+  }
+
+  const { [ROLE_HOME_PAGE_META_KEY]: homePage, ...permissionLevels } = permissions;
+
+  return {
+    permissions: permissionLevels as Role['permissions'],
+    homePage: typeof homePage === 'string' ? homePage : undefined,
+  };
+};
+
+const mergeHomePageIntoPermissions = (
+  permissions: Role['permissions'],
+  homePage?: string,
+): SupabasePermissions => {
+  const payload: SupabasePermissions = { ...permissions };
+
+  if (homePage) {
+    payload[ROLE_HOME_PAGE_META_KEY] = homePage;
+  } else {
+    delete payload[ROLE_HOME_PAGE_META_KEY];
+  }
+
+  return payload;
+};
+
 const mapRoleRow = (row: SupabaseRoleRow, includePin: boolean): Role => {
+  const { permissions, homePage } = extractPermissions(row.permissions);
   const role: Role = {
     id: row.id,
     name: row.name,
-    homePage: row.home_page ?? undefined,
-    permissions: row.permissions ?? {},
+    homePage,
+    permissions,
+
   };
 
   if (includePin && row.pin) {
@@ -523,10 +560,8 @@ export const api = {
   notifications: notificationsService,
 
   getRoles: async (): Promise<Role[]> => {
-    const response = await supabase
-      .from('roles')
-      .select('id, name, pin, permissions, home_page')
-      .order('name');
+    const response = await supabase.from('roles').select('id, name, pin, permissions').order('name');
+
     const rows = unwrap<SupabaseRoleRow[]>(response as SupabaseResponse<SupabaseRoleRow[]>);
     return rows.map(row => mapRoleRow(row, true));
   },
@@ -547,8 +582,8 @@ export const api = {
       .insert({
         name: payload.name,
         pin: payload.pin,
-        permissions: payload.permissions,
-        home_page: payload.homePage ?? null,
+        permissions: mergeHomePageIntoPermissions(payload.permissions, payload.homePage),
+
       })
       .select('id, name, pin, permissions, home_page')
       .single();
@@ -563,8 +598,8 @@ export const api = {
       .update({
         name: updates.name,
         pin: updates.pin,
-        permissions: updates.permissions,
-        home_page: updates.homePage ?? null,
+        permissions: mergeHomePageIntoPermissions(updates.permissions, updates.homePage),
+
       })
       .eq('id', roleId)
       .select('id, name, pin, permissions, home_page')

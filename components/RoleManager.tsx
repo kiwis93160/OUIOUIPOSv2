@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Save, Trash2 } from 'lucide-react';
 import Modal from './Modal';
 import { api } from '../services/api';
-import { NAV_LINKS } from '../constants';
+import { NAV_LINKS, ROLE_HOME_PAGE_META_KEY } from '../constants';
 import { Role } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -25,7 +25,8 @@ const DEFAULT_HOME_PAGE = NAV_LINKS[0]?.permissionKey ?? '/dashboard';
 const isPermissionGranted = (permission?: PermissionLevel) => permission === 'editor' || permission === 'readonly';
 
 const ensureNavPermissions = (permissions?: Role['permissions']): Role['permissions'] => {
-  const base: Role['permissions'] = { ...(permissions || {}) };
+  const base: Record<string, PermissionLevel> = { ...(permissions || {}) };
+  delete base[ROLE_HOME_PAGE_META_KEY];
   NAV_LINKS.forEach(link => {
     if (!(link.permissionKey in base)) {
       base[link.permissionKey] = 'none';
@@ -66,6 +67,9 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
 
     roles.forEach(role => {
       Object.keys(role.permissions).forEach(key => {
+        if (key === ROLE_HOME_PAGE_META_KEY) {
+          return;
+        }
         if (!navKeys.includes(key)) {
           extraKeys.add(key);
         }
