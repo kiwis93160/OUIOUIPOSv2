@@ -4,8 +4,9 @@ import { api } from '../services/api';
 import { uploadPaymentReceipt } from '../services/cloudinary';
 import { Product, Category, Ingredient, OrderItem, Order } from '../types';
 import Modal from '../components/Modal';
-import { ArrowLeft, ShoppingCart, Plus, Minus, X, Upload, MessageCircle, CheckCircle, RefreshCw, History } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Plus, Minus, X, Upload, MessageCircle, CheckCircle, History } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
+import { clearActiveCustomerOrder, getActiveCustomerOrder, storeActiveCustomerOrder } from '../services/customerOrderStorage';
 
 // ==================================================================================
 // 2. Item Customization Modal
@@ -126,6 +127,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     const [submitting, setSubmitting] = useState(false);
     const [submittedOrder, setSubmittedOrder] = useState<Order | null>(null);
     const [orderHistory, setOrderHistory] = useState<Order[]>([]);
+    const [hasProcessedQueuedReorder, setHasProcessedQueuedReorder] = useState(false);
 
     useEffect(() => {
         try {
@@ -154,6 +156,18 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
             setLoading(false);
         }
     }, []);
+
+    useEffect(() => {
+        if (orderHistory.length === 0 || hasProcessedQueuedReorder) return;
+        const queuedReorderId = localStorage.getItem('customer-order-reorder-id');
+        if (!queuedReorderId) return;
+        const pastOrder = orderHistory.find(order => order.id === queuedReorderId);
+        if (pastOrder) {
+            handleReorder(pastOrder);
+        }
+        localStorage.removeItem('customer-order-reorder-id');
+        setHasProcessedQueuedReorder(true);
+    }, [orderHistory, hasProcessedQueuedReorder]);
 
     useEffect(() => {
         fetchData();
@@ -226,6 +240,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
             setCart([]);
             setClientInfo({nom: '', adresse: '', telephone: ''});
             setPaymentProof(null);
+            storeActiveCustomerOrder(newOrder.id);
         } catch (err) {
             alert("Une erreur est survenue lors de la soumission ou du téléversement du justificatif.");
             console.error(err);
@@ -404,16 +419,17 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
 
 const CommandeClient: React.FC = () => {
     const navigate = useNavigate();
-    const [activeOrderId, setActiveOrderId] = useState<string | null>(() => localStorage.getItem('active-customer-order-id'));
+    const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
+    const activeOrderId = activeOrder?.orderId ?? null;
 
     const handleOrderSubmitted = (order: Order) => {
-        localStorage.setItem('active-customer-order-id', order.id);
-        setActiveOrderId(order.id);
+        storeActiveCustomerOrder(order.id);
+        setActiveOrder({ orderId: order.id });
     };
 
     const handleNewOrder = () => {
-        localStorage.removeItem('active-customer-order-id');
-        setActiveOrderId(null);
+        clearActiveCustomerOrder();
+        setActiveOrder(null);
     };
 
     return (

@@ -3,9 +3,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
-import { Product } from '../types';
+import { Product, Order } from '../types';
 import { Mail, MapPin, Phone, Menu, X } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
+import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 
 const PinInput: React.FC<{ pin: string; onPinChange: (pin: string) => void; pinLength: number }> = ({ pin, onPinChange, pinLength }) => {
   const handleKeyClick = (key: string) => {
@@ -60,9 +61,11 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   
   const [products, setProducts] = useState<Product[]>([]);
+  const [orderHistory, setOrderHistory] = useState<Order[]>([]);
   const [menuLoading, setMenuLoading] = useState(true);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeOrderId, setActiveOrderId] = useState<string | null>(() => localStorage.getItem('active-customer-order-id'));
+  const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
+  const activeOrderId = activeOrder?.orderId ?? null;
 
   const submitPin = useCallback(async (pinToSubmit: string) => {
     if (loading) return;
@@ -101,6 +104,17 @@ const Login: React.FC = () => {
     fetchMenuPreview();
   }, []);
 
+  useEffect(() => {
+    try {
+      const historyJSON = localStorage.getItem('customer-order-history');
+      if (historyJSON) {
+        setOrderHistory(JSON.parse(historyJSON));
+      }
+    } catch (error) {
+      console.error('Failed to read order history from storage', error);
+    }
+  }, []);
+
   const handleFormSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (pin.length === 6) {
@@ -109,8 +123,13 @@ const Login: React.FC = () => {
   };
 
   const handleNewOrder = () => {
-    localStorage.removeItem('active-customer-order-id');
-    setActiveOrderId(null);
+    clearActiveCustomerOrder();
+    setActiveOrder(null);
+  };
+
+  const handleQuickReorder = (orderId: string) => {
+    localStorage.setItem('customer-order-reorder-id', orderId);
+    navigate('/commande-client');
   };
 
   return (
@@ -175,6 +194,28 @@ const Login: React.FC = () => {
                 <button onClick={() => navigate('/commande-client')} className="ui-btn ui-btn-accent hero-cta">
                   Commander en ligne
                 </button>
+                {orderHistory.length > 0 && (
+                  <div className="hero-history">
+                    <p className="hero-history__title">Vos dernières commandes</p>
+                    <div className="hero-history__list">
+                      {orderHistory.slice(0, 3).map(order => (
+                        <div key={order.id} className="hero-history__item">
+                          <div className="hero-history__meta">
+                            <p className="hero-history__date">Commande du {new Date(order.date_creation).toLocaleDateString()}</p>
+                            <p className="hero-history__details">{order.items.length} article(s) • {order.total.toFixed(2)}€</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickReorder(order.id)}
+                            className="hero-history__cta"
+                          >
+                            Commander à nouveau
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
