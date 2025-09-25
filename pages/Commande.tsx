@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { uploadPaymentReceipt } from '../services/cloudinary';
@@ -23,12 +23,24 @@ const Commande: React.FC = () => {
     const [isExitConfirmOpen, setExitConfirmOpen] = useState(false);
     const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
 
-    const isOrderSynced = useCallback((latestOrder?: Order | null) => {
-        if (!order) return true;
-        const referenceOrder = latestOrder ?? originalOrder;
+    const orderRef = useRef<Order | null>(order);
+    const originalOrderRef = useRef<Order | null>(originalOrder);
+
+    useEffect(() => {
+        orderRef.current = order;
+    }, [order]);
+
+    useEffect(() => {
+        originalOrderRef.current = originalOrder;
+    }, [originalOrder]);
+
+    const isOrderSynced = useCallback((comparisonOrder?: Order | null) => {
+        const currentOrder = orderRef.current;
+        if (!currentOrder) return true;
+        const referenceOrder = comparisonOrder ?? originalOrderRef.current;
         if (!referenceOrder) return true;
-        return JSON.stringify(referenceOrder.items) === JSON.stringify(order.items);
-    }, [order, originalOrder]);
+        return JSON.stringify(referenceOrder.items) === JSON.stringify(currentOrder.items);
+    }, []);
 
     const fetchOrderData = useCallback(async (isRefresh = false) => {
         if (!tableId) return;
@@ -70,7 +82,7 @@ const Commande: React.FC = () => {
         return () => clearInterval(interval);
     }, [fetchOrderData]);
     
-    const hasUnsentChanges = useMemo(() => !isOrderSynced(), [isOrderSynced]);
+    const hasUnsentChanges = useMemo(() => !isOrderSynced(), [isOrderSynced, order, originalOrder]);
 
     const productQuantitiesInCart = useMemo(() => {
         if (!order) return {};
