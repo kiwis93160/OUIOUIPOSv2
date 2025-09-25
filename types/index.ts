@@ -90,6 +90,10 @@ export interface Order {
   receipt_url?: string;
 }
 
+export interface KitchenTicket extends Order {
+  ticketKey: string;
+}
+
 export interface Purchase {
   id: string;
   ingredient_id: string;

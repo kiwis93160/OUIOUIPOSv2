@@ -585,6 +585,7 @@ body {
   color: var(--color-danger);
 }
 
+
 .status-card {
   position: relative;
   cursor: pointer;
@@ -593,11 +594,17 @@ body {
   flex-direction: column;
   gap: 1.25rem;
   min-height: 280px;
-  transition: transform 0.25s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  border-width: 2px;
+  border-style: solid;
+  border-color: transparent;
+  background-color: var(--color-surface);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
 }
 
 .status-card:hover {
   transform: translateY(-4px);
+  box-shadow: 0 22px 44px rgba(15, 23, 42, 0.12);
 }
 
 .status-card__header {
@@ -665,52 +672,52 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 
+
 .status-card.status--free {
-  border-color: rgba(34, 197, 94, 0.45);
-  background: linear-gradient(160deg, rgba(34, 197, 94, 0.22) 0%, rgba(22, 163, 74, 0.08) 100%);
-  background-color: rgba(34, 197, 94, 0.22);
-  color: #166534;
-  box-shadow: 0 18px 36px rgba(22, 163, 74, 0.22);
+  border-color: #16a34a;
+  background-color: #ecfdf5;
+  color: #065f46;
 }
 
 .status-card.status--free .status-card__icon {
-  color: #22c55e;
+  color: #047857;
 }
 
 .status-card.status--free .status-card__state {
-  color: #15803d;
+  color: #047857;
 }
 
 .status-card.status--serving {
-  border-color: color-mix(in srgb, var(--color-warning) 45%, var(--color-border));
-  background: color-mix(in srgb, var(--color-warning) 18%, var(--color-surface));
-  background-color: color-mix(in srgb, var(--color-warning) 18%, var(--color-surface));
-  color: color-mix(in srgb, var(--color-warning) 60%, var(--color-heading));
+  border-color: #ea580c;
+  background-color: #fff7ed;
+  color: #7c2d12;
 }
 
 .status-card.status--serving .status-card__icon {
-  color: var(--color-warning);
+  color: #f97316;
+}
+
+.status-card.status--serving .status-card__state {
+  color: #c2410c;
 }
 
 .status-card.status--preparing {
-  border-color: rgba(250, 204, 21, 0.45);
-  background: linear-gradient(160deg, rgba(250, 204, 21, 0.24) 0%, rgba(253, 224, 71, 0.12) 100%);
-  background-color: rgba(250, 204, 21, 0.24);
-  color: #a16207;
+  border-color: #d97706;
+  background-color: #fef3c7;
+  color: #92400e;
 }
 
 .status-card.status--preparing .status-card__icon {
-  color: #facc15;
+  color: #f59e0b;
 }
 
 .status-card.status--preparing .status-card__state {
-  color: #ca8a04;
+  color: #b45309;
 }
 
 .status-card.status--ready {
-  border-color: rgba(37, 99, 235, 0.45);
-  background: linear-gradient(160deg, rgba(37, 99, 235, 0.22) 0%, rgba(59, 130, 246, 0.1) 100%);
-  background-color: rgba(37, 99, 235, 0.22);
+  border-color: #2563eb;
+  background-color: #dbeafe;
   color: #1d4ed8;
 }
 
@@ -723,18 +730,17 @@ body {
 }
 
 .status-card.status--payment {
-  border-color: rgba(139, 92, 246, 0.45);
-  background: linear-gradient(160deg, rgba(139, 92, 246, 0.22) 0%, rgba(167, 139, 250, 0.1) 100%);
-  background-color: rgba(139, 92, 246, 0.22);
-  color: #6d28d9;
+  border-color: #7c3aed;
+  background-color: #ede9fe;
+  color: #5b21b6;
 }
 
 .status-card.status--payment .status-card__icon {
-  color: #8b5cf6;
+  color: #6d28d9;
 }
 
 .status-card.status--payment .status-card__state {
-  color: #7c3aed;
+  color: #5b21b6;
 }
 
 .status-card.status--unknown {
