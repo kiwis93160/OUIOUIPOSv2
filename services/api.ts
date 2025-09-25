@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { DEFAULT_PRODUCT_IMAGE } from './storage';
+import { normalizeProductImageInput, resolveProductImageUrl } from './productImage';
 import {
   Role,
   Table,
@@ -216,7 +216,7 @@ const mapProductRow = (row: SupabaseProductRow, ingredientMap?: Map<string, Ingr
     prix_vente: row.prix_vente,
     categoria_id: row.categoria_id,
     estado: row.estado,
-    image: row.image && row.image.trim() ? row.image : DEFAULT_PRODUCT_IMAGE,
+    image: resolveProductImageUrl(row.image, row.nom_produit),
     recipe,
   };
 
@@ -1326,7 +1326,9 @@ export const api = {
         prix_vente: product.prix_vente,
         categoria_id: product.categoria_id,
         estado: product.estado,
-        image: product.image && product.image.trim() ? product.image : DEFAULT_PRODUCT_IMAGE,
+        image:
+          normalizeProductImageInput(product.image) ??
+          resolveProductImageUrl(product.image, product.nom_produit),
       })
       .select('id')
       .single();
@@ -1376,7 +1378,9 @@ export const api = {
     }
 
     if (rest.image !== undefined) {
-      updatePayload.image = rest.image && rest.image.trim() ? rest.image : DEFAULT_PRODUCT_IMAGE;
+      updatePayload.image =
+        normalizeProductImageInput(rest.image) ??
+        resolveProductImageUrl(rest.image, rest.nom_produit ?? '');
     }
 
     if (Object.keys(updatePayload).length > 0) {
