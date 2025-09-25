@@ -87,7 +87,7 @@ const ResumeVentes: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800">Résumé des Ventes par Commande</h1>
+            <h1 className="text-3xl font-bold text-white">Résumé des Ventes par Commande</h1>
             <div className="bg-white p-4 rounded-xl shadow-md space-y-4">
                  <div className="flex flex-wrap items-end gap-4">
                      <div className="flex-grow">

@@ -16,9 +16,11 @@ const KitchenTicket: React.FC<{ order: Order; onReady: (orderId: string) => void
 
     return (
         <div className={`rounded-lg border shadow-md flex flex-col h-full ${getBackgroundColor()}`}>
-            <header className="bg-brand-secondary text-white p-3 rounded-t-lg flex justify-between items-center">
-                <h3 className="text-xl font-bold">{order.table_nom || `À emporter #${order.id.slice(-4)}`}</h3>
-                <OrderTimer startTime={order.date_envoi_cuisine || Date.now()} />
+            <header className="bg-brand-secondary text-white p-3 rounded-t-lg">
+                <div className="flex flex-col gap-2">
+                    <h3 className="text-xl font-bold w-full">{order.table_nom || `À emporter #${order.id.slice(-4)}`}</h3>
+                    <OrderTimer startTime={order.date_envoi_cuisine || Date.now()} className="w-full justify-center" />
+                </div>
             </header>
             <div className="p-3 space-y-2 flex-1 overflow-y-auto">
                 {order.items.filter(i => i.estado === 'enviado').map((item: OrderItem) => (
@@ -93,7 +95,7 @@ const Cuisine: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col">
-            <h1 className="text-3xl font-bold mb-6 text-gray-800">Vue Cuisine</h1>
+            <h1 className="text-3xl font-bold mb-6 text-white">Vue Cuisine</h1>
             {orders.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center text-2xl text-gray-700">Aucune commande en préparation.</div>
             ) : (

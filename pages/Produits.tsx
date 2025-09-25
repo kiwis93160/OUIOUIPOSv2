@@ -199,12 +199,9 @@ const ProductCard: React.FC<{ product: Product; category?: Category; onEdit: () 
                         <p className="text-xs text-gray-500">{category?.nom || 'Sans catégorie'}</p>
                         <h3 className="font-bold text-lg text-gray-900">{product.nom_produit}</h3>
                     </div>
-                    <p className="text-xl font-extrabold text-brand-primary">{product.prix_vente.toFixed(2)}€</p>
+                <p className="text-xl font-extrabold text-brand-primary">{product.prix_vente.toFixed(2)}€</p>
                 </div>
                  <p className="text-xs text-gray-600 mt-1 flex-grow">{product.description}</p>
-                 <div className="text-xs text-gray-600 mt-2">
-                    Coût: {(product.cout_revient || 0).toFixed(2)}€ | Marge: {margin.toFixed(2)}€ ({marginPercentage.toFixed(0)}%)
-                </div>
                 
                 <div className="flex justify-between items-center mt-4">
                     <span className={`px-2 py-1 text-xs font-bold rounded-full flex items-center gap-1 ${color}`}>
@@ -247,6 +244,25 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
     });
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [isSubmitting, setSubmitting] = useState(false);
+
+    const ingredientMap = useMemo(() => new Map(ingredients.map(ing => [ing.id, ing])), [ingredients]);
+
+    const recipeCost = useMemo(() => {
+        return formData.recipe.reduce((total, item) => {
+            const ingredient = ingredientMap.get(item.ingredient_id);
+            if (!ingredient) return total;
+
+            let unitPrice = ingredient.prix_unitaire;
+            if (ingredient.unite === 'kg' || ingredient.unite === 'L') {
+                unitPrice = unitPrice / 1000;
+            }
+
+            return total + unitPrice * item.qte_utilisee;
+        }, 0);
+    }, [formData.recipe, ingredientMap]);
+
+    const marginValue = formData.prix_vente - recipeCost;
+    const marginPercentage = formData.prix_vente > 0 ? (marginValue / formData.prix_vente) * 100 : 0;
 
     const handleRecipeChange = (index: number, field: keyof RecipeItem, value: string) => {
         const newRecipe = [...formData.recipe];
@@ -323,6 +339,21 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                                 <option value="agotado_temporal">Rupture (Temp.)</option>
                                 <option value="agotado_indefinido">Indisponible</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-700">
+                        <div>
+                            <p className="text-xs uppercase tracking-wide text-gray-500">Coût de revient</p>
+                            <p className="text-lg font-semibold text-gray-900">{recipeCost.toFixed(2)} €</p>
+                        </div>
+                        <div>
+                            <p className="text-xs uppercase tracking-wide text-gray-500">Marge</p>
+                            <p className={`text-lg font-semibold ${marginValue >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{marginValue.toFixed(2)} €</p>
+                        </div>
+                        <div>
+                            <p className="text-xs uppercase tracking-wide text-gray-500">Marge %</p>
+                            <p className={`text-lg font-semibold ${marginPercentage >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{Number.isFinite(marginPercentage) ? marginPercentage.toFixed(1) : '0.0'}%</p>
                         </div>
                     </div>
 

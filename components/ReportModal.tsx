@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { api } from '../services/api';
-import { DailyReport } from '../types';
-import { Calendar, Users, ShoppingCart, DollarSign, Package, AlertTriangle, MessageSquare } from 'lucide-react';
+import { DailyReport, RoleLogin } from '../types';
+import { Users, ShoppingCart, DollarSign, Package, AlertTriangle, MessageSquare, LogIn } from 'lucide-react';
 
 const ReportStat: React.FC<{ icon: React.ReactNode, label: string, value: string | number }> = ({ icon, label, value }) => (
     <div className="bg-gray-100 p-4 rounded-lg flex items-center">
@@ -37,6 +37,17 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
         }
     }, [isOpen]);
 
+    const formatLoginsByRole = (logins: RoleLogin[]) => {
+        const grouped = new Map<string, string[]>();
+        logins.forEach(login => {
+            const time = new Date(login.loginAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            const existing = grouped.get(login.roleName) ?? [];
+            existing.push(time);
+            grouped.set(login.roleName, existing);
+        });
+        return grouped;
+    };
+
     const formatReportForWhatsApp = (reportData: DailyReport): string => {
         const parts: string[] = [];
         parts.push(`*RAPPORT OUIOUITACOS*`);
@@ -62,7 +73,18 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
           });
         }
         parts.push('---');
-    
+
+        parts.push(`*Connexions depuis 05h00*`);
+        const groupedLogins = formatLoginsByRole(reportData.roleLogins);
+        if (groupedLogins.size === 0) {
+          parts.push('Aucune connexion enregistrée.');
+        } else {
+          groupedLogins.forEach((times, roleName) => {
+            parts.push(`- ${roleName}: ${times.join(', ')}`);
+          });
+        }
+        parts.push('---');
+
         parts.push(`*Stocks Bas*`);
         if (reportData.lowStockIngredients.length === 0) {
           parts.push('Aucun ingrédient en stock bas.');
@@ -123,6 +145,26 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-xl font-semibold mb-3 flex items-center gap-2 text-gray-800"><LogIn/> Connexions depuis 05h00</h3>
+                                {(() => {
+                                    const grouped = formatLoginsByRole(report.roleLogins);
+                                    if (grouped.size === 0) {
+                                        return <p className="text-gray-500">Aucune connexion enregistrée depuis 05h00.</p>;
+                                    }
+                                    return (
+                                        <ul className="space-y-2">
+                                            {Array.from(grouped.entries()).map(([roleName, times]) => (
+                                                <li key={roleName} className="flex justify-between items-center bg-slate-100 p-2 rounded-md">
+                                                    <span className="font-semibold text-gray-800">{roleName}</span>
+                                                    <span className="text-sm text-gray-600">{times.join(', ')}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    );
+                                })()}
                             </div>
 
                             <div>

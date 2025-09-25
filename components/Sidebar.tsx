@@ -123,7 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
                       <span className="app-sidebar__badge-group">
                         {notifications.pendingTakeaway > 0 && (
                           <span
-                            className="app-sidebar__badge app-sidebar__badge--info"
+                            className="app-sidebar__badge app-sidebar__badge--danger"
                             title={`${notifications.pendingTakeaway} à valider`}
                           >
                             {notifications.pendingTakeaway}
@@ -143,7 +143,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
                     notificationContent = (
                       <span className="app-sidebar__badge-group">
                         <span
-                          className="app-sidebar__badge app-sidebar__badge--info"
+                          className="app-sidebar__badge app-sidebar__badge--danger"
                           title={`${notifications.readyForService} commande(s) prête(s)`}
                         >
                           {notifications.readyForService}
@@ -161,7 +161,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
                   } else if (link.href === '/ingredients' && notifications.lowStockIngredients > 0) {
                     notificationContent = (
                       <span className="app-sidebar__badge-group">
-                        <span className="app-sidebar__badge app-sidebar__badge--warning">
+                        <span className="app-sidebar__badge app-sidebar__badge--danger">
                           {notifications.lowStockIngredients}
                         </span>
                       </span>
