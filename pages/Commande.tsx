@@ -197,9 +197,14 @@ const Commande: React.FC = () => {
     }
 
     const handleSendToKitchen = async () => {
-        if (!order || !order.items.some(i => i.estado === 'en_attente')) return;
+        if (!order) return;
+
+        const pendingItems = order.items.filter(item => item.estado === 'en_attente');
+        if (pendingItems.length === 0) return;
+
+        const itemsToSend = pendingItems.map(item => item.id);
         try {
-            const updatedOrder = await api.sendOrderToKitchen(order.id);
+            const updatedOrder = await api.sendOrderToKitchen(order.id, itemsToSend);
             setOrder(updatedOrder);
             setOriginalOrder(JSON.parse(JSON.stringify(updatedOrder)));
             navigate('/ventes');

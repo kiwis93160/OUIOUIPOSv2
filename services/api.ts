@@ -1091,14 +1091,29 @@ export const api = {
     return updatedOrder;
   },
 
-  sendOrderToKitchen: async (orderId: string): Promise<Order> => {
+  sendOrderToKitchen: async (orderId: string, itemIds?: string[]): Promise<Order> => {
     const order = await fetchOrderById(orderId);
     if (!order) {
       throw new Error('Order not found');
     }
 
-    const itemsToSend = order.items.filter(item => item.estado === 'en_attente');
+    const pendingItems = order.items.filter(item => item.estado === 'en_attente');
+
+    const itemsToSend = (() => {
+      if (!itemIds || itemIds.length === 0) {
+        return pendingItems;
+      }
+
+      const idsToSend = new Set(itemIds);
+      return pendingItems.filter(item => idsToSend.has(item.id));
+    })();
+
     if (itemsToSend.length === 0) {
+      return order;
+    }
+
+    const persistedIds = itemsToSend.filter(item => isUuid(item.id)).map(item => item.id);
+    if (persistedIds.length === 0) {
       return order;
     }
 
@@ -1106,13 +1121,19 @@ export const api = {
     await supabase
       .from('order_items')
       .update({ estado: 'enviado', date_envoi: nowIso })
-      .eq('order_id', orderId)
-      .eq('estado', 'en_attente');
+      .in('id', persistedIds);
 
     await supabase
       .from('orders')
       .update({ estado_cocina: 'recibido', date_envoi_cuisine: nowIso })
       .eq('id', orderId);
+
+    if (order.table_id) {
+      await supabase
+        .from('restaurant_tables')
+        .update({ statut: 'occupee' })
+        .eq('id', order.table_id);
+    }
 
     publishOrderChange();
     const updatedOrder = await fetchOrderById(orderId);
