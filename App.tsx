@@ -18,13 +18,13 @@ import { NAV_LINKS } from './constants';
 const isPermissionGranted = (permission?: string) =>
   permission === 'editor' || permission === 'readonly';
 
-const PrivateRoute: React.FC<{ children: React.ReactElement, permissionKey: string }> = ({ children, permissionKey }) => {
+const PrivateRoute: React.FC<{ children: React.ReactElement; permissionKey?: string }> = ({ children, permissionKey }) => {
   const { role, loading } = useAuth();
   if (loading) {
     return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-primary"></div></div>;
   }
-  const permission = role?.permissions[permissionKey];
-  const hasPermission = isPermissionGranted(permission);
+  const permission = permissionKey ? role?.permissions[permissionKey] : undefined;
+  const hasPermission = permissionKey ? isPermissionGranted(permission) : true;
   return role && hasPermission ? children : <Navigate to="/login" replace />;
 };
 
@@ -51,7 +51,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/commande-client" element={<CommandeClient />} />
             
             <Route path="/" element={
-                <PrivateRoute permissionKey="/dashboard">
+                <PrivateRoute>
                     <ProtectedLayout />
                 </PrivateRoute>
             }>
