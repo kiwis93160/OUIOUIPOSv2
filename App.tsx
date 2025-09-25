@@ -13,6 +13,7 @@ import Produits from './pages/Produits';
 import CommandeClient from './pages/CommandeClient';
 import NotFound from './pages/NotFound';
 import ResumeVentes from './pages/ResumeVentes';
+import { NAV_LINKS } from './constants';
 
 const isPermissionGranted = (permission?: string) =>
   permission === 'editor' || permission === 'readonly';
@@ -33,14 +34,14 @@ const AppRoutes: React.FC = () => {
     const getHomeRedirect = () => {
         if (!role) return '/login';
 
-        const dashboardPermission = role.permissions['/dashboard'];
-        if (isPermissionGranted(dashboardPermission)) return '/dashboard';
+        if (role.homePage && isPermissionGranted(role.permissions[role.homePage])) {
+            return role.homePage;
+        }
 
-        const ventesPermission = role.permissions['/ventes'];
-        if (isPermissionGranted(ventesPermission)) return '/ventes';
-
-        const cocinaPermission = role.permissions['/cocina'];
-        if (isPermissionGranted(cocinaPermission)) return '/cocina';
+        const fallbackLink = NAV_LINKS.find(link => isPermissionGranted(role.permissions[link.permissionKey]));
+        if (fallbackLink) {
+            return fallbackLink.href;
+        }
         return '/login';
     };
 
