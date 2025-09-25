@@ -1,6 +1,5 @@
 import { supabase } from './supabaseClient';
 import { normalizeCloudinaryImageUrl, resolveProductImageUrl } from './cloudinary';
-import { normalizeProductImageInput } from './productImage';
 
 import {
   Role,
@@ -1337,8 +1336,6 @@ export const api = {
   },
 
   addProduct: async (product: Omit<Product, 'id'>): Promise<Product> => {
-    const normalizedImage = normalizeProductImageInput(product.image, product.nom_produit);
-
     const insertResponse = await supabase
       .from('products')
       .insert({
