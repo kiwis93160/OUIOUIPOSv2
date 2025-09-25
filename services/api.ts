@@ -5,6 +5,7 @@ import {
   Role,
   Table,
   Order,
+  KitchenTicket,
   Product,
   Category,
   Ingredient,
@@ -973,12 +974,44 @@ export const api = {
     return fetchCategories();
   },
 
-  getKitchenOrders: async (): Promise<Order[]> => {
+  getKitchenOrders: async (): Promise<KitchenTicket[]> => {
     const response = await selectOrdersQuery()
       .eq('estado_cocina', 'recibido')
       .or('statut.eq.en_cours,type.eq.a_emporter');
     const rows = unwrap<SupabaseOrderRow[]>(response as SupabaseResponse<SupabaseOrderRow[]>);
-    return rows.map(mapOrderRow);
+    const orders = rows.map(mapOrderRow);
+
+    const tickets: KitchenTicket[] = [];
+
+    orders.forEach(order => {
+      const sentItems = order.items.filter(item => item.estado === 'enviado');
+      if (sentItems.length === 0) {
+        return;
+      }
+
+      const groups = sentItems.reduce((acc, item) => {
+        const key = item.date_envoi ?? order.date_envoi_cuisine ?? order.date_creation;
+        const group = acc.get(key) ?? [];
+        group.push(item);
+        acc.set(key, group);
+        return acc;
+      }, new Map<number, OrderItem[]>());
+
+      groups.forEach((items, key) => {
+        tickets.push({
+          ...order,
+          items,
+          date_envoi_cuisine: key,
+          ticketKey: `${order.id}-${key}`,
+        });
+      });
+    });
+
+    return tickets.sort((a, b) => {
+      const aTime = a.date_envoi_cuisine ?? a.date_creation;
+      const bTime = b.date_envoi_cuisine ?? b.date_creation;
+      return aTime - bTime;
+    });
   },
 
   getTakeawayOrders: async (): Promise<{ pending: Order[]; ready: Order[] }> => {

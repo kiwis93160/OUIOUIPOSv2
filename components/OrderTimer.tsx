@@ -21,9 +21,9 @@ const OrderTimer: React.FC<OrderTimerProps> = ({ startTime, className = '' }) =>
   const timerString = formatMillisecondsToMinutesSeconds(elapsed);
 
   const getTimerColor = () => {
-    if (minutes >= 20) return 'bg-red-500 text-white';
-    if (minutes >= 10) return 'bg-yellow-400 text-black';
-    return 'bg-white text-brand-secondary';
+    if (minutes >= 20) return 'bg-red-500 text-white shadow-lg';
+    if (minutes >= 10) return 'bg-yellow-400 text-black shadow-md';
+    return 'bg-brand-primary text-brand-secondary shadow-md ring-1 ring-black/5';
   };
 
   return (

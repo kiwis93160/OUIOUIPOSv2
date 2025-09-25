@@ -24,11 +24,6 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                 </header>
 
                 <div className="p-4 space-y-4 flex-1 bg-white/80">
-                    <div className="flex items-center justify-between text-gray-900 font-semibold text-lg">
-                        <span>Total</span>
-                        <span>{order.total.toFixed(2)} €</span>
-                    </div>
-
                     {order.clientInfo && (
                         <div className="space-y-1 text-sm text-gray-700">
                             {order.clientInfo.nom && (
@@ -55,6 +50,11 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                                 </li>
                             ))}
                         </ul>
+                    </div>
+
+                    <div className="flex items-center justify-between text-gray-900 font-semibold text-lg pt-2 border-t border-gray-200">
+                        <span>Total</span>
+                        <span>{order.total.toFixed(2)} €</span>
                     </div>
                 </div>
 
