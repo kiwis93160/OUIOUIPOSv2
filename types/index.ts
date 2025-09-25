@@ -4,6 +4,7 @@ export interface Role {
   id: string;
   name: string;
   pin?: string;
+  homePage?: string;
   permissions: {
     [key: string]: 'editor' | 'readonly' | 'none';
   };
