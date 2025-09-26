@@ -1443,13 +1443,20 @@ export const api = {
     const start = getBusinessDayStart(now);
     const startIso = start.toISOString();
 
-    const [ordersResponse, categories, ingredients, productRowsResponse, roleLoginsResult] = await Promise.all([
+    const [ordersResponse, categories, ingredients, productRowsResponse] = await Promise.all([
       selectOrdersQuery().eq('statut', 'finalisee'),
       fetchCategories(),
       fetchIngredients(),
       selectProductsQuery(),
-      fetchRoleLoginsFromProxy(startIso),
     ]);
+    let roleLoginsResult: RoleLogin[] = [];
+    let roleLoginsUnavailable = false;
+    try {
+      roleLoginsResult = await fetchRoleLoginsFromProxy(startIso);
+    } catch (error) {
+      console.warn('Failed to fetch role logins for daily report', error);
+      roleLoginsUnavailable = true;
+    }
     const rows = unwrap<SupabaseOrderRow[]>(ordersResponse as SupabaseResponse<SupabaseOrderRow[]>);
     const allOrders = rows.map(mapOrderRow);
     const startTime = start.getTime();
@@ -1514,6 +1521,7 @@ export const api = {
       soldProducts: Array.from(soldProductsByCategory.values()),
       lowStockIngredients: ingredientsStockBas,
       roleLogins: roleLoginsResult,
+      roleLoginsUnavailable,
     };
   },
 

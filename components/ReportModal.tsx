@@ -19,22 +19,20 @@ const ReportStat: React.FC<{ icon: React.ReactNode, label: string, value: string
 const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
     const [report, setReport] = useState<DailyReport | null>(null);
     const [loading, setLoading] = useState(true);
-    const [loginsError, setLoginsError] = useState<string | null>(null);
+    const [reportError, setReportError] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
             const fetchReport = async () => {
                 setLoading(true);
-                setLoginsError(null);
+                setReportError(null);
                 try {
                     const data = await api.generateDailyReport();
                     setReport(data);
                 } catch (error) {
-                    console.error('Échec de la récupération des connexions pour le rapport quotidien', error);
+                    console.error('Échec de la génération du rapport quotidien', error);
                     setReport(null);
-                    setLoginsError(
-                        "Impossible de récupérer les connexions depuis le proxy sécurisé. Veuillez réessayer plus tard.",
-                    );
+                    setReportError("Impossible de générer le rapport quotidien. Veuillez réessayer plus tard.");
                 } finally {
                     setLoading(false);
                 }
@@ -81,13 +79,17 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
         parts.push('---');
 
         parts.push(`*Connexions depuis 05h00*`);
-        const groupedLogins = formatLoginsByRole(reportData.roleLogins);
-        if (groupedLogins.size === 0) {
-          parts.push('Aucune connexion enregistrée.');
+        if (reportData.roleLoginsUnavailable) {
+          parts.push("Connexions indisponibles (proxy sécurisé non configuré).");
         } else {
-          groupedLogins.forEach((times, roleName) => {
-            parts.push(`- ${roleName}: ${times.join(', ')}`);
-          });
+          const groupedLogins = formatLoginsByRole(reportData.roleLogins);
+          if (groupedLogins.size === 0) {
+            parts.push('Aucune connexion enregistrée.');
+          } else {
+            groupedLogins.forEach((times, roleName) => {
+              parts.push(`- ${roleName}: ${times.join(', ')}`);
+            });
+          }
         }
         parts.push('---');
 
@@ -116,16 +118,24 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
             <>
                 <div className="p-6 max-h-[70vh] overflow-y-auto">
                      {loading && <p>Génération du rapport...</p>}
-                     {!loading && loginsError && (
+                     {!loading && reportError && (
                         <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                            {loginsError}
+                            {reportError}
                         </div>
                      )}
-                     {!loading && !report && !loginsError && (
+                     {!loading && !report && !reportError && (
                         <p className="text-red-500">Impossible de générer le rapport.</p>
                      )}
                      {!loading && report && (
                          <div className="space-y-6">
+                            {report.roleLoginsUnavailable && (
+                                <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800 flex items-start gap-2">
+                                    <AlertTriangle className="mt-0.5 h-4 w-4" />
+                                    <span>
+                                        Les connexions des rôles sont temporairement indisponibles. Vérifiez la configuration du proxy sécurisé.
+                                    </span>
+                                </div>
+                            )}
                             <div className="text-center border-b pb-4">
                                  <h2 className="text-3xl font-bold text-brand-secondary">Rapport OUIOUITACOS</h2>
                                  <p className="text-gray-500">
@@ -162,22 +172,26 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
 
                             <div>
                                 <h3 className="text-xl font-semibold mb-3 flex items-center gap-2 text-gray-800"><LogIn/> Connexions depuis 05h00</h3>
-                                {(() => {
-                                    const grouped = formatLoginsByRole(report.roleLogins);
-                                    if (grouped.size === 0) {
-                                        return <p className="text-gray-500">Aucune connexion enregistrée depuis 05h00.</p>;
-                                    }
-                                    return (
-                                        <ul className="space-y-2">
-                                            {Array.from(grouped.entries()).map(([roleName, times]) => (
-                                                <li key={roleName} className="flex justify-between items-center bg-slate-100 p-2 rounded-md">
-                                                    <span className="font-semibold text-gray-800">{roleName}</span>
-                                                    <span className="text-sm text-gray-600">{times.join(', ')}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    );
-                                })()}
+                                {report.roleLoginsUnavailable ? (
+                                    <p className="text-gray-500">Connexions indisponibles : le proxy sécurisé n'a pas répondu.</p>
+                                ) : (
+                                    (() => {
+                                        const grouped = formatLoginsByRole(report.roleLogins);
+                                        if (grouped.size === 0) {
+                                            return <p className="text-gray-500">Aucune connexion enregistrée depuis 05h00.</p>;
+                                        }
+                                        return (
+                                            <ul className="space-y-2">
+                                                {Array.from(grouped.entries()).map(([roleName, times]) => (
+                                                    <li key={roleName} className="flex justify-between items-center bg-slate-100 p-2 rounded-md">
+                                                        <span className="font-semibold text-gray-800">{roleName}</span>
+                                                        <span className="text-sm text-gray-600">{times.join(', ')}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        );
+                                    })()
+                                )}
                             </div>
 
                             <div>
