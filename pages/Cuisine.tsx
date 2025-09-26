@@ -9,32 +9,62 @@ import { getOrderUrgencyStyles } from '../utils/orderUrgency';
 const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId: string) => void; canMarkReady: boolean }> = ({ order, onReady, canMarkReady }) => {
 
     const urgencyStyles = getOrderUrgencyStyles(order.date_envoi_cuisine || Date.now());
+    const urgencyLabelMap: Record<typeof urgencyStyles.level, string> = {
+        normal: 'Normal',
+        warning: 'À surveiller',
+        critical: 'Urgent',
+    };
 
     return (
-        <div className={`rounded-lg border shadow-md flex flex-col h-full overflow-hidden transition-colors duration-300 ${urgencyStyles.container}`}>
-            <header className="bg-brand-secondary text-white p-3 rounded-t-lg">
-                <div className="flex flex-col gap-2">
-                    <h3 className="text-xl font-bold w-full">{order.table_nom || `À emporter #${order.id.slice(-4)}`}</h3>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                        <OrderTimer startTime={order.date_envoi_cuisine || Date.now()} className="w-full justify-center sm:w-auto" />
-                        <p className="text-xs text-white/80 text-center sm:text-right">
+        <div className={`relative flex h-full flex-col overflow-hidden rounded-xl border bg-brand-surface shadow-lg transition-shadow duration-300 hover:shadow-xl ${urgencyStyles.border}`}>
+            <span aria-hidden className={`absolute inset-y-0 left-0 w-1.5 ${urgencyStyles.accent}`} />
+            <header className="border-b border-brand-border/60 px-5 pt-5 pb-4">
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-brand-text-muted">Commande</p>
+                            <h3 className="text-2xl font-semibold text-brand-heading">
+                                {order.table_nom || `À emporter #${order.id.slice(-4)}`}
+                            </h3>
+                        </div>
+                        <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${urgencyStyles.badge}`}>
+                            <span className={`h-2 w-2 rounded-full ${urgencyStyles.accent}`} />
+                            <span>{urgencyLabelMap[urgencyStyles.level]}</span>
+                        </span>
+                    </div>
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                        <OrderTimer startTime={order.date_envoi_cuisine || Date.now()} className="text-base" />
+                        <p className="text-xs font-medium text-brand-text-muted sm:text-right">
                             Envoyé {new Date(order.date_envoi_cuisine || Date.now()).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                     </div>
                 </div>
             </header>
-            <div className={`p-3 space-y-2 flex-1 overflow-y-auto transition-colors duration-300 ${urgencyStyles.content}`}>
-                {order.items.map((item: OrderItem) => (
-                    <div key={item.id} className="p-2 bg-gray-50 rounded">
-                        <p className="font-bold text-lg text-gray-900">{item.quantite}x {item.nom_produit}</p>
-                        {item.commentaire && <p className="text-sm text-gray-600 italic pl-2">- {item.commentaire}</p>}
-                    </div>
-                ))}
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+                <ul className="space-y-3">
+                    {order.items.map((item: OrderItem) => (
+                        <li key={item.id} className="rounded-lg border border-brand-border/70 bg-brand-surface-elevated px-4 py-3 shadow-sm">
+                            <div className="flex items-baseline justify-between gap-3">
+                                <p className="text-lg font-semibold text-brand-heading">{item.nom_produit}</p>
+                                <span className="text-2xl font-bold text-brand-heading">{item.quantite}×</span>
+                            </div>
+                            {item.commentaire && (
+                                <div className="mt-3 rounded-md border border-dashed border-brand-border/80 bg-brand-accent-soft/50 px-3 py-2">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-text-muted">Commentaire</p>
+                                    <p className="mt-1 text-sm text-brand-heading">{item.commentaire}</p>
+                                </div>
+                            )}
+                        </li>
+                    ))}
+                </ul>
             </div>
             {canMarkReady && (
-                <footer className={`p-3 border-t transition-colors duration-300 ${urgencyStyles.content}`}>
-                    <button onClick={() => onReady(order.id)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg text-lg flex items-center justify-center space-x-2 hover:bg-green-700 transition">
-                        <ChefHat size={24}/>
+                <footer className="border-t border-brand-border/60 px-5 pb-5 pt-4">
+                    <button
+                        onClick={() => onReady(order.id)}
+                        className="group inline-flex w-full items-center justify-center gap-3 rounded-lg border-2 border-transparent bg-status-success px-4 py-3 text-lg font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-status-success/70 focus-visible:ring-offset-2 hover:bg-status-success-hover"
+                    >
+                        <ChefHat size={22} className="shrink-0" />
                         <span>PRÊT</span>
                     </button>
                 </footer>
