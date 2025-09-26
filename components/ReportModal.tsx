@@ -80,7 +80,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
 
         parts.push(`*Connexions depuis 05h00*`);
         if (reportData.roleLoginsUnavailable) {
-          parts.push("Connexions indisponibles (proxy sécurisé non configuré).");
+          parts.push('Connexions indisponibles sur cet appareil.');
         } else {
           const groupedLogins = formatLoginsByRole(reportData.roleLogins);
           if (groupedLogins.size === 0) {
@@ -132,7 +132,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                                 <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800 flex items-start gap-2">
                                     <AlertTriangle className="mt-0.5 h-4 w-4" />
                                     <span>
-                                        Les connexions des rôles sont temporairement indisponibles. Vérifiez la configuration du proxy sécurisé.
+                                        Les connexions des rôles sont indisponibles sur cet appareil (stockage local inaccessible).
                                     </span>
                                 </div>
                             )}
@@ -173,7 +173,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                             <div>
                                 <h3 className="text-xl font-semibold mb-3 flex items-center gap-2 text-gray-800"><LogIn/> Connexions depuis 05h00</h3>
                                 {report.roleLoginsUnavailable ? (
-                                    <p className="text-gray-500">Connexions indisponibles : le proxy sécurisé n'a pas répondu.</p>
+                                    <p className="text-gray-500">Connexions indisponibles : impossible d'accéder au stockage local.</p>
                                 ) : (
                                     (() => {
                                         const grouped = formatLoginsByRole(report.roleLogins);
