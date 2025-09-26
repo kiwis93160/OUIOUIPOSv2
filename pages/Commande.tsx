@@ -253,10 +253,14 @@ const Commande: React.FC = () => {
                     .filter(item => isPersistedItemId(item.id) && !optimisticItems.some(finalItem => finalItem.id === item.id))
                     .map(item => item.id);
 
-                const updatedOrder = await api.updateOrder(currentOrder.id, {
-                    items: finalItems,
-                    removedItemIds,
-                });
+                const updatedOrder = await api.updateOrder(
+                    currentOrder.id,
+                    {
+                        items: finalItems,
+                        removedItemIds,
+                    },
+                    { includeNotifications: false },
+                );
                 const ingredientsData = await api.getIngredients();
 
                 setOrder(updatedOrder);

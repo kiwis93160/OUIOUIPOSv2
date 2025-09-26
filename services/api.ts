@@ -721,8 +721,14 @@ const notificationsService = {
   },
 };
 
-const publishOrderChange = () => {
-  notificationsService.publish('notifications_updated');
+type PublishOrderChangeOptions = {
+  includeNotifications?: boolean;
+};
+
+const publishOrderChange = (options?: PublishOrderChangeOptions) => {
+  if (options?.includeNotifications !== false) {
+    notificationsService.publish('notifications_updated');
+  }
   notificationsService.publish('orders_updated');
 };
 
@@ -1180,7 +1186,11 @@ export const api = {
     publishOrderChange();
   },
 
-  updateOrder: async (orderId: string, updates: Partial<Order> & { removedItemIds?: string[] }): Promise<Order> => {
+  updateOrder: async (
+    orderId: string,
+    updates: Partial<Order> & { removedItemIds?: string[] },
+    options?: PublishOrderChangeOptions,
+  ): Promise<Order> => {
     const existingOrder = await fetchOrderById(orderId);
     if (!existingOrder) {
       throw new Error('Order not found');
@@ -1254,7 +1264,7 @@ export const api = {
       await supabase.from('orders').update(payload).eq('id', orderId);
     }
 
-    publishOrderChange();
+    publishOrderChange({ includeNotifications: options?.includeNotifications ?? true });
     const updatedOrder = await fetchOrderById(orderId);
     if (!updatedOrder) {
       throw new Error('Order not found after update');
