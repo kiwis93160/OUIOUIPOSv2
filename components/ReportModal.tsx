@@ -19,16 +19,22 @@ const ReportStat: React.FC<{ icon: React.ReactNode, label: string, value: string
 const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
     const [report, setReport] = useState<DailyReport | null>(null);
     const [loading, setLoading] = useState(true);
+    const [loginsError, setLoginsError] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
             const fetchReport = async () => {
                 setLoading(true);
+                setLoginsError(null);
                 try {
                     const data = await api.generateDailyReport();
                     setReport(data);
                 } catch (error) {
-                    console.error("Failed to generate report:", error);
+                    console.error('Échec de la récupération des connexions pour le rapport quotidien', error);
+                    setReport(null);
+                    setLoginsError(
+                        "Impossible de récupérer les connexions depuis le proxy sécurisé. Veuillez réessayer plus tard.",
+                    );
                 } finally {
                     setLoading(false);
                 }
@@ -110,7 +116,14 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
             <>
                 <div className="p-6 max-h-[70vh] overflow-y-auto">
                      {loading && <p>Génération du rapport...</p>}
-                     {!loading && !report && <p className="text-red-500">Impossible de générer le rapport.</p>}
+                     {!loading && loginsError && (
+                        <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                            {loginsError}
+                        </div>
+                     )}
+                     {!loading && !report && !loginsError && (
+                        <p className="text-red-500">Impossible de générer le rapport.</p>
+                     )}
                      {!loading && report && (
                          <div className="space-y-6">
                             <div className="text-center border-b pb-4">
