@@ -161,9 +161,13 @@ const Commande: React.FC = () => {
     const productQuantitiesInCart = useMemo(() => {
         if (!order) return {};
         return order.items.reduce((acc, item) => {
+            if (item.estado !== 'en_attente') {
+                return acc;
+            }
+
             acc[item.produitRef] = (acc[item.produitRef] || 0) + item.quantite;
             return acc;
-        }, {} as {[key: string]: number});
+        }, {} as { [key: string]: number });
     }, [order]);
 
 
@@ -450,9 +454,34 @@ const Commande: React.FC = () => {
     if (loading) return <div className="text-center p-10 text-gray-800">Chargement de la commande...</div>;
     if (!order) return <div className="text-center p-10 text-red-500">Commande non trouvée.</div>;
 
-    const filteredProducts = activeCategoryId === 'all' 
-        ? products 
+    const filteredProducts = activeCategoryId === 'all'
+        ? products
         : products.filter(p => p.categoria_id === activeCategoryId);
+
+    const categorizedItems = useMemo(() => {
+        return order.items.reduce<{ pending: { item: OrderItem; index: number }[]; sent: { item: OrderItem; index: number }[] }>((acc, item, index) => {
+            if (item.estado === 'en_attente') {
+                acc.pending.push({ item, index });
+            } else {
+                acc.sent.push({ item, index });
+            }
+            return acc;
+        }, { pending: [], sent: [] });
+    }, [order.items]);
+
+    const handleProductPointerDown = useCallback((product: Product) => (event: React.PointerEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        addProductToOrder(product);
+    }, [addProductToOrder]);
+
+    const handleProductKeyDown = useCallback((product: Product) => (event: React.KeyboardEvent<HTMLButtonElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            addProductToOrder(product);
+        }
+    }, [addProductToOrder]);
+
+    const hasPendingItems = categorizedItems.pending.length > 0;
 
     return (
         <>
@@ -492,8 +521,13 @@ const Commande: React.FC = () => {
                         const isLowStock = !isProductAvailable(product);
                         const quantityInCart = productQuantitiesInCart[product.id] || 0;
                         return (
-                            <div key={product.id} onClick={() => addProductToOrder(product)}
-                                className={`border rounded-lg p-2 flex flex-col items-center justify-between text-center cursor-pointer hover:shadow-lg transition-all relative ${isLowStock ? 'border-yellow-500 border-2' : ''}`}>
+                            <button
+                                key={product.id}
+                                type="button"
+                                onPointerDown={handleProductPointerDown(product)}
+                                onKeyDown={handleProductKeyDown(product)}
+                                className={`border rounded-lg p-2 flex flex-col items-center justify-between text-center cursor-pointer hover:shadow-lg transition-all relative focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-gray-900 ${isLowStock ? 'border-yellow-500 border-2' : ''}`}
+                            >
                                 {quantityInCart > 0 && (
                                     <div className="absolute top-1 left-1 bg-brand-accent text-white rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
                                         {quantityInCart}
@@ -508,7 +542,7 @@ const Commande: React.FC = () => {
                                 <p className="font-semibold text-sm text-gray-800">{product.nom_produit}</p>
                                 <p className="text-xs text-gray-600 px-1 h-10 overflow-hidden flex-grow">{product.description}</p>
                                 <p className="font-bold text-brand-primary mt-1">{product.prix_vente.toFixed(2)} €</p>
-                            </div>
+                            </button>
                         )
                     })}
                 </div>
@@ -520,43 +554,74 @@ const Commande: React.FC = () => {
                     <h2 className="text-2xl font-semibold text-brand-secondary">Commande</h2>
                 </div>
                 <div className="flex-1 p-4 space-y-3 overflow-y-auto">
-                    {order.items.length === 0 ? <p className="text-gray-500">La commande est vide.</p> :
-                        order.items.map((item, index) => (
-                        <div key={item.id} className={`p-3 rounded-lg ${item.estado === 'enviado' ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                            <div className="flex justify-between items-start">
-                                <p className="font-bold text-gray-900 flex-1">{item.quantite}x {item.nom_produit}</p>
-                                <p className="font-bold text-gray-900">{(item.quantite * item.prix_unitaire).toFixed(2)}€</p>
-                            </div>
-                            <div className="flex justify-between items-center mt-2">
-                                <p className="text-sm text-gray-700">{item.prix_unitaire.toFixed(2)} € /u</p>
-                                <div className="flex items-center space-x-2 text-gray-800">
-                                    <button onClick={() => handleQuantityChange(index, -1)} disabled={item.estado === 'enviado'} className="disabled:text-gray-400 disabled:cursor-not-allowed p-1"><MinusCircle size={20} /></button>
-                                    <span className="font-bold w-6 text-center">{item.quantite}</span>
-                                    <button onClick={() => handleQuantityChange(index, 1)} disabled={item.estado === 'enviado'} className="disabled:text-gray-400 disabled:cursor-not-allowed p-1"><PlusCircle size={20} /></button>
+                    {order.items.length === 0 ? (
+                        <p className="text-gray-500">La commande est vide.</p>
+                    ) : (
+                        <>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold text-brand-secondary">Articles à envoyer</h3>
+                                    <span className="text-sm text-gray-500">{categorizedItems.pending.length}</span>
                                 </div>
-                            </div>
-                             {item.estado === 'en_attente' && (
-                                (editingCommentId === item.id || item.commentaire) ? (
-                                    <input
-                                        type="text"
-                                        placeholder="Ajouter un commentaire..."
-                                        value={item.commentaire}
-                                        onChange={(e) => handleCommentChange(index, e.target.value)}
-                                        onBlur={() => persistCommentChange(index)}
-                                        autoFocus
-                                        className="mt-2 ui-input text-sm"
-                                    />
+                                {categorizedItems.pending.length === 0 ? (
+                                    <p className="text-sm text-gray-500">Aucun article en attente.</p>
                                 ) : (
-                                    <button onClick={() => setEditingCommentId(item.id)} className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1">
-                                        <MessageSquare size={12}/> Ajouter un commentaire
-                                    </button>
-                                )
+                                    categorizedItems.pending.map(({ item, index }) => (
+                                        <div key={item.id} className="p-3 rounded-lg bg-yellow-100">
+                                            <div className="flex justify-between items-start">
+                                                <p className="font-bold text-gray-900 flex-1">{item.quantite}x {item.nom_produit}</p>
+                                                <p className="font-bold text-gray-900">{(item.quantite * item.prix_unitaire).toFixed(2)}€</p>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-2">
+                                                <p className="text-sm text-gray-700">{item.prix_unitaire.toFixed(2)} € /u</p>
+                                                <div className="flex items-center space-x-2 text-gray-800">
+                                                    <button onClick={() => handleQuantityChange(index, -1)} className="p-1"><MinusCircle size={20} /></button>
+                                                    <span className="font-bold w-6 text-center">{item.quantite}</span>
+                                                    <button onClick={() => handleQuantityChange(index, 1)} className="p-1"><PlusCircle size={20} /></button>
+                                                </div>
+                                            </div>
+                                            {(editingCommentId === item.id || item.commentaire) ? (
+                                                <input
+                                                    type="text"
+                                                    placeholder="Ajouter un commentaire..."
+                                                    value={item.commentaire}
+                                                    onChange={(e) => handleCommentChange(index, e.target.value)}
+                                                    onBlur={() => persistCommentChange(index)}
+                                                    autoFocus={editingCommentId === item.id}
+                                                    className="mt-2 ui-input text-sm"
+                                                />
+                                            ) : (
+                                                <button onClick={() => setEditingCommentId(item.id)} className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1">
+                                                    <MessageSquare size={12}/> Ajouter un commentaire
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {categorizedItems.sent.length > 0 && (
+                                <div className="space-y-3 pt-6 border-t border-gray-700">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-lg font-semibold text-brand-secondary">Envoyés en cuisine</h3>
+                                        <span className="text-sm text-gray-500">{categorizedItems.sent.length}</span>
+                                    </div>
+                                    {categorizedItems.sent.map(({ item }) => (
+                                        <div key={item.id} className="p-3 rounded-lg bg-green-100">
+                                            <div className="flex justify-between items-start">
+                                                <p className="font-bold text-gray-900 flex-1">{item.quantite}x {item.nom_produit}</p>
+                                                <p className="font-bold text-gray-900">{(item.quantite * item.prix_unitaire).toFixed(2)}€</p>
+                                            </div>
+                                            <p className="text-sm text-gray-700 mt-2">{item.prix_unitaire.toFixed(2)} € /u</p>
+                                            {item.commentaire && (
+                                                <p className="mt-2 text-sm italic text-gray-600 pl-2">"{item.commentaire}"</p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             )}
-                            {item.estado !== 'en_attente' && item.commentaire && (
-                                <p className="mt-2 text-sm italic text-gray-600 pl-2">"{item.commentaire}"</p>
-                            )}
-                        </div>
-                    ))}
+                        </>
+                    )}
                 </div>
                 <div className="p-4 border-t space-y-4">
                     <div className="flex justify-between text-2xl font-semibold text-brand-secondary">
@@ -572,7 +637,7 @@ const Commande: React.FC = () => {
 
                     <div className="flex space-x-2">
                         <button onClick={handleSendToKitchen}
-                            disabled={isSendingToKitchen || !order.items.some(i => i.estado === 'en_attente')}
+                            disabled={isSendingToKitchen || !hasPendingItems}
                             className="flex-1 ui-btn-accent justify-center py-3 disabled:opacity-60">
                             <Send size={20} />
                             <span>{isSendingToKitchen ? 'Synchronisation…' : 'Envoyer en Cuisine'}</span>
