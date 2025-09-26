@@ -25,6 +25,19 @@ const generateTempId = (() => {
     };
 })();
 
+const normalizeComment = (value?: string | null) => (value ?? '').trim();
+
+const haveSameExcludedIngredients = (a: string[] = [], b: string[] = []) => {
+    if (a.length !== b.length) {
+        return false;
+    }
+
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+
+    return sortedA.every((value, index) => value === sortedB[index]);
+};
+
 const Commande: React.FC = () => {
     const { tableId } = useParams<{ tableId: string }>();
     const navigate = useNavigate();
@@ -285,9 +298,15 @@ const Commande: React.FC = () => {
     }, [scheduleItemsSync, updateOrderItems]);
 
     const addProductToOrder = (product: Product) => {
+        const defaultComment = normalizeComment('');
+        const defaultExcludedIngredients: string[] = [];
+
         applyLocalItemsUpdate(items => {
             const existingItemIndex = items.findIndex(
-                item => item.produitRef === product.id && item.estado === 'en_attente' && !item.commentaire
+                item => item.produitRef === product.id
+                    && item.estado === 'en_attente'
+                    && normalizeComment(item.commentaire) === defaultComment
+                    && haveSameExcludedIngredients(item.excluded_ingredients ?? [], defaultExcludedIngredients)
             );
 
             if (existingItemIndex > -1) {
@@ -304,8 +323,8 @@ const Commande: React.FC = () => {
                 nom_produit: product.nom_produit,
                 prix_unitaire: product.prix_vente,
                 quantite: 1,
-                excluded_ingredients: [],
-                commentaire: '',
+                excluded_ingredients: [...defaultExcludedIngredients],
+                commentaire: defaultComment,
                 estado: 'en_attente',
             };
 
