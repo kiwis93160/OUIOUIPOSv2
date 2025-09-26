@@ -444,8 +444,8 @@ const resolveTableStatut = (
   row: SupabaseTableRow,
   meta?: { estado_cocina?: Order['estado_cocina'] },
 ): Table['statut'] => {
-  if (!row.commande_id) {
-    return 'libre';
+  if (row.commande_id) {
+    return 'en_cuisine';
   }
 
   const estadoCocina = meta?.estado_cocina;
@@ -462,7 +462,7 @@ const resolveTableStatut = (
     return row.statut;
   }
 
-  return 'en_cuisine';
+  return 'libre';
 };
 
 const mapTableRow = (
