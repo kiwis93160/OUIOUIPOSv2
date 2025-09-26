@@ -440,25 +440,49 @@ const mapSaleRow = (row: SupabaseSaleRow): Sale => ({
   saleDate: toTimestamp(row.sale_date) ?? Date.now(),
 });
 
+const resolveTableStatut = (
+  row: SupabaseTableRow,
+  meta?: { estado_cocina?: Order['estado_cocina'] },
+): Table['statut'] => {
+  if (!row.commande_id) {
+    return 'libre';
+  }
+
+  const estadoCocina = meta?.estado_cocina;
+
+  if (estadoCocina === 'listo') {
+    return 'para_entregar';
+  }
+
+  if (estadoCocina === 'servido' || estadoCocina === 'entregada') {
+    return 'para_pagar';
+  }
+
+  if (row.statut === 'para_entregar' || row.statut === 'para_pagar') {
+    return row.statut;
+  }
+
+  return 'en_cuisine';
+};
+
 const mapTableRow = (
   row: SupabaseTableRow,
   orderMeta: Map<string, { estado_cocina?: Order['estado_cocina']; date_envoi_cuisine?: number }>,
 ): Table => {
+  const meta = row.commande_id ? orderMeta.get(row.commande_id) : undefined;
+
   const table: Table = {
     id: row.id,
     nom: row.nom,
     capacite: row.capacite,
-    statut: row.statut,
+    statut: resolveTableStatut(row, meta),
     commandeId: row.commande_id ?? undefined,
-    couverts: row.couverts ?? undefined,
+    couverts: row.commande_id ? row.couverts ?? undefined : undefined,
   };
 
-  if (table.commandeId) {
-    const meta = orderMeta.get(table.commandeId);
-    if (meta) {
-      table.estado_cocina = meta.estado_cocina;
-      table.date_envoi_cuisine = meta.date_envoi_cuisine;
-    }
+  if (table.commandeId && meta) {
+    table.estado_cocina = meta.estado_cocina;
+    table.date_envoi_cuisine = meta.date_envoi_cuisine;
   }
 
   return table;
