@@ -47,6 +47,12 @@ const Commande: React.FC = () => {
         const pendingOrder = pendingServerOrderRef.current;
         if (!pendingOrder) return;
 
+        const currentOrder = orderRef.current;
+        if (currentOrder && JSON.stringify(currentOrder) === JSON.stringify(pendingOrder)) {
+            pendingServerOrderRef.current = null;
+            return;
+        }
+
         pendingServerOrderRef.current = null;
         orderRef.current = pendingOrder;
         setOrder(pendingOrder);
@@ -74,7 +80,12 @@ const Commande: React.FC = () => {
                     originalOrderRef.current = originalSnapshot;
                     setOriginalOrder(originalSnapshot);
                 } else {
-                    pendingServerOrderRef.current = orderData;
+                    const confirmedOrder = originalOrderRef.current;
+                    if (confirmedOrder && JSON.stringify(confirmedOrder) === JSON.stringify(orderData)) {
+                        pendingServerOrderRef.current = null;
+                    } else {
+                        pendingServerOrderRef.current = orderData;
+                    }
                 }
                 return;
             }
