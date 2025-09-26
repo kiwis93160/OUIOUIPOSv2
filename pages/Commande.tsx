@@ -289,27 +289,32 @@ const Commande: React.FC = () => {
         await syncQueueRef.current;
     }, [applyPendingServerSnapshot, fetchOrderData]);
 
-    const scheduleItemsSync = useCallback((updater: OrderItemsUpdater, removalSourceItems: OrderItem[], delay = 0) => {
+    const scheduleItemsSync = useCallback((delay = 100) => {
         if (itemsSyncTimeoutRef.current !== null) {
             window.clearTimeout(itemsSyncTimeoutRef.current);
         }
+
+        const effectiveDelay = delay > 0 ? delay : 1;
 
         itemsSyncTimeoutRef.current = window.setTimeout(() => {
             itemsSyncTimeoutRef.current = null;
             if (!orderRef.current) return;
 
-            void updateOrderItems(updater, { removalSourceItems });
-        }, delay);
+            const snapshotItems = orderRef.current.items.map(item => ({ ...item }));
+            const removalSourceItems = serverOrderRef.current
+                ? serverOrderRef.current.items.map(item => ({ ...item }))
+                : snapshotItems.map(item => ({ ...item }));
+
+            void updateOrderItems(snapshotItems, { removalSourceItems });
+        }, effectiveDelay);
     }, [updateOrderItems]);
 
     const applyLocalItemsUpdate = useCallback((updater: OrderItemsUpdater) => {
         const currentOrder = orderRef.current;
         if (!currentOrder) return;
 
-        const removalSourceItems = currentOrder.items.map(item => ({ ...item }));
-
         updateOrderItems(updater, { isLocalUpdate: true });
-        scheduleItemsSync(updater, removalSourceItems);
+        scheduleItemsSync();
     }, [scheduleItemsSync, updateOrderItems]);
 
     const addProductToOrder = (product: Product) => {
