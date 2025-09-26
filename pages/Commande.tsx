@@ -451,15 +451,14 @@ const Commande: React.FC = () => {
         }
     };
 
-    if (loading) return <div className="text-center p-10 text-gray-800">Chargement de la commande...</div>;
-    if (!order) return <div className="text-center p-10 text-red-500">Commande non trouvée.</div>;
-
     const filteredProducts = activeCategoryId === 'all'
         ? products
         : products.filter(p => p.categoria_id === activeCategoryId);
 
+    const orderItems = order?.items ?? [];
+
     const categorizedItems = useMemo(() => {
-        return order.items.reduce<{ pending: { item: OrderItem; index: number }[]; sent: { item: OrderItem; index: number }[] }>((acc, item, index) => {
+        return orderItems.reduce<{ pending: { item: OrderItem; index: number }[]; sent: { item: OrderItem; index: number }[] }>((acc, item, index) => {
             if (item.estado === 'en_attente') {
                 acc.pending.push({ item, index });
             } else {
@@ -467,7 +466,7 @@ const Commande: React.FC = () => {
             }
             return acc;
         }, { pending: [], sent: [] });
-    }, [order.items]);
+    }, [orderItems]);
 
     const handleProductPointerDown = useCallback((product: Product) => (event: React.PointerEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -482,6 +481,9 @@ const Commande: React.FC = () => {
     }, [addProductToOrder]);
 
     const hasPendingItems = categorizedItems.pending.length > 0;
+
+    if (loading) return <div className="text-center p-10 text-gray-800">Chargement de la commande...</div>;
+    if (!order) return <div className="text-center p-10 text-red-500">Commande non trouvée.</div>;
 
     return (
         <>
