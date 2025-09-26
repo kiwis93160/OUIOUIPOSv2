@@ -8,6 +8,9 @@ import OrderTimer from '../components/OrderTimer';
 import PaymentModal from '../components/PaymentModal';
 import Modal from '../components/Modal';
 
+const isPersistedItemId = (value?: string) =>
+    !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
 const Commande: React.FC = () => {
     const { tableId } = useParams<{ tableId: string }>();
     const navigate = useNavigate();
@@ -27,6 +30,7 @@ const Commande: React.FC = () => {
     const orderRef = useRef<Order | null>(order);
     const originalOrderRef = useRef<Order | null>(originalOrder);
     const pendingServerOrderRef = useRef<Order | null>(null);
+    const itemsSyncTimeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
         orderRef.current = order;
@@ -158,10 +162,14 @@ const Commande: React.FC = () => {
     
     type OrderItemsUpdater = OrderItem[] | ((items: OrderItem[]) => OrderItem[]);
 
-    const isPersistedItemId = (value?: string) =>
-        !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+    useEffect(() => () => {
+        if (itemsSyncTimeoutRef.current !== null) {
+            window.clearTimeout(itemsSyncTimeoutRef.current);
+            itemsSyncTimeoutRef.current = null;
+        }
+    }, []);
 
-    const updateOrderItems = async (updater: OrderItemsUpdater, options?: {isLocalUpdate?: boolean}) => {
+    const updateOrderItems = useCallback(async (updater: OrderItemsUpdater, options?: {isLocalUpdate?: boolean}) => {
         const currentOrder = orderRef.current;
         if (!currentOrder) return;
 
@@ -212,10 +220,29 @@ const Commande: React.FC = () => {
             alert("Une erreur est survenue lors de la mise à jour de la commande.");
             fetchOrderData(true);
         }
-    };
+    }, [applyPendingServerSnapshot, fetchOrderData]);
+
+    const scheduleItemsSync = useCallback((delay = 150) => {
+        if (itemsSyncTimeoutRef.current !== null) {
+            window.clearTimeout(itemsSyncTimeoutRef.current);
+        }
+
+        itemsSyncTimeoutRef.current = window.setTimeout(() => {
+            itemsSyncTimeoutRef.current = null;
+            if (!orderRef.current) return;
+
+            const snapshot = orderRef.current.items.map(item => ({ ...item }));
+            void updateOrderItems(snapshot);
+        }, delay);
+    }, [updateOrderItems]);
+
+    const applyLocalItemsUpdate = useCallback((updater: OrderItemsUpdater) => {
+        updateOrderItems(updater, { isLocalUpdate: true });
+        scheduleItemsSync();
+    }, [scheduleItemsSync, updateOrderItems]);
 
     const addProductToOrder = (product: Product) => {
-        updateOrderItems(items => {
+        applyLocalItemsUpdate(items => {
             const existingItemIndex = items.findIndex(
                 item => item.produitRef === product.id && item.estado === 'en_attente' && !item.commentaire
             );
@@ -242,9 +269,9 @@ const Commande: React.FC = () => {
             return [...items, newItem];
         });
     };
-    
+
     const handleQuantityChange = (itemIndex: number, change: number) => {
-        updateOrderItems(items => {
+        applyLocalItemsUpdate(items => {
             if (!items[itemIndex]) return items;
             const updatedItems = items.map(item => ({ ...item }));
             const newQuantity = updatedItems[itemIndex].quantite + change;
