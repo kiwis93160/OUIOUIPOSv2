@@ -1116,7 +1116,7 @@ export const api = {
     await supabase
       .from('restaurant_tables')
       .update({
-        statut: 'occupee',
+        statut: 'en_cuisine',
         commande_id: insertedRow.id,
         couverts: tableRow.couverts ?? tableRow.capacite,
       })
@@ -1282,7 +1282,7 @@ export const api = {
     if (order.table_id) {
       await supabase
         .from('restaurant_tables')
-        .update({ statut: 'occupee' })
+        .update({ statut: 'en_cuisine' })
         .eq('id', order.table_id);
     }
 
@@ -1305,7 +1305,7 @@ export const api = {
     if (order?.table_id) {
       await supabase
         .from('restaurant_tables')
-        .update({ statut: 'a_payer' })
+        .update({ statut: 'para_entregar' })
         .eq('id', order.table_id);
     }
 
@@ -1318,11 +1318,23 @@ export const api = {
   },
 
   markOrderAsServed: async (orderId: string): Promise<Order> => {
+    const existingOrder = await fetchOrderById(orderId);
+    if (!existingOrder) {
+      throw new Error('Order not found');
+    }
+
     const nowIso = new Date().toISOString();
     await supabase
       .from('orders')
       .update({ estado_cocina: 'servido', date_servido: nowIso })
       .eq('id', orderId);
+
+    if (existingOrder.table_id) {
+      await supabase
+        .from('restaurant_tables')
+        .update({ statut: 'para_pagar' })
+        .eq('id', existingOrder.table_id);
+    }
 
     publishOrderChange();
     const updatedOrder = await fetchOrderById(orderId);
