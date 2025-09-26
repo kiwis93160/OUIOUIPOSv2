@@ -1,4 +1,4 @@
-import React, { useState, FormEvent, useEffect, useCallback } from 'react';
+import React, { useState, FormEvent, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
@@ -8,7 +8,14 @@ import { Mail, MapPin, Phone, Menu, X } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 
-const PinInput: React.FC<{ pin: string; onPinChange: (pin: string) => void; pinLength: number }> = ({ pin, onPinChange, pinLength }) => {
+type PinInputProps = {
+  pin: string;
+  onPinChange: (pin: string) => void;
+  pinLength: number;
+  describedBy?: string;
+};
+
+const PinInput = React.forwardRef<HTMLInputElement, PinInputProps>(({ pin, onPinChange, pinLength, describedBy }, ref) => {
   const handleKeyClick = (key: string) => {
     if (pin.length < pinLength) {
       onPinChange(pin + key);
@@ -16,17 +23,64 @@ const PinInput: React.FC<{ pin: string; onPinChange: (pin: string) => void; pinL
   };
 
   const handleDelete = () => {
-    onPinChange(pin.slice(0, -1));
+    if (pin.length > 0) {
+      onPinChange(pin.slice(0, -1));
+    }
   };
 
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const sanitized = event.target.value.replace(/\D/g, '').slice(0, pinLength);
+    onPinChange(sanitized);
+  };
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (/^\d$/.test(event.key)) {
+      event.preventDefault();
+      handleKeyClick(event.key);
+      return;
+    }
+
+    if (event.key === 'Backspace') {
+      event.preventDefault();
+      handleDelete();
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onPinChange('');
+    }
+  };
+
+  const digitsMessage =
+    pin.length === 0
+      ? `Aucun chiffre saisi. Vous pouvez entrer ${pinLength} chiffres.`
+      : `${pin.length} ${pin.length > 1 ? 'chiffres saisis' : 'chiffre saisi'} sur ${pinLength}.`;
+
   return (
-    <div className="pin-input" aria-label="Clavier numérique">
+    <div className="pin-input" aria-label="Clavier numérique sécurisé">
+      <input
+        ref={ref}
+        id="staff-pin-field"
+        type="password"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        className="pin-input__field"
+        value={pin}
+        onChange={handleInputChange}
+        onKeyDown={handleInputKeyDown}
+        aria-describedby={describedBy}
+        aria-label={`Code PIN à ${pinLength} chiffres`}
+      />
       <div className="pin-indicator" role="presentation">
         {Array.from({ length: pinLength }).map((_, index) => (
           <div key={index} className="pin-indicator__slot" aria-hidden="true">
             {pin[index] ? '•' : ''}
           </div>
         ))}
+      </div>
+      <div className="pin-input__live" aria-live="polite">
+        {digitsMessage}
       </div>
       <div className="pin-pad">
         {[...Array(9)].map((_, index) => (
@@ -49,7 +103,9 @@ const PinInput: React.FC<{ pin: string; onPinChange: (pin: string) => void; pinL
       </div>
     </div>
   );
-};
+});
+
+PinInput.displayName = 'PinInput';
 
 
 const Login: React.FC = () => {
@@ -57,6 +113,7 @@ const Login: React.FC = () => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const pinInputRef = useRef<HTMLInputElement>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
   
@@ -78,7 +135,7 @@ const Login: React.FC = () => {
       setError(err.message || 'PIN invalide. Veuillez réessayer.');
       setPin('');
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   }, [login, navigate, loading]);
 
@@ -88,6 +145,15 @@ const Login: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [pin, submitPin]);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      const timer = window.setTimeout(() => {
+        pinInputRef.current?.focus();
+      }, 50);
+      return () => window.clearTimeout(timer);
+    }
+  }, [isModalOpen]);
 
   useEffect(() => {
     const fetchMenuPreview = async () => {
@@ -288,13 +354,60 @@ const Login: React.FC = () => {
         </div>
       </footer>
 
-      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setPin(''); setError(''); }} title="Entrez votre PIN">
-        <form onSubmit={handleFormSubmit} className="modal-form">
-          <PinInput pin={pin} onPinChange={setPin} pinLength={6} />
-          <p className="modal-form__error" role="alert" aria-live="assertive">{error}</p>
-          <button type="submit" disabled={loading || pin.length !== 6} className="ui-btn ui-btn-primary ui-btn--block" data-state={loading ? 'loading' : 'idle'}>
-            {loading ? 'Connexion...' : 'Valider'}
-          </button>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setPin('');
+          setError('');
+        }}
+        title="Connexion du personnel"
+      >
+        <form
+          onSubmit={handleFormSubmit}
+          className="modal-form"
+          aria-describedby="staff-pin-help"
+        >
+          <div className="modal-form__intro">
+            <p id="staff-pin-help" className="modal-form__help">
+              Entrez votre code PIN à 6 chiffres pour accéder au tableau de bord du personnel.
+            </p>
+          </div>
+          <div className="modal-form__controls">
+            <PinInput
+              ref={pinInputRef}
+              pin={pin}
+              onPinChange={setPin}
+              pinLength={6}
+              describedBy="staff-pin-help"
+            />
+            <div className="modal-form__side">
+              <p className="modal-form__error" role="alert" aria-live="assertive">
+                {error}
+              </p>
+              <div className="modal-form__actions">
+                <button
+                  type="submit"
+                  disabled={loading || pin.length !== 6}
+                  className="ui-btn ui-btn-primary ui-btn--block"
+                  data-state={loading ? 'loading' : 'idle'}
+                >
+                  {loading ? 'Connexion...' : 'Valider'}
+                </button>
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-secondary ui-btn--block"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setPin('');
+                    setError('');
+                  }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
         </form>
       </Modal>
     </div>
