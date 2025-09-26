@@ -207,7 +207,10 @@ const Commande: React.FC = () => {
         }
     }, []);
 
-    const updateOrderItems = useCallback(async (updater: OrderItemsUpdater, options?: {isLocalUpdate?: boolean}) => {
+    const updateOrderItems = useCallback(async (
+        updater: OrderItemsUpdater,
+        options?: { isLocalUpdate?: boolean; removalSourceItems?: OrderItem[] }
+    ) => {
         const currentOrder = orderRef.current;
         if (!currentOrder) return;
 
@@ -247,10 +250,11 @@ const Commande: React.FC = () => {
                 }
 
                 const baseItemsForComputation = baseOrder.items.map(item => ({ ...item }));
+                const removalSourceItems = options?.removalSourceItems ?? currentOrder.items;
 
                 const finalItems = computeItems(baseItemsForComputation);
-                const removedItemIds = currentOrder.items
-                    .filter(item => isPersistedItemId(item.id) && !optimisticItems.some(finalItem => finalItem.id === item.id))
+                const removedItemIds = removalSourceItems
+                    .filter(item => isPersistedItemId(item.id) && !finalItems.some(finalItem => finalItem.id === item.id))
                     .map(item => item.id);
 
                 const updatedOrder = await api.updateOrder(
@@ -282,7 +286,7 @@ const Commande: React.FC = () => {
         await syncQueueRef.current;
     }, [applyPendingServerSnapshot, fetchOrderData]);
 
-    const scheduleItemsSync = useCallback((delay = 0) => {
+    const scheduleItemsSync = useCallback((updater: OrderItemsUpdater, removalSourceItems: OrderItem[], delay = 0) => {
         if (itemsSyncTimeoutRef.current !== null) {
             window.clearTimeout(itemsSyncTimeoutRef.current);
         }
@@ -291,14 +295,18 @@ const Commande: React.FC = () => {
             itemsSyncTimeoutRef.current = null;
             if (!orderRef.current) return;
 
-            const snapshot = orderRef.current.items.map(item => ({ ...item }));
-            void updateOrderItems(snapshot);
+            void updateOrderItems(updater, { removalSourceItems });
         }, delay);
     }, [updateOrderItems]);
 
     const applyLocalItemsUpdate = useCallback((updater: OrderItemsUpdater) => {
+        const currentOrder = orderRef.current;
+        if (!currentOrder) return;
+
+        const removalSourceItems = currentOrder.items.map(item => ({ ...item }));
+
         updateOrderItems(updater, { isLocalUpdate: true });
-        scheduleItemsSync();
+        scheduleItemsSync(updater, removalSourceItems);
     }, [scheduleItemsSync, updateOrderItems]);
 
     const addProductToOrder = (product: Product) => {
