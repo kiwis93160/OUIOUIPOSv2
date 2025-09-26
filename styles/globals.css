@@ -1467,3 +1467,56 @@ p {
   color: #f8fafc;
   line-height: var(--line-height-snug);
 }
+@layer utilities {
+  .urgency-border-normal {
+    border-color: #c7d2fe;
+  }
+
+  .urgency-border-warning {
+    border-color: #facc15;
+  }
+
+  .urgency-border-critical {
+    border-color: #fca5a5;
+  }
+
+  .urgency-accent-normal {
+    background-color: #2563eb;
+  }
+
+  .urgency-accent-warning {
+    background-color: #f59e0b;
+  }
+
+  .urgency-accent-critical {
+    background-color: #dc2626;
+  }
+
+  .urgency-badge-normal {
+    background-color: #eff4ff;
+    color: #1d4ed8;
+  }
+
+  .urgency-badge-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  .urgency-badge-critical {
+    background-color: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .urgency-icon-normal {
+    color: #2563eb;
+  }
+
+  .urgency-icon-warning {
+    color: #b45309;
+  }
+
+  .urgency-icon-critical {
+    color: #b91c1c;
+  }
+}
+

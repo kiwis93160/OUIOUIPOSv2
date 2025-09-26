@@ -6,62 +6,80 @@ import Modal from '../components/Modal';
 import OrderTimer from '../components/OrderTimer';
 import { getOrderUrgencyStyles } from '../utils/orderUrgency';
 
+
 const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => void, onDeliver?: (orderId: string) => void, isProcessing?: boolean }> = ({ order, onValidate, onDeliver, isProcessing }) => {
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
     const displayName = order.table_nom || `Commande #${order.id.slice(-6)}`;
     const timerStart = order.date_envoi_cuisine || order.date_creation;
     const urgencyStyles = getOrderUrgencyStyles(timerStart);
+    const urgencyLabelMap: Record<typeof urgencyStyles.level, string> = {
+        normal: 'Normal',
+        warning: 'À surveiller',
+        critical: 'Urgent',
+    };
 
     return (
         <>
-            <div className={`rounded-lg border shadow-md flex flex-col h-full overflow-hidden transition-colors duration-300 ${urgencyStyles.container}`}>
-                <header className="bg-brand-secondary text-white p-3 rounded-t-lg">
+            <div className={`relative flex h-full flex-col overflow-hidden rounded-xl border bg-brand-surface shadow-md transition-shadow duration-300 hover:shadow-lg ${urgencyStyles.border}`}>
+                <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${urgencyStyles.accent}`} />
+                <header className="border-b border-brand-border/60 px-5 pt-5 pb-4">
                     <div className="flex flex-col gap-3">
-                        <h4 className="text-xl font-bold leading-tight">{displayName}</h4>
-                        <OrderTimer startTime={timerStart} className="w-full justify-center" />
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                                <h4 className="text-xl font-semibold leading-tight text-brand-heading">{displayName}</h4>
+                                <p className="text-xs text-brand-text-muted">
+                                    Commande envoyée {new Date(timerStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                            </div>
+                            <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${urgencyStyles.badge}`}>
+                                <span className={`h-2 w-2 rounded-full ${urgencyStyles.accent}`} />
+                                <span>{urgencyLabelMap[urgencyStyles.level]}</span>
+                            </span>
+                        </div>
+                        <OrderTimer startTime={timerStart} className="text-base" />
                     </div>
                 </header>
 
-
-              <div className="p-3 space-y-3 flex-1 overflow-y-auto">
-
-                
+                <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
                     {order.clientInfo && (
-                        <div className="space-y-1 text-sm text-gray-800 bg-white/90 rounded-md p-3 shadow-sm">
+                        <div className="space-y-2 rounded-lg border border-brand-border/60 bg-brand-surface-elevated p-4 shadow-sm">
                             {order.clientInfo.nom && (
-                                <div className="flex items-center gap-2">
-                                    <User size={14} />
+                                <div className="flex items-center gap-2 text-sm text-brand-heading">
+                                    <User size={16} className={urgencyStyles.icon} />
                                     <span className="font-medium">{order.clientInfo.nom}</span>
                                 </div>
                             )}
                             {order.clientInfo.adresse && (
-                                <div className="flex items-start gap-2 text-sm text-gray-700">
-                                    <MapPin size={14} className="mt-0.5" />
+                                <div className="flex items-start gap-2 text-sm text-brand-text">
+                                    <MapPin size={16} className={`mt-0.5 ${urgencyStyles.icon}`} />
                                     <span>{order.clientInfo.adresse}</span>
                                 </div>
                             )}
                         </div>
                     )}
 
-                    <div className="space-y-2">
-                        <h5 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">Articles</h5>
-                        <ul className="space-y-1">
+                    <div className="space-y-3">
+                        <h5 className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-text-muted">Articles</h5>
+                        <ul className="space-y-2">
                             {order.items.map((item: OrderItem) => (
-                                <li key={item.id} className="text-sm text-gray-700 bg-gray-50 rounded-md px-3 py-2">
-                                    <span className="font-semibold text-gray-900">{item.quantite}x</span> {item.nom_produit}
+                                <li key={item.id} className="rounded-lg border border-brand-border/60 bg-brand-surface-elevated px-4 py-3 text-sm text-brand-heading shadow-sm">
+                                    <div className="flex items-baseline justify-between gap-3">
+                                        <span className="font-semibold">{item.nom_produit}</span>
+                                        <span className="text-lg font-bold">{item.quantite}×</span>
+                                    </div>
                                 </li>
                             ))}
                         </ul>
                     </div>
 
-                    <div className="flex items-center justify-between text-gray-900 font-semibold text-lg pt-2 border-t border-gray-200">
+                    <div className="flex items-center justify-between rounded-lg border border-brand-border/60 bg-brand-surface-elevated px-4 py-3 font-semibold text-brand-heading shadow-sm">
                         <span>Total</span>
                         <span>{order.total.toFixed(2)} €</span>
                     </div>
                 </div>
 
-                <footer className={`p-4 border-t space-y-3 transition-colors duration-300 ${urgencyStyles.content}`}>
+                <footer className="border-t border-brand-border/60 px-5 pb-5 pt-4">
                     {order.statut === 'pendiente_validacion' && onValidate && (
                         <div className="space-y-2">
                             <button
@@ -69,7 +87,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                                 className="w-full ui-btn ui-btn-secondary"
                                 type="button"
                             >
-                                <Eye size={16} /> {order.receipt_url ? 'Voir le justificatif' : 'Justificatif indisponible'}
+                                <Eye size={16} className={urgencyStyles.icon} /> {order.receipt_url ? 'Voir le justificatif' : 'Justificatif indisponible'}
                             </button>
                             <button
                                 onClick={() => onValidate(order.id)}

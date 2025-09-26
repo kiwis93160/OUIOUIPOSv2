@@ -2,32 +2,34 @@ export type OrderUrgencyLevel = 'normal' | 'warning' | 'critical';
 
 export interface OrderUrgencyStyles {
   level: OrderUrgencyLevel;
-  /**
-   * Classes applied on the ticket wrapper. They follow the same palette as the timer
-   * (brand primary for normal, yellow for warning, red for critical) while keeping
-   * enough contrast for borders and default text.
-   */
-  container: string;
-  /**
-   * Classes applied on inner content sections (body, footer…). These sections get
-   * a near-white background so text remains legible even when the wrapper switches
-   * to intense urgency colours.
-   */
-  content: string;
+  /** Classes applied on the ticket wrapper border. */
+  border: string;
+  /** Accent colour used for badges or sidebands. */
+  accent: string;
+  /** Background and text colour for urgency badges. */
+  badge: string;
+  /** Icon/text colour accent for subtle highlights. */
+  icon: string;
 }
 
 const URGENCY_STYLE_MAP: Record<OrderUrgencyLevel, Omit<OrderUrgencyStyles, 'level'>> = {
   critical: {
-    container: 'bg-red-600 border-red-700 text-white',
-    content: 'bg-white/95 text-gray-900',
+    border: 'urgency-border-critical',
+    accent: 'urgency-accent-critical',
+    badge: 'urgency-badge-critical',
+    icon: 'urgency-icon-critical',
   },
   warning: {
-    container: 'bg-yellow-400 border-yellow-500 text-gray-900',
-    content: 'bg-white/95 text-gray-900',
+    border: 'urgency-border-warning',
+    accent: 'urgency-accent-warning',
+    badge: 'urgency-badge-warning',
+    icon: 'urgency-icon-warning',
   },
   normal: {
-    container: 'bg-brand-primary/20 border-brand-primary text-brand-secondary',
-    content: 'bg-white text-brand-text',
+    border: 'urgency-border-normal',
+    accent: 'urgency-accent-normal',
+    badge: 'urgency-badge-normal',
+    icon: 'urgency-icon-normal',
   },
 };
 
@@ -55,8 +57,10 @@ export const getOrderUrgencyStyles = (startTime?: number): OrderUrgencyStyles =>
 
   return {
     level,
-    container: styles.container,
-    content: styles.content,
+    border: styles.border,
+    accent: styles.accent,
+    badge: styles.badge,
+    icon: styles.icon,
   };
 };
 
@@ -65,4 +69,4 @@ export const getOrderUrgencyStyles = (startTime?: number): OrderUrgencyStyles =>
  * urgency level and the different sections' classes.
  */
 export const getOrderUrgencyClass = (startTime?: number): string =>
-  getOrderUrgencyStyles(startTime).container;
+  getOrderUrgencyStyles(startTime).border;
