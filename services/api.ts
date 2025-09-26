@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { normalizeCloudinaryImageUrl, resolveProductImageUrl } from './cloudinary';
-import { fetchRoleLoginsSince as fetchRoleLoginsFromProxy, logRoleLogin } from './roleLoginsProxy';
+import { clearRoleLoginsBefore, fetchRoleLoginsSince, logRoleLogin } from './roleLogins';
 
 import {
   Role,
@@ -752,7 +752,7 @@ export const api = {
     const role = mapRoleRow(row, false);
 
     try {
-      await logRoleLogin(role.id);
+      await logRoleLogin(role.id, role.name);
     } catch (error) {
       console.warn('Failed to enregistrer la connexion du rôle', error);
     }
@@ -1476,6 +1476,8 @@ export const api = {
     const start = getBusinessDayStart(now);
     const startIso = start.toISOString();
 
+    clearRoleLoginsBefore(startIso);
+
     const [ordersResponse, categories, ingredients, productRowsResponse] = await Promise.all([
       selectOrdersQuery().eq('statut', 'finalisee'),
       fetchCategories(),
@@ -1485,7 +1487,7 @@ export const api = {
     let roleLoginsResult: RoleLogin[] = [];
     let roleLoginsUnavailable = false;
     try {
-      roleLoginsResult = await fetchRoleLoginsFromProxy(startIso);
+      roleLoginsResult = await fetchRoleLoginsSince(startIso);
     } catch (error) {
       console.warn('Failed to fetch role logins for daily report', error);
       roleLoginsUnavailable = true;
