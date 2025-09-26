@@ -22,6 +22,7 @@ const Commande: React.FC = () => {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isExitConfirmOpen, setExitConfirmOpen] = useState(false);
     const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+    const [isSendingToKitchen, setIsSendingToKitchen] = useState(false);
 
     const orderRef = useRef<Order | null>(order);
     const originalOrderRef = useRef<Order | null>(originalOrder);
@@ -278,20 +279,41 @@ const Commande: React.FC = () => {
     }
 
     const handleSendToKitchen = async () => {
-        if (!order) return;
+        if (!orderRef.current) return;
 
-        const pendingItems = order.items.filter(item => item.estado === 'en_attente');
-        if (pendingItems.length === 0) return;
+        setIsSendingToKitchen(true);
 
-        const itemsToSend = pendingItems.map(item => item.id);
         try {
-            const updatedOrder = await api.sendOrderToKitchen(order.id, itemsToSend);
+            let latestOrder = orderRef.current;
+
+            while (latestOrder && latestOrder.items.some(item => item.estado === 'en_attente' && !isPersistedItemId(item.id))) {
+                await updateOrderItems(latestOrder.items.map(item => ({ ...item })));
+                latestOrder = orderRef.current;
+            }
+
+            latestOrder = orderRef.current;
+            if (!latestOrder) return;
+
+            const pendingItems = latestOrder.items.filter(item => item.estado === 'en_attente');
+            if (pendingItems.length === 0) return;
+
+            const nonPersistedItems = pendingItems.filter(item => !isPersistedItemId(item.id));
+            if (nonPersistedItems.length > 0) {
+                console.warn('Des articles non persistés subsistent après synchronisation, envoi annulé.');
+                return;
+            }
+
+            const itemsToSend = pendingItems.map(item => item.id);
+
+            const updatedOrder = await api.sendOrderToKitchen(latestOrder.id, itemsToSend);
             setOrder(updatedOrder);
             setOriginalOrder(JSON.parse(JSON.stringify(updatedOrder)));
             navigate('/ventes');
         } catch (error) {
             console.error("Failed to send order to kitchen", error);
             alert("Erreur lors de l'envoi en cuisine.");
+        } finally {
+            setIsSendingToKitchen(false);
         }
     };
 
@@ -473,9 +495,10 @@ const Commande: React.FC = () => {
 
                     <div className="flex space-x-2">
                         <button onClick={handleSendToKitchen}
-                            disabled={!order.items.some(i => i.estado === 'en_attente')}
+                            disabled={isSendingToKitchen || !order.items.some(i => i.estado === 'en_attente')}
                             className="flex-1 ui-btn-accent justify-center py-3 disabled:opacity-60">
-                            <Send size={20} /><span>Envoyer en Cuisine</span>
+                            <Send size={20} />
+                            <span>{isSendingToKitchen ? 'Synchronisation…' : 'Envoyer en Cuisine'}</span>
                         </button>
                         <button onClick={() => setIsPaymentModalOpen(true)}
                                 disabled={order.estado_cocina !== 'servido'}
