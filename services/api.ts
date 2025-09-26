@@ -450,6 +450,10 @@ const resolveTableStatut = (
 
   const estadoCocina = meta?.estado_cocina;
 
+  if (!estadoCocina || estadoCocina === 'no_enviado') {
+    return 'libre';
+  }
+
   if (estadoCocina === 'listo') {
     return 'para_entregar';
   }
@@ -462,7 +466,7 @@ const resolveTableStatut = (
     return row.statut;
   }
 
-  return 'En cuisine';
+  return 'en_cuisine';
 };
 
 const mapTableRow = (
