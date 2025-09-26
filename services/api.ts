@@ -13,6 +13,7 @@ import {
   OrderItem,
   RecipeItem,
   DashboardStats,
+  DashboardPeriod,
   SalesDataPoint,
   NotificationCounts,
   DailyReport,
@@ -572,6 +573,20 @@ export const getBusinessDayStart = (now: Date = new Date()): Date => {
   return startTime;
 };
 
+const DASHBOARD_PERIOD_CONFIG: Record<DashboardPeriod, { days: number; label: string }> = {
+  week: { days: 7, label: '7 derniers jours' },
+  month: { days: 30, label: '30 derniers jours' },
+};
+
+const resolveDashboardPeriodBounds = (period: DashboardPeriod) => {
+  const config = DASHBOARD_PERIOD_CONFIG[period];
+  const end = new Date(getBusinessDayStart());
+  end.setDate(end.getDate() + 1);
+  const start = new Date(end);
+  start.setDate(start.getDate() - config.days);
+  return { config, start, end };
+};
+
 const createSalesEntriesForOrder = async (order: Order) => {
   if (!order.items.length) {
     return;
@@ -745,28 +760,35 @@ export const api = {
     return role;
   },
 
-  getDashboardStats: async (): Promise<DashboardStats> => {
+  getDashboardStats: async (period: DashboardPeriod = 'week'): Promise<DashboardStats> => {
+    const { config, start, end } = resolveDashboardPeriodBounds(period);
+    const startIso = start.toISOString();
+    const endIso = end.toISOString();
+    const previousStart = new Date(start);
+    previousStart.setDate(previousStart.getDate() - config.days);
+    const previousStartIso = previousStart.toISOString();
+
     const businessDayStart = getBusinessDayStart();
     const businessDayIso = businessDayStart.toISOString();
 
-    const [tables, ingredients, categories, productRowsResponse, ordersResponse, weekOrdersResponse] = await Promise.all([
-      fetchTablesWithMeta(),
-      fetchIngredients(),
-      fetchCategories(),
-      selectProductsQuery(),
-      selectOrdersQuery().eq('statut', 'finalisee').gte('date_creation', businessDayIso),
-      selectOrdersQuery().eq('statut', 'finalisee').gte('date_creation', (() => {
-        const start = new Date(businessDayStart);
-        start.setDate(start.getDate() - 13);
-        return start.toISOString();
-      })()),
-    ]);
+    const [tables, ingredients, categories, productRowsResponse, todaysOrdersResponse, periodOrdersResponse] =
+      await Promise.all([
+        fetchTablesWithMeta(),
+        fetchIngredients(),
+        fetchCategories(),
+        selectProductsQuery(),
+        selectOrdersQuery().eq('statut', 'finalisee').gte('date_creation', businessDayIso),
+        selectOrdersQuery().eq('statut', 'finalisee').gte('date_creation', previousStartIso).lt('date_creation', endIso),
+      ]);
 
-    const todaysOrderRows = unwrap<SupabaseOrderRow[]>(ordersResponse as SupabaseResponse<SupabaseOrderRow[]>);
+    const todaysOrderRows = unwrap<SupabaseOrderRow[]>(todaysOrdersResponse as SupabaseResponse<SupabaseOrderRow[]>);
     const todaysOrders = todaysOrderRows.map(mapOrderRow);
 
-    const weekOrderRows = unwrap<SupabaseOrderRow[]>(weekOrdersResponse as SupabaseResponse<SupabaseOrderRow[]>);
-    const weekOrders = weekOrderRows.map(mapOrderRow);
+    const periodOrderRows = unwrap<SupabaseOrderRow[]>(periodOrdersResponse as SupabaseResponse<SupabaseOrderRow[]>);
+    const mappedPeriodOrders = periodOrderRows.map(mapOrderRow);
+
+    const currentPeriodOrders = mappedPeriodOrders.filter(order => order.date_creation >= start.getTime());
+    const previousPeriodOrders = mappedPeriodOrders.filter(order => order.date_creation < start.getTime());
 
     const ingredientMap = new Map(ingredients.map(ing => [ing.id, ing]));
     const productRows = unwrap<SupabaseProductRow[]>(productRowsResponse as SupabaseResponse<SupabaseProductRow[]>);
@@ -777,8 +799,8 @@ export const api = {
       }),
     );
 
-    const ventesAujourdhui = todaysOrders.reduce((sum, order) => sum + order.total, 0);
-    const beneficeAujourdhui = todaysOrders.reduce((profit, order) => {
+    const ventesPeriode = currentPeriodOrders.reduce((sum, order) => sum + (order.total ?? 0), 0);
+    const beneficePeriode = currentPeriodOrders.reduce((profit, order) => {
       return (
         profit +
         order.items.reduce((acc, item) => {
@@ -789,13 +811,13 @@ export const api = {
       );
     }, 0);
 
-    const clientsAujourdhui = todaysOrders.reduce((sum, order) => sum + order.couverts, 0);
-    const panierMoyen = todaysOrders.length > 0 ? ventesAujourdhui / todaysOrders.length : 0;
+    const clientsPeriode = currentPeriodOrders.reduce((sum, order) => sum + (order.couverts ?? 0), 0);
+    const panierMoyen = currentPeriodOrders.length > 0 ? ventesPeriode / currentPeriodOrders.length : 0;
 
     const categoryMap = new Map(categories.map(category => [category.id, category.nom]));
 
     const ventesParCategorieMap = new Map<string, number>();
-    todaysOrders.forEach(order => {
+    currentPeriodOrders.forEach(order => {
       order.items.forEach(item => {
         const product = productMap.get(item.produitRef);
         const categoryName = product ? categoryMap.get(product.categoria_id) ?? 'Sans catégorie' : 'Sans catégorie';
@@ -816,45 +838,56 @@ export const api = {
     const commandesEnCuisine = todaysOrders.filter(order => order.estado_cocina === 'recibido').length;
     const ingredientsStockBas = ingredients.filter(ingredient => ingredient.stock_actuel <= ingredient.stock_minimum);
 
-    const ventes7Jours = Array.from({ length: 7 }).map((_, index) => {
-      const dayStart = new Date(businessDayStart);
-      dayStart.setDate(dayStart.getDate() - (6 - index));
+    const sumOrdersBetween = (orders: Order[], rangeStart: Date, rangeEnd: Date) => {
+      const startTimestamp = rangeStart.getTime();
+      const endTimestamp = rangeEnd.getTime();
+      return orders.reduce((sum, order) => {
+        if (order.date_creation >= startTimestamp && order.date_creation < endTimestamp) {
+          return sum + (order.total ?? 0);
+        }
+        return sum;
+      }, 0);
+    };
+
+    const ventesPeriodeSeries = Array.from({ length: config.days }).map((_, index) => {
+      const dayStart = new Date(start);
+      dayStart.setDate(dayStart.getDate() + index);
       const dayEnd = new Date(dayStart);
       dayEnd.setDate(dayEnd.getDate() + 1);
 
-      const dayTotal = weekOrders
-        .filter(order => order.date_creation >= dayStart.getTime() && order.date_creation < dayEnd.getTime())
-        .reduce((sum, order) => sum + order.total, 0);
+      const previousDayStart = new Date(previousStart);
+      previousDayStart.setDate(previousDayStart.getDate() + index);
+      const previousDayEnd = new Date(previousDayStart);
+      previousDayEnd.setDate(previousDayEnd.getDate() + 1);
 
-      const previousWeekStart = new Date(dayStart);
-      previousWeekStart.setDate(previousWeekStart.getDate() - 7);
-      const previousWeekEnd = new Date(previousWeekStart);
-      previousWeekEnd.setDate(previousWeekEnd.getDate() + 1);
-
-      const previousWeekTotal = weekOrders
-        .filter(
-          order =>
-            order.date_creation >= previousWeekStart.getTime() && order.date_creation < previousWeekEnd.getTime(),
-        )
-        .reduce((sum, order) => sum + order.total, 0);
+      const name =
+        config.days === 7
+          ? index === config.days - 1
+            ? 'Auj'
+            : `J-${config.days - 1 - index}`
+          : dayStart.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 
       return {
-        name: index === 6 ? 'Auj' : `J-${6 - index}`,
-        ventes: dayTotal,
-        ventesSemainePrecedente: previousWeekTotal,
+        name,
+        ventes: sumOrdersBetween(currentPeriodOrders, dayStart, dayEnd),
+        ventesPeriodePrecedente: sumOrdersBetween(previousPeriodOrders, previousDayStart, previousDayEnd),
       };
     });
 
     return {
-      ventesAujourdhui,
-      beneficeAujourdhui,
-      clientsAujourdhui,
+      period,
+      periodLabel: config.label,
+      periodStart: startIso,
+      periodEnd: endIso,
+      ventesPeriode,
+      beneficePeriode,
+      clientsPeriode,
       panierMoyen,
       tablesOccupees,
       clientsActuels,
       commandesEnCuisine,
       ingredientsStockBas,
-      ventes7Jours,
+      ventesPeriodeSeries,
       ventesParCategorie,
     };
   },
