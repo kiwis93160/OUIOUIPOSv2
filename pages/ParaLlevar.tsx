@@ -16,19 +16,19 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
     const urgencyLabelMap: Record<typeof urgencyStyles.level, string> = {
         normal: 'Normal',
         warning: 'À surveiller',
-        critical: 'Urgent',
+        critical: 'Critique',
     };
 
     return (
         <>
-            <div className={`relative flex h-full flex-col overflow-hidden rounded-xl border bg-brand-surface shadow-md transition-shadow duration-300 hover:shadow-lg ${urgencyStyles.border}`}>
+            <div className={`relative flex h-full flex-col overflow-hidden rounded-xl border bg-white text-gray-900 shadow-md transition-shadow duration-300 hover:shadow-lg ${urgencyStyles.border}`}>
                 <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${urgencyStyles.accent}`} />
-                <header className="border-b border-brand-border/60 px-5 pt-5 pb-4">
+                <header className="border-b border-gray-200 px-5 pt-5 pb-4">
                     <div className="flex flex-col gap-3">
                         <div className="flex items-start justify-between gap-3">
                             <div className="space-y-1">
-                                <h4 className="text-xl font-semibold leading-tight text-brand-heading">{displayName}</h4>
-                                <p className="text-xs text-brand-text-muted">
+                                <h4 className="text-xl font-semibold leading-tight text-gray-900">{displayName}</h4>
+                                <p className="text-xs text-gray-500">
                                     Commande envoyée {new Date(timerStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                 </p>
                             </div>
@@ -43,43 +43,43 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
 
                 <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
                     {order.clientInfo && (
-                        <div className="space-y-2 rounded-lg border border-brand-border/60 bg-brand-surface-elevated p-4 shadow-sm">
+                        <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm">
                             {order.clientInfo.nom && (
-                                <div className="flex items-center gap-2 text-sm text-brand-heading">
+                                <div className="flex items-center gap-2 text-sm text-gray-900">
                                     <User size={16} className={urgencyStyles.icon} />
                                     <span className="font-medium">{order.clientInfo.nom}</span>
                                 </div>
                             )}
                             {order.clientInfo.adresse && (
-                                <div className="flex items-start gap-2 text-sm text-brand-text">
-                                    <MapPin size={16} className={`mt-0.5 ${urgencyStyles.icon}`} />
-                                    <span>{order.clientInfo.adresse}</span>
+                                <div className="flex items-start gap-2 text-sm text-gray-700">
+                                    <MapPin size={16} className={`mt-0.5 text-gray-500 ${urgencyStyles.icon}`} />
+                                    <span className="text-gray-700">{order.clientInfo.adresse}</span>
                                 </div>
                             )}
                         </div>
                     )}
 
                     <div className="space-y-3">
-                        <h5 className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-text-muted">Articles</h5>
+                        <h5 className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Articles</h5>
                         <ul className="space-y-2">
                             {order.items.map((item: OrderItem) => (
-                                <li key={item.id} className="rounded-lg border border-brand-border/60 bg-brand-surface-elevated px-4 py-3 text-sm text-brand-heading shadow-sm">
-                                    <div className="flex items-baseline justify-between gap-3">
-                                        <span className="font-semibold">{item.nom_produit}</span>
-                                        <span className="text-lg font-bold">{item.quantite}×</span>
+                                <li key={item.id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 shadow-sm">
+                                    <div className="flex items-baseline justify-between gap-3 text-gray-900">
+                                        <span className="font-semibold text-gray-900">{item.nom_produit}</span>
+                                        <span className="text-lg font-bold text-gray-900">{item.quantite}×</span>
                                     </div>
                                 </li>
                             ))}
                         </ul>
                     </div>
 
-                    <div className="flex items-center justify-between rounded-lg border border-brand-border/60 bg-brand-surface-elevated px-4 py-3 font-semibold text-brand-heading shadow-sm">
+                    <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-semibold text-gray-900 shadow-sm">
                         <span>Total</span>
-                        <span>{order.total.toFixed(2)} €</span>
+                        <span className="text-gray-900">{order.total.toFixed(2)} €</span>
                     </div>
                 </div>
 
-                <footer className="border-t border-brand-border/60 px-5 pb-5 pt-4">
+                <footer className="border-t border-gray-200 px-5 pb-5 pt-4">
                     {order.statut === 'pendiente_validacion' && onValidate && (
                         <div className="space-y-2">
                             <button
@@ -181,11 +181,11 @@ const ParaLlevar: React.FC = () => {
         }
     };
 
-    if (loading) return <div className="text-gray-800">Chargement des commandes à emporter...</div>;
+    if (loading) return <div className="text-gray-700">Chargement des commandes à emporter...</div>;
 
     return (
         <div>
-            <h1 className="text-heading mb-6">Commandes à Emporter</h1>
+            <h1 className="mb-6 text-3xl font-bold text-gray-900">Commandes à Emporter</h1>
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
                 {/* Column for validation */}
                 <div className="bg-gray-100 p-4 rounded-xl">

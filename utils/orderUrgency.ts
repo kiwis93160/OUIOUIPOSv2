@@ -14,22 +14,22 @@ export interface OrderUrgencyStyles {
 
 const URGENCY_STYLE_MAP: Record<OrderUrgencyLevel, Omit<OrderUrgencyStyles, 'level'>> = {
   critical: {
-    border: 'urgency-border-critical',
-    accent: 'urgency-accent-critical',
-    badge: 'urgency-badge-critical',
-    icon: 'urgency-icon-critical',
+    border: 'border-red-500 urgency-border-critical',
+    accent: 'bg-red-500 urgency-accent-critical',
+    badge: 'bg-red-100 text-red-700 ring-1 ring-inset ring-red-300 urgency-badge-critical',
+    icon: 'text-red-500 urgency-icon-critical',
   },
   warning: {
-    border: 'urgency-border-warning',
-    accent: 'urgency-accent-warning',
-    badge: 'urgency-badge-warning',
-    icon: 'urgency-icon-warning',
+    border: 'border-yellow-400 urgency-border-warning',
+    accent: 'bg-yellow-400 urgency-accent-warning',
+    badge: 'bg-yellow-100 text-yellow-800 ring-1 ring-inset ring-yellow-300 urgency-badge-warning',
+    icon: 'text-yellow-500 urgency-icon-warning',
   },
   normal: {
-    border: 'urgency-border-normal',
-    accent: 'urgency-accent-normal',
-    badge: 'urgency-badge-normal',
-    icon: 'urgency-icon-normal',
+    border: 'border-brand-accent urgency-border-normal',
+    accent: 'bg-brand-accent urgency-accent-normal',
+    badge: 'bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200 urgency-badge-normal',
+    icon: 'text-brand-accent urgency-icon-normal',
   },
 };
 
