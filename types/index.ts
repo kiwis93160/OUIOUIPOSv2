@@ -45,7 +45,7 @@ export interface Table {
   id: string;
   nom: string;
   capacite: number;
-  statut: 'libre' | 'occupee' | 'a_payer';
+  statut: 'libre' | 'en_cuisine' | 'para_entregar' | 'para_pagar';
   commandeId?: string;
   couverts?: number;
   estado_cocina?: Order['estado_cocina'];

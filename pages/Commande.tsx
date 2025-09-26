@@ -249,7 +249,7 @@ const Commande: React.FC = () => {
         await syncQueueRef.current;
     }, [applyPendingServerSnapshot, fetchOrderData]);
 
-    const scheduleItemsSync = useCallback((delay = 150) => {
+    const scheduleItemsSync = useCallback((delay = 0) => {
         if (itemsSyncTimeoutRef.current !== null) {
             window.clearTimeout(itemsSyncTimeoutRef.current);
         }

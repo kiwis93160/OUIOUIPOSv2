@@ -5,34 +5,40 @@ import { api } from '../services/api';
 import { Table } from '../types';
 import OrderTimer from '../components/OrderTimer';
 
-const getTableStatus = (table: Table) => {
-  const hasActiveOrder = Boolean(table.commandeId);
+type StatusDescriptor = { text: string; statusClass: string; Icon: React.ComponentType<{ size?: number }> };
 
-  if (!hasActiveOrder) {
-    return { text: 'Libre', statusClass: 'status--free', Icon: Armchair };
+const STATUS_DESCRIPTORS: Record<Table['statut'], StatusDescriptor> = {
+  libre: { text: 'Libre', statusClass: 'status--free', Icon: Armchair },
+  en_cuisine: { text: 'En cuisine', statusClass: 'status--preparing', Icon: Utensils },
+  para_entregar: { text: 'Para entregar', statusClass: 'status--ready', Icon: HandPlatter },
+  para_pagar: { text: 'Para pagar', statusClass: 'status--payment', Icon: DollarSign },
+};
+
+const getTableStatus = (table: Table): StatusDescriptor => {
+  switch (table.statut) {
+    case 'libre':
+      return STATUS_DESCRIPTORS.libre;
+    case 'en_cuisine':
+      return STATUS_DESCRIPTORS.en_cuisine;
+    case 'para_entregar':
+      return STATUS_DESCRIPTORS.para_entregar;
+    case 'para_pagar':
+      return STATUS_DESCRIPTORS.para_pagar;
+    default:
+      if (table.estado_cocina === 'servido' || table.estado_cocina === 'entregada') {
+        return STATUS_DESCRIPTORS.para_pagar;
+      }
+
+      if (table.estado_cocina === 'listo') {
+        return STATUS_DESCRIPTORS.para_entregar;
+      }
+
+      if (table.commandeId) {
+        return STATUS_DESCRIPTORS.en_cuisine;
+      }
+
+      return STATUS_DESCRIPTORS.libre;
   }
-
-  if (table.estado_cocina === 'servido' || table.estado_cocina === 'entregada' || table.statut === 'a_payer') {
-    return { text: 'Para pagar', statusClass: 'status--payment', Icon: DollarSign };
-  }
-
-  if (table.estado_cocina === 'listo') {
-    return { text: 'À servir', statusClass: 'status--ready', Icon: HandPlatter };
-  }
-
-  if (table.estado_cocina === 'recibido') {
-    return { text: 'En cuisine', statusClass: 'status--preparing', Icon: Utensils };
-  }
-
-  if (table.estado_cocina === 'no_enviado' || table.statut === 'occupee') {
-    return { text: 'Commande en cours', statusClass: 'status--preparing', Icon: Utensils };
-  }
-
-  if (table.statut === 'libre' && (!table.estado_cocina || table.estado_cocina === '')) {
-    return { text: 'Libre', statusClass: 'status--free', Icon: Armchair };
-  }
-
-  return { text: 'Inconnu', statusClass: 'status--unknown', Icon: Armchair };
 };
 
 
@@ -87,7 +93,7 @@ const TableCard: React.FC<{ table: Table; onServe: (orderId: string) => void }> 
           <p className="status-card__meta">Capacité : {table.capacite}</p>
         )}
 
-        {table.estado_cocina === 'listo' && (
+        {(table.estado_cocina === 'listo' || table.statut === 'para_entregar') && (
           <button type="button" onClick={handleServeClick} className="ui-btn ui-btn-accent status-card__cta">
             ENTREGADA
           </button>
