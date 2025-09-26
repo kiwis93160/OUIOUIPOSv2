@@ -218,7 +218,10 @@ const Commande: React.FC = () => {
             ? (updater as (prevItems: OrderItem[]) => OrderItem[])(items)
             : updater;
 
-        const optimisticSourceItems = currentOrder.items.map(item => ({ ...item }));
+        const optimisticSourceItemsBase = options?.isLocalUpdate
+            ? currentOrder.items
+            : options?.removalSourceItems ?? currentOrder.items;
+        const optimisticSourceItems = optimisticSourceItemsBase.map(item => ({ ...item }));
         const optimisticItems = computeItems(optimisticSourceItems);
         const optimisticOrder: Order = {
             ...currentOrder,
