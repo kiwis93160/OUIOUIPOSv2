@@ -13,6 +13,18 @@ const isPersistedItemId = (value?: string) =>
 
 const cloneOrder = (order: Order): Order => JSON.parse(JSON.stringify(order));
 
+const generateTempId = (() => {
+    let counter = 0;
+    return () => {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return `tmp-${crypto.randomUUID()}`;
+        }
+
+        counter += 1;
+        return `tmp-${Date.now()}-${counter}`;
+    };
+})();
+
 const Commande: React.FC = () => {
     const { tableId } = useParams<{ tableId: string }>();
     const navigate = useNavigate();
@@ -283,7 +295,7 @@ const Commande: React.FC = () => {
             }
 
             const newItem: OrderItem = {
-                id: `oi${Date.now()}`,
+                id: generateTempId(),
                 produitRef: product.id,
                 nom_produit: product.nom_produit,
                 prix_unitaire: product.prix_vente,
@@ -323,7 +335,7 @@ const Commande: React.FC = () => {
                 itemToUpdate.quantite -= 1;
                 const newItemWithComment = {
                     ...itemToUpdate,
-                    id: `oi${Date.now()}`,
+                    id: generateTempId(),
                     quantite: 1,
                     commentaire: newComment,
                 };
