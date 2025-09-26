@@ -6,12 +6,6 @@ import { Table } from '../types';
 import OrderTimer from '../components/OrderTimer';
 
 const getTableStatus = (table: Table) => {
-  const hasActiveOrder = Boolean(table.commandeId);
-
-  if (table.statut === 'libre' || (!hasActiveOrder && table.statut !== 'a_payer')) {
-    return { text: 'Libre', statusClass: 'status--free', Icon: Armchair };
-  }
-
   if (table.estado_cocina === 'servido' || table.estado_cocina === 'entregada' || table.statut === 'a_payer') {
     return { text: 'Para pagar', statusClass: 'status--payment', Icon: DollarSign };
   }
@@ -20,8 +14,12 @@ const getTableStatus = (table: Table) => {
     return { text: 'À servir', statusClass: 'status--ready', Icon: HandPlatter };
   }
 
-  if (table.estado_cocina === 'recibido' || table.estado_cocina === 'no_enviado' || table.statut === 'occupee') {
+  if (table.statut === 'occupee' || table.estado_cocina === 'no_enviado' || table.estado_cocina === 'recibido') {
     return { text: 'En cuisine', statusClass: 'status--preparing', Icon: Utensils };
+  }
+
+  if (table.statut === 'libre' && (!table.estado_cocina || table.estado_cocina === '')) {
+    return { text: 'Libre', statusClass: 'status--free', Icon: Armchair };
   }
 
   return { text: 'Inconnu', statusClass: 'status--unknown', Icon: Armchair };
