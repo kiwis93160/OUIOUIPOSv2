@@ -31,6 +31,7 @@ const Commande: React.FC = () => {
     const originalOrderRef = useRef<Order | null>(originalOrder);
     const pendingServerOrderRef = useRef<Order | null>(null);
     const itemsSyncTimeoutRef = useRef<number | null>(null);
+    const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
 
     useEffect(() => {
         orderRef.current = order;
@@ -190,36 +191,41 @@ const Commande: React.FC = () => {
 
         if (options?.isLocalUpdate) return;
 
-        try {
-            const latestOrder = await api.getOrderById(currentOrder.id);
-            const baseOrder = latestOrder ?? currentOrder;
-            const baseItemsForComputation = typeof updater === 'function'
-                ? baseOrder.items.map(item => ({ ...item }))
-                : baseOrder.items;
+        const runServerSync = async () => {
+            try {
+                const latestOrder = await api.getOrderById(currentOrder.id);
+                const baseOrder = latestOrder ?? currentOrder;
+                const baseItemsForComputation = typeof updater === 'function'
+                    ? baseOrder.items.map(item => ({ ...item }))
+                    : baseOrder.items;
 
-            const finalItems = computeItems(baseItemsForComputation);
-            const removedItemIds = currentOrder.items
-                .filter(item => isPersistedItemId(item.id) && !optimisticItems.some(finalItem => finalItem.id === item.id))
-                .map(item => item.id);
+                const finalItems = computeItems(baseItemsForComputation);
+                const removedItemIds = currentOrder.items
+                    .filter(item => isPersistedItemId(item.id) && !optimisticItems.some(finalItem => finalItem.id === item.id))
+                    .map(item => item.id);
 
-            const updatedOrder = await api.updateOrder(currentOrder.id, {
-                items: finalItems,
-                removedItemIds,
-            });
-            const ingredientsData = await api.getIngredients();
+                const updatedOrder = await api.updateOrder(currentOrder.id, {
+                    items: finalItems,
+                    removedItemIds,
+                });
+                const ingredientsData = await api.getIngredients();
 
-            setOrder(updatedOrder);
-            orderRef.current = updatedOrder;
-            const updatedOriginalSnapshot = JSON.parse(JSON.stringify(updatedOrder));
-            setOriginalOrder(updatedOriginalSnapshot);
-            originalOrderRef.current = updatedOriginalSnapshot;
-            setIngredients(ingredientsData);
-            applyPendingServerSnapshot();
-        } catch (error) {
-            console.error("Failed to update order:", error);
-            alert("Une erreur est survenue lors de la mise à jour de la commande.");
-            fetchOrderData(true);
-        }
+                setOrder(updatedOrder);
+                orderRef.current = updatedOrder;
+                const updatedOriginalSnapshot = JSON.parse(JSON.stringify(updatedOrder));
+                setOriginalOrder(updatedOriginalSnapshot);
+                originalOrderRef.current = updatedOriginalSnapshot;
+                setIngredients(ingredientsData);
+                applyPendingServerSnapshot();
+            } catch (error) {
+                console.error("Failed to update order:", error);
+                alert("Une erreur est survenue lors de la mise à jour de la commande.");
+                fetchOrderData(true);
+            }
+        };
+
+        syncQueueRef.current = syncQueueRef.current.then(runServerSync, runServerSync);
+        await syncQueueRef.current;
     }, [applyPendingServerSnapshot, fetchOrderData]);
 
     const scheduleItemsSync = useCallback((delay = 150) => {
