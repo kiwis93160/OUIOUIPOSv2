@@ -157,6 +157,7 @@ export interface DailyReport {
     soldProducts: SoldProductsByCategory[];
     lowStockIngredients: Ingredient[];
     roleLogins: RoleLogin[];
+    roleLoginsUnavailable?: boolean;
 }
 
 export interface Sale {

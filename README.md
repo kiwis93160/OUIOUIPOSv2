@@ -98,6 +98,9 @@ Dans l'interface Netlify (`Site settings > Environment variables`), ajoutez les 
 - `VITE_CLOUDINARY_CLOUD_NAME`
 - `VITE_CLOUDINARY_UPLOAD_PRESET` (et, si nécessaire, `VITE_CLOUDINARY_UPLOAD_PRESET_PRODUCTS` / `VITE_CLOUDINARY_UPLOAD_PRESET_RECEIPTS`)
 - `VITE_CLOUDINARY_PRODUCTS_FOLDER`, `VITE_CLOUDINARY_RECEIPTS_FOLDER`, `VITE_CLOUDINARY_DEFAULT_PRODUCT_IMAGE`
+- `SUPABASE_SERVICE_ROLE_KEY` (nécessaire aux fonctions Netlify pour récupérer les connexions de rôles)
+
+Pour les fonctions serverless (`netlify/functions/role-logins.ts`), assurez-vous d'ajouter une clé service Supabase dédiée à l'environnement Netlify. Cette clé ne doit pas être exposée côté client.
 
 Netlify redémarrera automatiquement après mise à jour. Vérifiez également que la configuration Supabase autorise le domaine Netlify (`Settings > API > Allowed Redirect URLs`) si vous activez l'authentification Supabase ultérieurement.
 
