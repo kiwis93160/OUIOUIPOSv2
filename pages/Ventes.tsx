@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Armchair, DollarSign, Utensils, HandPlatter } from 'lucide-react';
 import { api } from '../services/api';
@@ -100,15 +100,21 @@ const TableCard: React.FC<{ table: Table; onServe: (orderId: string) => void }> 
 const Ventes: React.FC = () => {
     const [tables, setTables] = useState<Table[]>([]);
     const [loading, setLoading] = useState(true);
+    const fetchIdRef = useRef(0);
 
     const fetchTables = useCallback(async () => {
+        const fetchId = ++fetchIdRef.current;
         try {
             const data = await api.getTables();
-            setTables(data);
+            if (fetchId === fetchIdRef.current) {
+                setTables(data);
+            }
         } catch (error) {
             console.error("Failed to fetch tables", error);
         } finally {
-            setLoading(false);
+            if (fetchId === fetchIdRef.current) {
+                setLoading(false);
+            }
         }
     }, []);
     

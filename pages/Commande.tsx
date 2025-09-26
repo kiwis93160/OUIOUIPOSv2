@@ -11,6 +11,8 @@ import Modal from '../components/Modal';
 const isPersistedItemId = (value?: string) =>
     !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
+const cloneOrder = (order: Order): Order => JSON.parse(JSON.stringify(order));
+
 const Commande: React.FC = () => {
     const { tableId } = useParams<{ tableId: string }>();
     const navigate = useNavigate();
@@ -29,6 +31,7 @@ const Commande: React.FC = () => {
 
     const orderRef = useRef<Order | null>(order);
     const originalOrderRef = useRef<Order | null>(originalOrder);
+    const serverOrderRef = useRef<Order | null>(null);
     const pendingServerOrderRef = useRef<Order | null>(null);
     const itemsSyncTimeoutRef = useRef<number | null>(null);
     const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -53,6 +56,8 @@ const Commande: React.FC = () => {
         const pendingOrder = pendingServerOrderRef.current;
         if (!pendingOrder) return;
 
+        serverOrderRef.current = cloneOrder(pendingOrder);
+
         const currentOrder = orderRef.current;
         if (currentOrder && JSON.stringify(currentOrder) === JSON.stringify(pendingOrder)) {
             pendingServerOrderRef.current = null;
@@ -63,7 +68,7 @@ const Commande: React.FC = () => {
         orderRef.current = pendingOrder;
         setOrder(pendingOrder);
 
-        const originalSnapshot = JSON.parse(JSON.stringify(pendingOrder));
+        const originalSnapshot = cloneOrder(pendingOrder);
         originalOrderRef.current = originalSnapshot;
         setOriginalOrder(originalSnapshot);
     }, []);
@@ -75,6 +80,8 @@ const Commande: React.FC = () => {
 
             if (isRefresh) {
                 const orderData = await api.createOrGetOrderByTableId(tableId);
+                const serverSnapshot = cloneOrder(orderData);
+                serverOrderRef.current = serverSnapshot;
                 const shouldSyncState = isOrderSynced();
 
                 if (shouldSyncState) {
@@ -82,7 +89,7 @@ const Commande: React.FC = () => {
                     setOrder(orderData);
                     orderRef.current = orderData;
 
-                    const originalSnapshot = JSON.parse(JSON.stringify(orderData));
+                    const originalSnapshot = cloneOrder(orderData);
                     originalOrderRef.current = originalSnapshot;
                     setOriginalOrder(originalSnapshot);
                 } else {
@@ -90,7 +97,7 @@ const Commande: React.FC = () => {
                     if (confirmedOrder && JSON.stringify(confirmedOrder) === JSON.stringify(orderData)) {
                         pendingServerOrderRef.current = null;
                     } else {
-                        pendingServerOrderRef.current = orderData;
+                        pendingServerOrderRef.current = serverSnapshot;
                     }
                 }
                 return;
@@ -102,9 +109,10 @@ const Commande: React.FC = () => {
                 api.getCategories(),
                 api.getIngredients(),
             ]);
+            serverOrderRef.current = cloneOrder(orderData);
             setOrder(orderData);
             orderRef.current = orderData;
-            const originalSnapshot = JSON.parse(JSON.stringify(orderData));
+            const originalSnapshot = cloneOrder(orderData);
             setOriginalOrder(originalSnapshot);
             originalOrderRef.current = originalSnapshot;
             setProducts(productsData);
@@ -193,11 +201,23 @@ const Commande: React.FC = () => {
 
         const runServerSync = async () => {
             try {
-                const latestOrder = await api.getOrderById(currentOrder.id);
-                const baseOrder = latestOrder ?? currentOrder;
-                const baseItemsForComputation = typeof updater === 'function'
-                    ? baseOrder.items.map(item => ({ ...item }))
-                    : baseOrder.items;
+                let baseOrder = pendingServerOrderRef.current ?? serverOrderRef.current ?? null;
+
+                if (!baseOrder) {
+                    const latestOrder = await api.getOrderById(currentOrder.id);
+                    if (latestOrder) {
+                        baseOrder = latestOrder;
+                        serverOrderRef.current = cloneOrder(latestOrder);
+                    } else {
+                        baseOrder = currentOrder;
+                    }
+                }
+
+                if (!baseOrder) {
+                    return;
+                }
+
+                const baseItemsForComputation = baseOrder.items.map(item => ({ ...item }));
 
                 const finalItems = computeItems(baseItemsForComputation);
                 const removedItemIds = currentOrder.items
@@ -212,9 +232,10 @@ const Commande: React.FC = () => {
 
                 setOrder(updatedOrder);
                 orderRef.current = updatedOrder;
-                const updatedOriginalSnapshot = JSON.parse(JSON.stringify(updatedOrder));
+                const updatedOriginalSnapshot = cloneOrder(updatedOrder);
                 setOriginalOrder(updatedOriginalSnapshot);
                 originalOrderRef.current = updatedOriginalSnapshot;
+                serverOrderRef.current = cloneOrder(updatedOrder);
                 setIngredients(ingredientsData);
                 applyPendingServerSnapshot();
             } catch (error) {

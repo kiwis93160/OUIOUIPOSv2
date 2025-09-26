@@ -44,6 +44,12 @@ type SupabaseTableRow = {
   couverts: number | null;
 };
 
+type SupabaseOrderMetaRow = {
+  id: string;
+  estado_cocina: Order['estado_cocina'];
+  date_envoi_cuisine: string | null;
+};
+
 type SupabaseRecipeRow = {
   ingredient_id: string;
   qte_utilisee: number;
@@ -163,6 +169,11 @@ const ensureOrdersRealtimeSubscription = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'order_items' },
+        () => publishEvent('orders_updated'),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'restaurant_tables' },
         () => publishEvent('orders_updated'),
       )
       .subscribe(status => {
@@ -551,11 +562,19 @@ const fetchTablesWithMeta = async (): Promise<Table[]> => {
 
   let orderMeta = new Map<string, { estado_cocina?: Order['estado_cocina']; date_envoi_cuisine?: number }>();
   if (activeOrderIds.length > 0) {
-    const ordersResponse = await selectOrdersQuery().in('id', activeOrderIds);
-    const orderRows = unwrap<SupabaseOrderRow[]>(ordersResponse as SupabaseResponse<SupabaseOrderRow[]>);
-    const orders = orderRows.map(mapOrderRow);
+    const ordersResponse = await supabase
+      .from('orders')
+      .select('id, estado_cocina, date_envoi_cuisine')
+      .in('id', activeOrderIds);
+    const orderRows = unwrap<SupabaseOrderMetaRow[]>(ordersResponse as SupabaseResponse<SupabaseOrderMetaRow[]>);
     orderMeta = new Map(
-      orders.map(order => [order.id, { estado_cocina: order.estado_cocina, date_envoi_cuisine: order.date_envoi_cuisine }]),
+      orderRows.map(order => [
+        order.id,
+        {
+          estado_cocina: order.estado_cocina,
+          date_envoi_cuisine: toTimestamp(order.date_envoi_cuisine),
+        },
+      ]),
     );
   }
 
