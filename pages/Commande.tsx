@@ -268,15 +268,18 @@ const Commande: React.FC = () => {
                     },
                     { includeNotifications: false },
                 );
-                const ingredientsData = await api.getIngredients();
-
                 setOrder(updatedOrder);
                 orderRef.current = updatedOrder;
                 const updatedOriginalSnapshot = cloneOrder(updatedOrder);
                 setOriginalOrder(updatedOriginalSnapshot);
                 originalOrderRef.current = updatedOriginalSnapshot;
                 serverOrderRef.current = cloneOrder(updatedOrder);
-                setIngredients(ingredientsData);
+
+                void api.getIngredients()
+                    .then(setIngredients)
+                    .catch(error => {
+                        console.error("Failed to refresh ingredients", error);
+                    });
                 applyPendingServerSnapshot();
             } catch (error) {
                 console.error("Failed to update order:", error);
