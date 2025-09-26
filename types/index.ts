@@ -108,22 +108,28 @@ export interface SalesDataPoint {
     value: number;
 }
 
-export interface WeeklySalesChartPoint {
+export type DashboardPeriod = 'week' | 'month';
+
+export interface PeriodSalesChartPoint {
     name: string;
     ventes: number;
-    ventesSemainePrecedente: number;
+    ventesPeriodePrecedente: number;
 }
 
 export interface DashboardStats {
-    ventesAujourdhui: number;
-    beneficeAujourdhui: number;
-    clientsAujourdhui: number;
+    period: DashboardPeriod;
+    periodLabel: string;
+    periodStart: string;
+    periodEnd: string;
+    ventesPeriode: number;
+    beneficePeriode: number;
+    clientsPeriode: number;
     panierMoyen: number;
     tablesOccupees: number;
     clientsActuels: number;
     commandesEnCuisine: number;
     ingredientsStockBas: Ingredient[];
-    ventes7Jours: WeeklySalesChartPoint[];
+    ventesPeriodeSeries: PeriodSalesChartPoint[];
     ventesParCategorie: SalesDataPoint[];
 }
 

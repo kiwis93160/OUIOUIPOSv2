@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { DollarSign, Users, Armchair, AlertTriangle, Soup, BarChart2, PieChart as PieIcon, Shield } from 'lucide-react';
 import { api, getBusinessDayStart } from '../services/api';
-import { DashboardStats, SalesDataPoint } from '../types';
+import { DashboardStats, SalesDataPoint, DashboardPeriod } from '../types';
 import Modal from '../components/Modal';
 import RoleManager from '../components/RoleManager';
 
@@ -31,6 +31,20 @@ const OpStatCard: React.FC<{ title: string; value: string | number; icon: React.
 );
 
 
+const PERIOD_CONFIG: Record<DashboardPeriod, { label: string; days: number }> = {
+    week: { label: '7 derniers jours', days: 7 },
+    month: { label: '30 derniers jours', days: 30 },
+};
+
+const resolvePeriodBounds = (period: DashboardPeriod) => {
+    const { days } = PERIOD_CONFIG[period];
+    const end = new Date(getBusinessDayStart());
+    end.setDate(end.getDate() + 1);
+    const start = new Date(end);
+    start.setDate(start.getDate() - days);
+    return { start, end };
+};
+
 const Dashboard: React.FC = () => {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [salesByProduct, setSalesByProduct] = useState<SalesDataPoint[]>([]);
@@ -38,14 +52,18 @@ const Dashboard: React.FC = () => {
     const [pieChartMode, setPieChartMode] = useState<'category' | 'product'>('category');
     const [isLowStockModalOpen, setLowStockModalOpen] = useState(false);
     const [isRoleManagerOpen, setRoleManagerOpen] = useState(false);
+    const [period, setPeriod] = useState<DashboardPeriod>('week');
 
     useEffect(() => {
         const fetchAllStats = async () => {
-            const businessDayStartIso = getBusinessDayStart().toISOString();
+            const { start, end } = resolvePeriodBounds(period);
+            const startIso = start.toISOString();
+            const endIso = end.toISOString();
+            setLoading(true);
             try {
                 const [statsData, productSalesData] = await Promise.all([
-                    api.getDashboardStats(),
-                    api.getSalesByProduct({ start: businessDayStartIso })
+                    api.getDashboardStats(period),
+                    api.getSalesByProduct({ start: startIso, end: endIso })
                 ]);
                 setStats(statsData);
                 setSalesByProduct(productSalesData);
@@ -56,7 +74,7 @@ const Dashboard: React.FC = () => {
             }
         };
         fetchAllStats();
-    }, []);
+    }, [period]);
 
     if (loading) return <div className="text-gray-800">Chargement des données du dashboard...</div>;
     if (!stats) return <div className="text-red-500">Impossible de charger les données.</div>;
@@ -67,7 +85,22 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-end">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="inline-flex rounded-lg bg-gray-100 p-1 text-sm font-semibold text-gray-600">
+                    {Object.entries(PERIOD_CONFIG).map(([key, option]) => {
+                        const value = key as DashboardPeriod;
+                        const isActive = period === value;
+                        return (
+                            <button
+                                key={value}
+                                onClick={() => setPeriod(value)}
+                                className={`px-3 py-1.5 rounded-md transition-colors ${isActive ? 'bg-white text-gray-900 shadow' : 'hover:text-gray-900'}`}
+                            >
+                                {option.label}
+                            </button>
+                        );
+                    })}
+                </div>
                 <button
                     onClick={() => setRoleManagerOpen(true)}
                     className="ui-btn-primary"
@@ -79,9 +112,9 @@ const Dashboard: React.FC = () => {
 
             {/* Block 1: Key Indicators */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MainStatCard title="Ventes du Jour" value={`${stats.ventesAujourdhui.toFixed(2)} €`} icon={<DollarSign size={28}/>} />
-                <MainStatCard title="Bénéfice du Jour" value={`${stats.beneficeAujourdhui.toFixed(2)} €`} icon={<DollarSign size={28}/>} />
-                <MainStatCard title="Clients du Jour" value={stats.clientsAujourdhui.toString()} icon={<Users size={28}/>} />
+                <MainStatCard title={`Ventes (${stats.periodLabel})`} value={`${stats.ventesPeriode.toFixed(2)} €`} icon={<DollarSign size={28}/>} />
+                <MainStatCard title={`Bénéfice (${stats.periodLabel})`} value={`${stats.beneficePeriode.toFixed(2)} €`} icon={<DollarSign size={28}/>} />
+                <MainStatCard title={`Clients (${stats.periodLabel})`} value={stats.clientsPeriode.toString()} icon={<Users size={28}/>} />
                 <MainStatCard title="Panier Moyen" value={`${stats.panierMoyen.toFixed(2)} €`} icon={<BarChart2 size={28}/>} />
             </div>
 
@@ -98,18 +131,18 @@ const Dashboard: React.FC = () => {
                 />
             </div>
 
-            {/* Block 3: Weekly Sales Chart */}
+            {/* Block 3: Sales Chart */}
             <div className="ui-card p-6">
-                <h3 className="text-lg font-semibold mb-4 text-gray-900">Ventes Hebdomadaires</h3>
+                <h3 className="text-lg font-semibold mb-4 text-gray-900">Ventes sur {stats.periodLabel}</h3>
                 <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={stats.ventes7Jours}>
+                    <BarChart data={stats.ventesPeriodeSeries}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" />
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Bar dataKey="ventes" fill="#8884d8" name="Cette Semaine (€)" />
-                        <Bar dataKey="ventesSemainePrecedente" fill="#d8d6f5" name="Semaine Précédente (€)" />
+                        <Bar dataKey="ventes" fill="#8884d8" name={`${stats.periodLabel} (€)`} />
+                        <Bar dataKey="ventesPeriodePrecedente" fill="#d8d6f5" name="Période précédente (€)" />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
@@ -117,7 +150,7 @@ const Dashboard: React.FC = () => {
             {/* Block 4: Sales Pie Chart */}
             <div className="ui-card p-6">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Répartition des Ventes</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Répartition des Ventes ({stats.periodLabel})</h3>
                     <div className="flex p-1 bg-gray-200 rounded-lg">
                         <button onClick={() => setPieChartMode('category')} className={`px-3 py-1 text-sm font-semibold rounded-md ${pieChartMode === 'category' ? 'bg-white shadow' : ''}`}>Par Catégorie</button>
                         <button onClick={() => setPieChartMode('product')} className={`px-3 py-1 text-sm font-semibold rounded-md ${pieChartMode === 'product' ? 'bg-white shadow' : ''}`}>Par Produit</button>
