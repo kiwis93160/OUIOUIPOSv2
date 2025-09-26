@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { DollarSign, Users, Armchair, AlertTriangle, Soup, BarChart2, PieChart as PieIcon, Shield } from 'lucide-react';
-import { api } from '../services/api';
+import { api, getBusinessDayStart } from '../services/api';
 import { DashboardStats, SalesDataPoint } from '../types';
 import Modal from '../components/Modal';
 import RoleManager from '../components/RoleManager';
@@ -41,10 +41,11 @@ const Dashboard: React.FC = () => {
 
     useEffect(() => {
         const fetchAllStats = async () => {
+            const businessDayStartIso = getBusinessDayStart().toISOString();
             try {
                 const [statsData, productSalesData] = await Promise.all([
                     api.getDashboardStats(),
-                    api.getSalesByProduct()
+                    api.getSalesByProduct({ start: businessDayStartIso })
                 ]);
                 setStats(statsData);
                 setSalesByProduct(productSalesData);
@@ -62,6 +63,7 @@ const Dashboard: React.FC = () => {
 
     const PIE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF4560', '#775DD0'];
     const pieData = pieChartMode === 'category' ? stats.ventesParCategorie : salesByProduct;
+    const hasPieData = pieData.length > 0;
 
     return (
         <div className="space-y-6">
@@ -121,15 +123,21 @@ const Dashboard: React.FC = () => {
                         <button onClick={() => setPieChartMode('product')} className={`px-3 py-1 text-sm font-semibold rounded-md ${pieChartMode === 'product' ? 'bg-white shadow' : ''}`}>Par Produit</button>
                     </div>
                 </div>
-                <ResponsiveContainer width="100%" height={300}>
-                     <PieChart>
-                        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label>
-                            {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />
-                        <Legend/>
-                    </PieChart>
-                </ResponsiveContainer>
+                {hasPieData ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                            <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label>
+                                {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                            </Pie>
+                            <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />
+                            <Legend/>
+                        </PieChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div style={{ height: 300 }} className="flex items-center justify-center text-gray-500">
+                        Aucune donnée pour la période sélectionnée.
+                    </div>
+                )}
             </div>
 
             <Modal isOpen={isLowStockModalOpen} onClose={() => setLowStockModalOpen(false)} title="Ingrédients en Stock Bas">
