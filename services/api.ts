@@ -127,6 +127,11 @@ type SupabaseSaleRow = {
   sale_date: string;
 };
 
+type SalesPeriod = {
+  start?: Date | string;
+  end?: Date | string;
+};
+
 type SupabaseResponse<T> = {
   data: T;
   error: { message: string } | null;
@@ -556,7 +561,7 @@ const fetchTablesWithMeta = async (): Promise<Table[]> => {
   return tableRows.map(row => mapTableRow(row, orderMeta));
 };
 
-const getBusinessDayStart = (now: Date = new Date()): Date => {
+export const getBusinessDayStart = (now: Date = new Date()): Date => {
   const startTime = new Date(now);
   startTime.setHours(5, 0, 0, 0);
 
@@ -854,10 +859,27 @@ export const api = {
     };
   },
 
-  getSalesByProduct: async (): Promise<SalesDataPoint[]> => {
-    const response = await supabase
+  getSalesByProduct: async (period?: SalesPeriod): Promise<SalesDataPoint[]> => {
+    const resolveIso = (value?: Date | string): string | undefined => {
+      if (!value) {
+        return undefined;
+      }
+      return typeof value === 'string' ? value : value.toISOString();
+    };
+
+    const startIso = resolveIso(period?.start) ?? getBusinessDayStart().toISOString();
+    const endIso = resolveIso(period?.end);
+
+    let query = supabase
       .from('sales')
-      .select('product_id, product_name, total_price');
+      .select('product_id, product_name, total_price')
+      .gte('sale_date', startIso);
+
+    if (endIso) {
+      query = query.lt('sale_date', endIso);
+    }
+
+    const response = await query;
     const rows = unwrap<{ product_id: string; product_name: string; total_price: number }[]>(
       response as SupabaseResponse<{ product_id: string; product_name: string; total_price: number }[]>,
     );
