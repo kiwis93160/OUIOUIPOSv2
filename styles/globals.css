@@ -1469,7 +1469,7 @@ p {
 }
 @layer utilities {
   .urgency-border-normal {
-    border-color: #c7d2fe;
+    border-color: #2563eb;
   }
 
   .urgency-border-warning {
@@ -1477,7 +1477,7 @@ p {
   }
 
   .urgency-border-critical {
-    border-color: #fca5a5;
+    border-color: #ef4444;
   }
 
   .urgency-accent-normal {
@@ -1485,15 +1485,15 @@ p {
   }
 
   .urgency-accent-warning {
-    background-color: #f59e0b;
+    background-color: #facc15;
   }
 
   .urgency-accent-critical {
-    background-color: #dc2626;
+    background-color: #ef4444;
   }
 
   .urgency-badge-normal {
-    background-color: #eff4ff;
+    background-color: #dbeafe;
     color: #1d4ed8;
   }
 
@@ -1512,11 +1512,11 @@ p {
   }
 
   .urgency-icon-warning {
-    color: #b45309;
+    color: #ca8a04;
   }
 
   .urgency-icon-critical {
-    color: #b91c1c;
+    color: #ef4444;
   }
 }
 
