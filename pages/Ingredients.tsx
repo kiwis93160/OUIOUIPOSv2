@@ -252,15 +252,18 @@ const ResupplyModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess:
 
 const DeleteModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess: () => void; ingredient: Ingredient }> = ({ isOpen, onClose, onSuccess, ingredient }) => {
     const [isSubmitting, setSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const handleDelete = async () => {
         setSubmitting(true);
+        setErrorMessage(null);
         try {
             await api.deleteIngredient(ingredient.id);
             onSuccess();
             onClose();
         } catch (error) {
             console.error("Failed to delete ingredient", error);
+            setErrorMessage("Impossible de supprimer cet ingrédient car il est utilisé dans au moins une recette.");
         } finally {
             setSubmitting(false);
         }
@@ -269,6 +272,7 @@ const DeleteModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess: (
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Confirmer la Suppression">
             <p className="text-gray-700">Êtes-vous sûr de vouloir supprimer l'ingrédient <strong className="text-gray-900">{ingredient.nom}</strong> ? Cette action est irréversible.</p>
+            {errorMessage && <p className="mt-4 text-sm text-red-600">{errorMessage}</p>}
             <div className="flex flex-col sm:flex-row gap-3 pt-6">
                 <button type="button" onClick={onClose} className="w-full ui-btn-secondary py-3">Annuler</button>
                 <button onClick={handleDelete} disabled={isSubmitting} className="w-full ui-btn-danger py-3 disabled:opacity-60">{isSubmitting ? 'Suppression...' : 'Supprimer'}</button>

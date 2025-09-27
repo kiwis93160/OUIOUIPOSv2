@@ -1760,6 +1760,20 @@ export const api = {
   },
 
   deleteIngredient: async (ingredientId: string): Promise<{ success: boolean }> => {
+    const relatedRecipesResponse = await supabase
+      .from('product_recipes')
+      .select('ingredient_id, product_id, qte_utilisee')
+      .eq('ingredient_id', ingredientId)
+      .limit(1);
+
+    const relatedRecipes = unwrap<SupabaseRecipeRow[]>(
+      relatedRecipesResponse as SupabaseResponse<SupabaseRecipeRow[]>,
+    );
+
+    if (relatedRecipes.length > 0) {
+      throw new Error("Impossible de supprimer l'ingrédient car il est utilisé dans une recette.");
+    }
+
     await supabase.from('ingredients').delete().eq('id', ingredientId);
     notificationsService.publish('notifications_updated');
     return { success: true };
