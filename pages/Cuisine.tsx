@@ -153,7 +153,7 @@ const Cuisine: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col">
-            <h1 className="mb-6 text-3xl font-bold text-gray-900">Vue Cuisine</h1>
+            <h1 className="mb-4 text-3xl font-bold text-white sm:mb-6">Vue Cuisine</h1>
             {orders.length === 0 ? (
                 <div className="flex flex-1 items-center justify-center text-2xl text-gray-500">Aucune commande en préparation.</div>
             ) : (
