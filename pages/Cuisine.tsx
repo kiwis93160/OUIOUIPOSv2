@@ -155,8 +155,8 @@ const Cuisine: React.FC = () => {
     if (loading) return <div className="text-gray-700">Chargement des commandes pour la cuisine...</div>;
 
     return (
-        <div className="h-full flex flex-col">
-            <h1 className="mb-4 text-3xl font-bold text-white sm:mb-6">Vue Cuisine</h1>
+        <div className="flex h-full flex-col">
+            <div className="mb-4 text-3xl font-bold text-white sm:mb-6">Vue Cuisine</div>
             {orders.length === 0 ? (
                 <div className="flex flex-1 items-center justify-center text-2xl text-gray-500">Aucune commande en préparation.</div>
             ) : (

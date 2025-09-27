@@ -99,8 +99,8 @@ const Produits: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-heading">Gestion des Produits</h1>
-            
+            <div className="text-heading">Gestion des Produits</div>
+
             <div className="ui-card p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="flex flex-col sm:flex-row gap-4 w-full">
                     <div className="relative flex-grow">
