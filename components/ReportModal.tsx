@@ -6,13 +6,13 @@ import { Users, ShoppingCart, DollarSign, Package, AlertTriangle, MessageSquare,
 import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 
 const ReportStat: React.FC<{ icon: React.ReactNode, label: string, value: string | number }> = ({ icon, label, value }) => (
-    <div className="bg-gray-100 p-4 rounded-lg flex items-center">
-        <div className="p-3 bg-brand-primary/20 text-brand-primary rounded-full mr-4">
+    <div className="bg-gray-100 p-3 sm:p-4 rounded-lg flex flex-col sm:flex-row sm:items-center items-start gap-3">
+        <div className="p-2 sm:p-3 bg-brand-primary/20 text-brand-primary rounded-full">
             {icon}
         </div>
-        <div>
-            <p className="text-sm text-gray-500 font-semibold">{label}</p>
-            <p className="text-2xl font-bold text-gray-800">{value}</p>
+        <div className="space-y-1">
+            <p className="text-xs sm:text-sm text-gray-500 font-semibold">{label}</p>
+            <p className="text-lg sm:text-xl font-bold text-gray-800">{value}</p>
         </div>
     </div>
 );
@@ -147,7 +147,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                                  </p>
                             </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                 <ReportStat icon={<DollarSign/>} label="Ventes du Jour" value={`${formatIntegerAmount(report.ventesDuJour)} €`} />
                                 <ReportStat icon={<Users/>} label="Clients du Jour" value={report.clientsDuJour} />
                                 <ReportStat icon={<ShoppingCart/>} label="Panier Moyen" value={`${formatIntegerAmount(report.panierMoyen)} €`} />
