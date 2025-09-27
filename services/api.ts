@@ -145,6 +145,14 @@ type SupabaseResponse<T> = {
   status?: number;
 };
 
+type TablePayload = {
+  nom: string;
+  capacite: number;
+  couverts?: number | null;
+};
+
+type TableUpdatePayload = Partial<TablePayload>;
+
 type EventCallback = () => void;
 
 const eventListeners: Record<string, EventCallback[]> = {};
@@ -490,6 +498,35 @@ const mapTableRow = (
   }
 
   return table;
+};
+
+const mapTableRowWithMeta = async (row: SupabaseTableRow): Promise<Table> => {
+  if (!row.commande_id) {
+    return mapTableRow(row, new Map());
+  }
+
+  const orderResponse = await supabase
+    .from('orders')
+    .select('id, estado_cocina, date_envoi_cuisine')
+    .eq('id', row.commande_id)
+    .maybeSingle();
+  const orderMetaRow = unwrapMaybe<SupabaseOrderMetaRow>(
+    orderResponse as SupabaseResponse<SupabaseOrderMetaRow | null>,
+  );
+
+  const orderMeta = orderMetaRow
+    ? new Map([
+        [
+          orderMetaRow.id,
+          {
+            estado_cocina: orderMetaRow.estado_cocina,
+            date_envoi_cuisine: toTimestamp(orderMetaRow.date_envoi_cuisine),
+          },
+        ],
+      ])
+    : new Map();
+
+  return mapTableRow(row, orderMeta);
 };
 
 const selectOrdersQuery = () =>
@@ -988,6 +1025,53 @@ export const api = {
 
   getTables: async (): Promise<Table[]> => {
     return fetchTablesWithMeta();
+  },
+
+  createTable: async (payload: TablePayload): Promise<Table> => {
+    const response = await supabase
+      .from('restaurant_tables')
+      .insert({
+        nom: payload.nom,
+        capacite: payload.capacite,
+        couverts: payload.couverts ?? null,
+      })
+      .select('id, nom, capacite, statut, commande_id, couverts')
+      .single();
+
+    const row = unwrap<SupabaseTableRow>(response as SupabaseResponse<SupabaseTableRow>);
+    publishOrderChange();
+    return mapTableRowWithMeta(row);
+  },
+
+  updateTable: async (tableId: string, updates: TableUpdatePayload): Promise<Table> => {
+    const payload: Record<string, unknown> = {};
+
+    if (updates.nom !== undefined) {
+      payload.nom = updates.nom;
+    }
+    if (updates.capacite !== undefined) {
+      payload.capacite = updates.capacite;
+    }
+    if (updates.couverts !== undefined) {
+      payload.couverts = updates.couverts ?? null;
+    }
+
+    const response = await supabase
+      .from('restaurant_tables')
+      .update(payload)
+      .eq('id', tableId)
+      .select('id, nom, capacite, statut, commande_id, couverts')
+      .single();
+
+    const row = unwrap<SupabaseTableRow>(response as SupabaseResponse<SupabaseTableRow>);
+    publishOrderChange();
+    return mapTableRowWithMeta(row);
+  },
+
+  deleteTable: async (tableId: string): Promise<void> => {
+    const response = await supabase.from('restaurant_tables').delete().eq('id', tableId);
+    unwrap(response as SupabaseResponse<unknown>);
+    publishOrderChange();
   },
 
   getIngredients: async (): Promise<Ingredient[]> => {
