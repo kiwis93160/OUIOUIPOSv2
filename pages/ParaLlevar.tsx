@@ -186,8 +186,7 @@ const ParaLlevar: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="text-3xl font-bold text-gray-900">Commandes à Emporter</div>
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-2">
                 {/* Column for validation */}
                 <div className="bg-gray-100 p-4 rounded-xl">
                     <h2 className="text-xl font-bold mb-4 text-center text-blue-700">En Attente de Validation ({pendingOrders.length})</h2>

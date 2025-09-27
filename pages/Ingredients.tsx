@@ -60,9 +60,7 @@ const Ingredients: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="text-heading">Gestion des Ingrédients</div>
-
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="relative w-full sm:w-auto">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     <input
