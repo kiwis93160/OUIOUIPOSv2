@@ -703,8 +703,10 @@ body {
 }
 
 .status-card__title {
-  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+  font-size: clamp(2rem, 3vw, 2.35rem);
   margin: 0;
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(15, 23, 42, 0.4);
 }
 
 .status-card__icon {
