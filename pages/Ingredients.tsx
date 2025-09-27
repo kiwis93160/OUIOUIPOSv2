@@ -60,8 +60,8 @@ const Ingredients: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="relative w-full sm:w-auto">
+            <div className="mt-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                <div className="relative w-full md:w-80">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     <input
                         type="text"
@@ -72,7 +72,7 @@ const Ingredients: React.FC = () => {
                     />
                 </div>
                 {canEdit && (
-                    <button onClick={() => handleOpenModal('add')} className="w-full sm:w-auto ui-btn-primary">
+                    <button onClick={() => handleOpenModal('add')} className="w-full md:w-auto ui-btn-primary">
                         <PlusCircle size={20} />
                         Ajouter un ingrédient
                     </button>

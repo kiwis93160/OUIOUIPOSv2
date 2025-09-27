@@ -28,7 +28,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     <div className="flex flex-col gap-3">
                         <div className="flex items-start justify-between gap-3">
                             <div className="space-y-1">
-                                <h4 className="text-xl font-semibold leading-tight text-gray-900">{displayName}</h4>
+                                <h4 className="text-lg sm:text-xl md:text-2xl font-semibold leading-tight text-gray-900">{displayName}</h4>
                                 <p className="text-xs text-gray-500">
                                     Commande envoyée {new Date(timerStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                 </p>
@@ -38,7 +38,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                                 <span>{urgencyLabelMap[urgencyStyles.level]}</span>
                             </span>
                         </div>
-                        <OrderTimer startTime={timerStart} className="text-base" />
+                        <OrderTimer startTime={timerStart} className="text-sm sm:text-base" />
                     </div>
                 </header>
 
@@ -67,7 +67,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                                 <li key={item.id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 shadow-sm">
                                     <div className="flex items-baseline justify-between gap-3 text-gray-900">
                                         <span className="font-semibold text-gray-900">{item.nom_produit}</span>
-                                        <span className="text-lg font-bold text-gray-900">{item.quantite}×</span>
+                                        <span className="text-base sm:text-lg font-bold text-gray-900">{item.quantite}×</span>
                                     </div>
                                 </li>
                             ))}
@@ -76,7 +76,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
 
                     <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-semibold text-gray-900 shadow-sm">
                         <span>Total</span>
-                        <span className="text-gray-900">{formatIntegerAmount(order.total)} €</span>
+                        <span className="text-lg sm:text-xl text-gray-900">{formatIntegerAmount(order.total)} €</span>
                     </div>
                 </div>
 
@@ -186,10 +186,10 @@ const ParaLlevar: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-8 md:grid-cols-2">
                 {/* Column for validation */}
                 <div className="bg-gray-100 p-4 rounded-xl">
-                    <h2 className="text-xl font-bold mb-4 text-center text-blue-700">En Attente de Validation ({pendingOrders.length})</h2>
+                    <h2 className="text-lg sm:text-xl font-bold mb-4 text-center text-blue-700">En Attente de Validation ({pendingOrders.length})</h2>
                     <div className="space-y-4">
                         {pendingOrders.length > 0 ? pendingOrders.map(order => (
                             <TakeawayCard key={order.id} order={order} onValidate={handleValidate} isProcessing={processingOrderId === order.id} />
@@ -199,7 +199,7 @@ const ParaLlevar: React.FC = () => {
 
                 {/* Column for ready orders */}
                 <div className="bg-gray-100 p-4 rounded-xl">
-                    <h2 className="text-xl font-bold mb-4 text-center text-green-700">Commandes Prêtes ({readyOrders.length})</h2>
+                    <h2 className="text-lg sm:text-xl font-bold mb-4 text-center text-green-700">Commandes Prêtes ({readyOrders.length})</h2>
                     <div className="space-y-4">
                         {readyOrders.length > 0 ? readyOrders.map(order => (
                             <TakeawayCard key={order.id} order={order} onDeliver={handleDeliver} isProcessing={processingOrderId === order.id} />

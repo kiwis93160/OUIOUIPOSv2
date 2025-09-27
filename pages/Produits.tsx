@@ -100,9 +100,9 @@ const Produits: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="mt-6 ui-card p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="flex flex-col sm:flex-row gap-4 w-full">
-                    <div className="relative flex-grow">
+            <div className="mt-6 ui-card p-4 flex flex-col lg:flex-row justify-between items-center gap-4">
+                <div className="flex flex-col md:flex-row gap-4 w-full">
+                    <div className="relative flex-grow md:max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                         <input
                             type="text"
@@ -115,18 +115,18 @@ const Produits: React.FC = () => {
                     <select
                         value={categoryFilter}
                         onChange={e => setCategoryFilter(e.target.value)}
-                        className="ui-select sm:w-56"
+                        className="ui-select md:w-56"
                     >
                         <option value="all">Toutes les catégories</option>
                         {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.nom}</option>)}
                     </select>
                 </div>
                 {canEdit && (
-                    <div className="flex gap-2 w-full sm:w-auto">
-                        <button onClick={() => setCategoryModalOpen(true)} className="flex-1 sm:flex-initial ui-btn-secondary">
+                    <div className="flex gap-2 w-full lg:w-auto">
+                        <button onClick={() => setCategoryModalOpen(true)} className="flex-1 lg:flex-initial ui-btn-secondary">
                             <Settings size={20} />
                         </button>
-                        <button onClick={() => handleOpenModal('product', 'add')} className="flex-1 sm:flex-initial ui-btn-primary">
+                        <button onClick={() => handleOpenModal('product', 'add')} className="flex-1 lg:flex-initial ui-btn-primary">
                             <PlusCircle size={20} />
                             Ajouter Produit
                         </button>
