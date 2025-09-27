@@ -5,7 +5,6 @@ import { uploadPaymentReceipt } from '../services/cloudinary';
 import { Order, Product, Category, OrderItem, Ingredient } from '../types';
 import { PlusCircle, MinusCircle, Send, DollarSign, AlertTriangle, Check, ArrowLeft, MessageSquare } from 'lucide-react';
 import { formatIntegerAmount } from '../utils/formatIntegerAmount';
-import OrderTimer from '../components/OrderTimer';
 import PaymentModal from '../components/PaymentModal';
 import Modal from '../components/Modal';
 
@@ -543,9 +542,6 @@ const Commande: React.FC = () => {
                         </div>
                         <div className="flex flex-col gap-2">
                             <h2 className="text-2xl font-semibold text-white">Table {order.table_nom}</h2>
-                            {order.date_envoi_cuisine && (
-                                <OrderTimer startTime={order.date_envoi_cuisine} className="w-full justify-center sm:w-auto sm:self-start" />
-                            )}
                         </div>
                     </div>
                     <div className="flex space-x-2 mt-4 overflow-x-auto pb-2">
