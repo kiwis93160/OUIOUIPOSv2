@@ -27,7 +27,9 @@ const OrderTimer: React.FC<OrderTimerProps> = ({ startTime, className = '' }) =>
   };
 
   return (
-    <div className={`flex items-center space-x-2 px-2 py-1 rounded-full text-lg font-bold ${getTimerColor()} ${className}`}>
+    <div
+      className={`flex items-center space-x-2 px-2 py-1 rounded-full text-lg font-bold border-2 border-white ${getTimerColor()} ${className}`}
+    >
       <Clock size={20} />
       <span>{timerString}</span>
     </div>
