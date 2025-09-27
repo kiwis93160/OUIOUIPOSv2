@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { ChefHat } from 'lucide-react';
 import { api } from '../services/api';
-import { KitchenTicket as KitchenTicketOrder, OrderItem } from '../types';
+import { KitchenTicket as KitchenTicketOrder } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import OrderTimer from '../components/OrderTimer';
 import { getOrderUrgencyStyles } from '../utils/orderUrgency';
@@ -14,6 +14,50 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
         warning: 'À surveiller',
         critical: 'Critique',
     };
+
+    const groupedItems = useMemo(() => {
+        type GroupedItem = {
+            key: string;
+            nom_produit: string;
+            quantite: number;
+            commentaire?: string;
+        };
+
+        const items: GroupedItem[] = [];
+        const groupIndex = new Map<string, number>();
+
+        order.items.forEach((item) => {
+            const trimmedComment = item.commentaire?.trim();
+            const commentKey = trimmedComment || 'no_comment';
+            const baseKey = `${item.produitRef}::${commentKey}`;
+
+            if (trimmedComment) {
+                items.push({
+                    key: `${baseKey}::${item.id}`,
+                    nom_produit: item.nom_produit,
+                    quantite: item.quantite,
+                    commentaire: trimmedComment,
+                });
+                return;
+            }
+
+            const existingIndex = groupIndex.get(baseKey);
+
+            if (existingIndex !== undefined) {
+                items[existingIndex].quantite += item.quantite;
+                return;
+            }
+
+            groupIndex.set(baseKey, items.length);
+            items.push({
+                key: baseKey,
+                nom_produit: item.nom_produit,
+                quantite: item.quantite,
+            });
+        });
+
+        return items;
+    }, [order.items]);
 
     return (
         <div className={`relative flex h-full flex-col overflow-hidden rounded-xl border bg-white text-gray-900 shadow-lg transition-shadow duration-300 hover:shadow-xl ${urgencyStyles.border}`}>
@@ -42,17 +86,13 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
             </header>
             <div className="flex-1 overflow-y-auto px-5 py-4">
                 <ul className="space-y-3">
-                    {order.items.map((item: OrderItem) => (
-                        <li key={item.id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 shadow-sm">
-                            <div className="flex items-baseline justify-between gap-3">
-                                <p className="text-lg font-semibold text-gray-900">{item.nom_produit}</p>
-                                <span className="text-2xl font-bold text-gray-900">{item.quantite}×</span>
-                            </div>
+                    {groupedItems.map((item) => (
+                        <li key={item.key} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 shadow-sm">
+                            <p className="text-lg font-semibold text-gray-900">{item.quantite}x {item.nom_produit}</p>
                             {item.commentaire && (
-                                <div className="mt-3 rounded-md border border-dashed border-blue-200 bg-blue-50 px-3 py-2">
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">Commentaire</p>
-                                    <p className="mt-1 text-sm text-gray-900">{item.commentaire}</p>
-                                </div>
+                                <p className="mt-2 rounded-md border border-dashed border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium italic text-blue-800">
+                                    {item.commentaire}
+                                </p>
                             )}
                         </li>
                     ))}
