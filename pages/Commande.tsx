@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { uploadPaymentReceipt } from '../services/cloudinary';
 import { Order, Product, Category, OrderItem, Ingredient } from '../types';
 import { PlusCircle, MinusCircle, Send, DollarSign, AlertTriangle, Check, ArrowLeft, MessageSquare } from 'lucide-react';
+import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 import OrderTimer from '../components/OrderTimer';
 import PaymentModal from '../components/PaymentModal';
 import Modal from '../components/Modal';
@@ -585,7 +586,7 @@ const Commande: React.FC = () => {
                                 <img src={product.image} alt={product.nom_produit} className="w-24 h-24 object-cover rounded-md mb-2" />
                                 <p className="font-semibold text-sm text-gray-800">{product.nom_produit}</p>
                                 <p className="text-xs text-gray-600 px-1 h-10 overflow-hidden flex-grow">{product.description}</p>
-                                <p className="font-bold text-brand-primary mt-1">{product.prix_vente.toFixed(2)} €</p>
+                                <p className="font-bold text-brand-primary mt-1">{formatIntegerAmount(product.prix_vente)} €</p>
                             </button>
                         )
                     })}
@@ -614,10 +615,10 @@ const Commande: React.FC = () => {
                                         <div key={item.id} className="p-3 rounded-lg bg-yellow-100">
                                             <div className="flex justify-between items-start">
                                                 <p className="font-bold text-gray-900 flex-1">{item.quantite}x {item.nom_produit}</p>
-                                                <p className="font-bold text-gray-900">{(item.quantite * item.prix_unitaire).toFixed(2)}€</p>
+                                                <p className="font-bold text-gray-900">{formatIntegerAmount(item.quantite * item.prix_unitaire)}€</p>
                                             </div>
                                             <div className="flex justify-between items-center mt-2">
-                                                <p className="text-sm text-gray-700">{item.prix_unitaire.toFixed(2)} € /u</p>
+                                                <p className="text-sm text-gray-700">{formatIntegerAmount(item.prix_unitaire)} € /u</p>
                                                 <div className="flex items-center space-x-2 text-gray-800">
                                                     <button onClick={() => handleQuantityChange(index, -1)} className="p-1"><MinusCircle size={20} /></button>
                                                     <span className="font-bold w-6 text-center">{item.quantite}</span>
@@ -654,9 +655,9 @@ const Commande: React.FC = () => {
                                         <div key={item.id} className="p-3 rounded-lg bg-green-100">
                                             <div className="flex justify-between items-start">
                                                 <p className="font-bold text-gray-900 flex-1">{item.quantite}x {item.nom_produit}</p>
-                                                <p className="font-bold text-gray-900">{(item.quantite * item.prix_unitaire).toFixed(2)}€</p>
+                                                <p className="font-bold text-gray-900">{formatIntegerAmount(item.quantite * item.prix_unitaire)}€</p>
                                             </div>
-                                            <p className="text-sm text-gray-700 mt-2">{item.prix_unitaire.toFixed(2)} € /u</p>
+                                            <p className="text-sm text-gray-700 mt-2">{formatIntegerAmount(item.prix_unitaire)} € /u</p>
                                             {item.commentaire && (
                                                 <p className="mt-2 text-sm italic text-gray-600 pl-2">"{item.commentaire}"</p>
                                             )}
@@ -670,7 +671,7 @@ const Commande: React.FC = () => {
                 <div className="p-4 border-t space-y-4">
                     <div className="flex justify-between text-2xl font-semibold text-brand-secondary">
                         <span>Total</span>
-                        <span>{order.total.toFixed(2)} €</span>
+                        <span>{formatIntegerAmount(order.total)} €</span>
                     </div>
 
                     {order.estado_cocina === 'listo' && (

@@ -3,6 +3,7 @@ import Modal from './Modal';
 import { api } from '../services/api';
 import { DailyReport, RoleLogin } from '../types';
 import { Users, ShoppingCart, DollarSign, Package, AlertTriangle, MessageSquare, LogIn } from 'lucide-react';
+import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 
 const ReportStat: React.FC<{ icon: React.ReactNode, label: string, value: string | number }> = ({ icon, label, value }) => (
     <div className="bg-gray-100 p-4 rounded-lg flex items-center">
@@ -60,9 +61,9 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
         parts.push('---');
     
         parts.push(`*Statistiques du Jour*`);
-        parts.push(`- Ventes: *${reportData.ventesDuJour.toFixed(2)} €*`);
+        parts.push(`- Ventes: *${formatIntegerAmount(reportData.ventesDuJour)} €*`);
         parts.push(`- Clients: *${reportData.clientsDuJour}*`);
-        parts.push(`- Panier Moyen: *${reportData.panierMoyen.toFixed(2)} €*`);
+        parts.push(`- Panier Moyen: *${formatIntegerAmount(reportData.panierMoyen)} €*`);
         parts.push('---');
     
         parts.push(`*Produits Vendus*`);
@@ -72,7 +73,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
           reportData.soldProducts.forEach(category => {
             parts.push(`\n_${category.categoryName}_`);
             category.products.forEach(product => {
-              parts.push(`  - ${product.quantity}x ${product.name} (${product.totalSales.toFixed(2)} €)`);
+              parts.push(`  - ${product.quantity}x ${product.name} (${formatIntegerAmount(product.totalSales)} €)`);
             });
           });
         }
@@ -147,9 +148,9 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <ReportStat icon={<DollarSign/>} label="Ventes du Jour" value={`${report.ventesDuJour.toFixed(2)} €`} />
+                                <ReportStat icon={<DollarSign/>} label="Ventes du Jour" value={`${formatIntegerAmount(report.ventesDuJour)} €`} />
                                 <ReportStat icon={<Users/>} label="Clients du Jour" value={report.clientsDuJour} />
-                                <ReportStat icon={<ShoppingCart/>} label="Panier Moyen" value={`${report.panierMoyen.toFixed(2)} €`} />
+                                <ReportStat icon={<ShoppingCart/>} label="Panier Moyen" value={`${formatIntegerAmount(report.panierMoyen)} €`} />
                             </div>
 
                             <div>
@@ -161,7 +162,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                                             <ul className="list-disc list-inside pl-2 text-gray-700">
                                                 {category.products.map(product => (
                                                     <li key={product.id}>
-                                                        {product.quantity}x {product.name} - <span className="font-semibold">{product.totalSales.toFixed(2)} €</span>
+                                                        {product.quantity}x {product.name} - <span className="font-semibold">{formatIntegerAmount(product.totalSales)} €</span>
                                                     </li>
                                                 ))}
                                             </ul>

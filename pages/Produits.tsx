@@ -7,6 +7,7 @@ import { uploadProductImage, resolveProductImageUrl } from '../services/cloudina
 import { Product, Category, Ingredient, RecipeItem } from '../types';
 import Modal from '../components/Modal';
 import { PlusCircle, Edit, Trash2, Search, Settings, GripVertical, CheckCircle, Clock, XCircle, MoreVertical, Upload, HelpCircle } from 'lucide-react';
+import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 
 const getStatusInfo = (status: Product['estado']) => {
     switch (status) {
@@ -199,7 +200,7 @@ const ProductCard: React.FC<{ product: Product; category?: Category; onEdit: () 
                         <p className="text-xs text-gray-500">{category?.nom || 'Sans catégorie'}</p>
                         <h3 className="font-bold text-lg text-gray-900">{product.nom_produit}</h3>
                     </div>
-                <p className="text-xl font-extrabold text-brand-primary">{product.prix_vente.toFixed(2)}€</p>
+                <p className="text-xl font-extrabold text-brand-primary">{formatIntegerAmount(product.prix_vente)}€</p>
                 </div>
                  <p className="text-xs text-gray-600 mt-1 flex-grow">{product.description}</p>
                 
@@ -345,15 +346,15 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-700">
                         <div>
                             <p className="text-xs uppercase tracking-wide text-gray-500">Coût de revient</p>
-                            <p className="text-lg font-semibold text-gray-900">{recipeCost.toFixed(2)} €</p>
+                            <p className="text-lg font-semibold text-gray-900">{formatIntegerAmount(recipeCost)} €</p>
                         </div>
                         <div>
                             <p className="text-xs uppercase tracking-wide text-gray-500">Marge</p>
-                            <p className={`text-lg font-semibold ${marginValue >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{marginValue.toFixed(2)} €</p>
+                            <p className={`text-lg font-semibold ${marginValue >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatIntegerAmount(marginValue)} €</p>
                         </div>
                         <div>
                             <p className="text-xs uppercase tracking-wide text-gray-500">Marge %</p>
-                            <p className={`text-lg font-semibold ${marginPercentage >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{Number.isFinite(marginPercentage) ? marginPercentage.toFixed(1) : '0.0'}%</p>
+                            <p className={`text-lg font-semibold ${marginPercentage >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{Number.isFinite(marginPercentage) ? formatIntegerAmount(marginPercentage) : '0'}%</p>
                         </div>
                     </div>
 

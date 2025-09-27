@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { api } from '../services/api';
 import { Order } from '../types';
 import { CheckCircle, ChefHat, FileText, PackageCheck, User, MapPin, Receipt, Phone } from 'lucide-react';
+import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 import {
     clearActiveCustomerOrder,
     getActiveCustomerOrder,
@@ -178,13 +179,13 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
                         {order.items.map(item => (
                             <div key={item.id} className={`flex justify-between ${variant === 'hero' ? 'text-gray-200' : 'text-gray-600'}`}>
                                 <span>{item.quantite}x {item.nom_produit}</span>
-                                <span>{(item.prix_unitaire * item.quantite).toFixed(2)}€</span>
+                                <span>{formatIntegerAmount(item.prix_unitaire * item.quantite)}€</span>
                             </div>
                         ))}
                     </div>
                     <div className={`flex justify-between font-bold text-lg border-t pt-2 ${variant === 'hero' ? 'text-white border-gray-500' : 'text-gray-800'}`}>
                         <span>Total</span>
-                        <span>{order.total.toFixed(2)}€</span>
+                        <span>{formatIntegerAmount(order.total)}€</span>
                     </div>
 
                     <div className={`border-t pt-4 space-y-2 ${variant === 'hero' ? 'border-gray-500' : ''}`}>

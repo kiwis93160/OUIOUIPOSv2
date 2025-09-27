@@ -7,6 +7,7 @@ import Modal from '../components/Modal';
 import { ArrowLeft, ShoppingCart, Plus, Minus, X, Upload, MessageCircle, CheckCircle, History } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder, storeActiveCustomerOrder } from '../services/customerOrderStorage';
+import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 
 // ==================================================================================
 // 2. Item Customization Modal
@@ -61,7 +62,7 @@ const ItemCustomizationModal: React.FC<ItemCustomizationModalProps> = ({ isOpen,
                         <button onClick={() => setQuantity(q => q + 1)} className="p-2 rounded-full bg-gray-200 text-gray-800"><Plus size={18}/></button>
                     </div>
                     <button onClick={handleSave} className="bg-brand-primary text-brand-secondary font-bold py-2 px-6 rounded-lg hover:bg-yellow-400 transition">
-                        Ajouter ({ (product.prix_vente * quantity).toFixed(2) } €)
+                        Ajouter ({formatIntegerAmount(product.prix_vente * quantity)} €)
                     </button>
                 </div>
             </div>
@@ -260,7 +261,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     const generateWhatsAppMessage = (order: Order) => {
         const header = `*Nouvelle Commande OUIOUITACOS #${order.id.slice(-6)}*`;
         const itemLines = (order.items ?? []).map(item => {
-            const baseLine = `- ${item.quantite}x ${item.nom_produit} (${item.prix_unitaire.toFixed(2)}€) → ${(item.prix_unitaire * item.quantite).toFixed(2)}€`;
+            const baseLine = `- ${item.quantite}x ${item.nom_produit} (${formatIntegerAmount(item.prix_unitaire)}€) → ${formatIntegerAmount(item.prix_unitaire * item.quantite)}€`;
             const details: string[] = [];
             if (item.commentaire) {
                 details.push(`Commentaire: ${item.commentaire}`);
@@ -272,7 +273,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
         });
         const items = itemLines.length > 0 ? itemLines.join('\n') : 'Aucun article';
         const totalValue = order.total ?? order.items.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0);
-        const totalMsg = `*Total: ${totalValue.toFixed(2)}€*`;
+        const totalMsg = `*Total: ${formatIntegerAmount(totalValue)}€*`;
         const paymentMethod = order.payment_method ? `Paiement: ${order.payment_method}` : undefined;
         const client = `Client: ${order.clientInfo?.nom} (${order.clientInfo?.telephone})\nAdresse: ${order.clientInfo?.adresse}`;
         const footer = "Justificatif de paiement ci-joint.";
@@ -296,7 +297,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                     <div key={order.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                                         <div>
                                             <p className="font-semibold text-gray-700">Commande du {new Date(order.date_creation).toLocaleDateString()}</p>
-                                            <p className="text-sm text-gray-500">{order.items.length} article(s) - {order.total.toFixed(2)}€</p>
+                                            <p className="text-sm text-gray-500">{order.items.length} article(s) - {formatIntegerAmount(order.total)}€</p>
                                         </div>
                                         <button onClick={() => handleReorder(order)} className="bg-brand-primary text-brand-secondary font-bold py-1 px-3 rounded-lg text-sm hover:bg-yellow-400">
                                             Commander à nouveau
@@ -326,7 +327,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                     <img src={product.image} alt={product.nom_produit} className="w-28 h-28 object-cover rounded-md mb-2" />
                                     <p className="font-semibold text-sm flex-grow text-gray-700">{product.nom_produit}</p>
                                     <p className="text-xs text-gray-500 mt-1 px-1 h-10 overflow-hidden">{product.description}</p>
-                                    <p className="font-bold text-gray-700 mt-1">{product.prix_vente.toFixed(2)} €</p>
+                                    <p className="font-bold text-gray-700 mt-1">{formatIntegerAmount(product.prix_vente)} €</p>
                                     {product.estado !== 'disponible' && <span className="text-xs text-red-500 font-bold mt-1">Épuisé</span>}
                                 </div>
                             ))}
@@ -345,7 +346,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                         <div>
                                             <p className="font-semibold text-gray-700">{item.nom_produit}</p>
                                             {item.commentaire && <p className="text-xs text-gray-500 italic">"{item.commentaire}"</p>}
-                                            <p className="text-sm text-gray-600 font-semibold">{(item.prix_unitaire * item.quantite).toFixed(2)} €</p>
+                                            <p className="text-sm text-gray-600 font-semibold">{formatIntegerAmount(item.prix_unitaire * item.quantite)} €</p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button onClick={() => handleQuantityChange(item.id, -1)} className="p-1 rounded-full bg-gray-200"><Minus size={14}/></button>
@@ -359,7 +360,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                         <div className="border-t my-4"></div>
                         <div className="flex justify-between text-xl font-bold text-gray-700">
                             <span>Total</span>
-                            <span>{total.toFixed(2)} €</span>
+                            <span>{formatIntegerAmount(total)} €</span>
                         </div>
 
                         {cart.length > 0 && (
@@ -392,7 +393,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                     <input id="payment-proof-upload" type="file" required accept="image/*,.pdf" onChange={e => setPaymentProof(e.target.files ? e.target.files[0] : null)} className="hidden" />
                                 </div>
                                 <button type="submit" disabled={!clientInfo.nom || !clientInfo.telephone || !clientInfo.adresse || !paymentProof || submitting} className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg text-lg hover:bg-red-700 transition disabled:bg-gray-400">
-                                    {submitting ? 'Envoi...' : `Soumettre la Commande (${total.toFixed(2)} €)`}
+                                    {submitting ? 'Envoi...' : `Soumettre la Commande (${formatIntegerAmount(total)} €)`}
                                 </button>
                             </form>
                         )}
