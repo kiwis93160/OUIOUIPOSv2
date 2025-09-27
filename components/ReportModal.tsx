@@ -12,7 +12,7 @@ const ReportStat: React.FC<{ icon: React.ReactNode, label: string, value: string
         </div>
         <div className="space-y-1">
             <p className="text-xs sm:text-sm text-gray-500 font-semibold">{label}</p>
-            <p className="text-lg sm:text-xl font-bold text-gray-800">{value}</p>
+            <p className="font-bold text-gray-800 text-[clamp(1.1rem,2.5vw,1.5rem)]">{value}</p>
         </div>
     </div>
 );
@@ -138,7 +138,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                                 </div>
                             )}
                             <div className="text-center border-b pb-4">
-                                 <h2 className="text-3xl font-bold text-brand-secondary">Rapport OUIOUITACOS</h2>
+                                 <h2 className="font-bold text-brand-secondary text-[clamp(1.75rem,4vw,2.75rem)]">Rapport OUIOUITACOS</h2>
                                  <p className="text-gray-500">
                                      Généré le {new Date(report.generatedAt).toLocaleString('fr-FR')}
                                  </p>

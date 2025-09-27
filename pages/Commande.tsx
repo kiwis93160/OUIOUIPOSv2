@@ -529,7 +529,7 @@ const Commande: React.FC = () => {
 
     return (
         <>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-10rem)]">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[calc(100vh-12rem)] lg:h-[calc(100vh-10rem)]">
             {/* Menu Section */}
             <div className="lg:col-span-2 ui-card flex flex-col">
             <div className="p-4 border-b">

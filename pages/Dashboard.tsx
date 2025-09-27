@@ -14,7 +14,7 @@ const MainStatCard: React.FC<{ title: string; value: string; icon: React.ReactNo
         </div>
         <div>
             <p className="text-sm font-semibold text-gray-500">{title}</p>
-            <p className="text-3xl font-bold text-gray-800">{value}</p>
+            <p className="text-2xl md:text-3xl xl:text-4xl font-bold text-gray-800">{value}</p>
         </div>
     </div>
 );
@@ -26,7 +26,7 @@ const OpStatCard: React.FC<{ title: string; value: string | number; icon: React.
         </div>
         <div>
             <p className="text-xs text-gray-500">{title}</p>
-            <p className="text-xl font-bold text-gray-800">{value}</p>
+            <p className="text-lg sm:text-xl xl:text-2xl font-bold text-gray-800">{value}</p>
         </div>
     </div>
 );
@@ -112,7 +112,7 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Block 1: Key Indicators */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MainStatCard title={`Ventes (${stats.periodLabel})`} value={`${formatIntegerAmount(stats.ventesPeriode)} €`} icon={<DollarSign size={28}/>} />
                 <MainStatCard title={`Bénéfice (${stats.periodLabel})`} value={`${formatIntegerAmount(stats.beneficePeriode)} €`} icon={<DollarSign size={28}/>} />
                 <MainStatCard title={`Clients (${stats.periodLabel})`} value={stats.clientsPeriode.toString()} icon={<Users size={28}/>} />
@@ -120,11 +120,11 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Block 2: Operational Status */}
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <OpStatCard title="Tables Occupées" value={stats.tablesOccupees} icon={<Armchair size={24}/>} />
                 <OpStatCard title="Clients Actuels" value={stats.clientsActuels} icon={<Users size={24}/>} />
                 <OpStatCard title="En Cuisine" value={stats.commandesEnCuisine} icon={<Soup size={24}/>} />
-                <OpStatCard 
+                <OpStatCard
                     title="Ingrédients Bas" 
                     value={stats.ingredientsStockBas.length} 
                     icon={<AlertTriangle size={24} className={stats.ingredientsStockBas.length > 0 ? 'text-red-500' : 'text-gray-600'} />}

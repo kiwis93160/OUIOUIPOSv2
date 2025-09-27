@@ -89,16 +89,16 @@ const ResumeVentes: React.FC = () => {
     return (
         <div className="space-y-6">
             <div className="mt-6 space-y-4 rounded-xl bg-white p-4 shadow-md">
-                 <div className="flex flex-wrap items-end gap-4">
-                     <div className="flex-grow">
+                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                     <div className="flex flex-col">
                         <label className="text-sm font-medium text-gray-700">Date de début</label>
                         <input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900"/>
                     </div>
-                    <div className="flex-grow">
+                    <div className="flex flex-col">
                         <label className="text-sm font-medium text-gray-700">Date de fin</label>
                         <input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900"/>
                     </div>
-                    <div className="flex-grow">
+                    <div className="flex flex-col">
                         <label className="text-sm font-medium text-gray-700">Méthode de paiement</label>
                         <select name="paymentMethod" value={filters.paymentMethod} onChange={handleFilterChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900">
                             <option value="all">Toutes</option>
@@ -107,7 +107,7 @@ const ResumeVentes: React.FC = () => {
                             <option value="tarjeta">Tarjeta</option>
                         </select>
                     </div>
-                    <button onClick={exportToCSV} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-green-700 transition h-10">
+                    <button onClick={exportToCSV} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition h-12 sm:h-full sm:self-end">
                         <Download size={18} /> Export CSV
                     </button>
                 </div>
