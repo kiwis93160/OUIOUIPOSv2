@@ -14,19 +14,19 @@ export interface OrderUrgencyStyles {
 
 const URGENCY_STYLE_MAP: Record<OrderUrgencyLevel, Omit<OrderUrgencyStyles, 'level'>> = {
   critical: {
-    border: 'border-red-500 urgency-border-critical',
+    border: 'border-4 border-solid border-red-500',
     accent: 'bg-red-500 urgency-accent-critical',
     badge: 'bg-red-100 text-red-700 ring-1 ring-inset ring-red-300 urgency-badge-critical',
     icon: 'text-red-500 urgency-icon-critical',
   },
   warning: {
-    border: 'border-yellow-400 urgency-border-warning',
+    border: 'border-[3px] border-solid border-yellow-400',
     accent: 'bg-yellow-400 urgency-accent-warning',
     badge: 'bg-yellow-100 text-yellow-800 ring-1 ring-inset ring-yellow-300 urgency-badge-warning',
     icon: 'text-yellow-500 urgency-icon-warning',
   },
   normal: {
-    border: 'border-brand-accent urgency-border-normal',
+    border: 'border-2 border-solid border-brand-accent',
     accent: 'bg-brand-accent urgency-accent-normal',
     badge: 'bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200 urgency-badge-normal',
     icon: 'text-brand-accent urgency-icon-normal',

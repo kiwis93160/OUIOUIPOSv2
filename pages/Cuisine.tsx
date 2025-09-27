@@ -54,8 +54,7 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
     }, [order.items]);
 
     return (
-        <div className={`relative flex h-full flex-col overflow-hidden rounded-xl border bg-white text-gray-900 shadow-lg transition-shadow duration-300 hover:shadow-xl ${urgencyStyles.border}`}>
-            <span aria-hidden className={`absolute inset-y-0 left-0 w-1.5 ${urgencyStyles.accent}`} />
+        <div className={`flex h-full flex-col overflow-hidden rounded-xl bg-white text-gray-900 shadow-lg transition-shadow duration-300 hover:shadow-xl ${urgencyStyles.border}`}>
             <header className="border-b border-gray-200 px-5 pt-5 pb-4">
                 <div className="flex w-full flex-col gap-4">
                     <div className="space-y-1">
