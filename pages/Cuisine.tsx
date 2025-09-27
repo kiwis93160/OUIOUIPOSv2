@@ -53,22 +53,20 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
         return items;
     }, [order.items]);
 
+    const sentAt = new Date(order.date_envoi_cuisine || Date.now());
+    const sentAtFormatted = sentAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
     return (
         <div className={`flex h-full flex-col overflow-hidden rounded-xl bg-white text-gray-900 shadow-lg transition-shadow duration-300 hover:shadow-xl ${urgencyStyles.border}`}>
             <header className="border-b border-gray-200 px-5 pt-5 pb-4">
                 <div className="flex w-full flex-col gap-4">
-                    <div className="space-y-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-500">Commande</p>
-                        <h3 className="w-full text-2xl font-semibold text-gray-900">
-                            {order.table_nom || `À emporter #${order.id.slice(-4)}`}
-                        </h3>
-                    </div>
-                    <div className="flex w-full flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                        <OrderTimer startTime={order.date_envoi_cuisine || Date.now()} className="text-base" />
-                        <p className="text-xs font-medium text-gray-500 sm:text-right">
-                            Envoyé {new Date(order.date_envoi_cuisine || Date.now()).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                    </div>
+                    <h3 className="w-full text-center text-3xl font-semibold text-gray-900 sm:text-left sm:text-4xl">
+                        {order.table_nom || `À emporter #${order.id.slice(-4)}`}
+                    </h3>
+                    <OrderTimer
+                        startTime={order.date_envoi_cuisine || Date.now()}
+                        className="w-full justify-center rounded-xl px-0 text-xl sm:justify-start sm:rounded-full sm:px-4 sm:text-2xl"
+                    />
                 </div>
             </header>
             <div className="flex-1 overflow-y-auto px-5 py-4">
@@ -85,17 +83,22 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
                     ))}
                 </ul>
             </div>
-            {canMarkReady && (
-                <footer className="border-t border-gray-200 px-5 pb-5 pt-4">
-                    <button
-                        onClick={() => onReady(order.id)}
-                        className="group inline-flex w-full items-center justify-center gap-3 rounded-lg border-2 border-transparent bg-black px-4 py-3 text-lg font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/70 focus-visible:ring-offset-2 hover:bg-neutral-900"
-                    >
-                        <ChefHat size={22} className="shrink-0" />
-                        <span>PRÊT</span>
-                    </button>
-                </footer>
-            )}
+            <footer className="border-t border-gray-200 px-5 pb-5 pt-4">
+                <div className="flex w-full flex-col gap-3">
+                    <p className="text-xs text-gray-500">
+                        Envoyé {sentAtFormatted}
+                    </p>
+                    {canMarkReady && (
+                        <button
+                            onClick={() => onReady(order.id)}
+                            className="group inline-flex w-full items-center justify-center gap-3 rounded-lg border-2 border-transparent bg-black px-4 py-3 text-lg font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/70 focus-visible:ring-offset-2 hover:bg-neutral-900"
+                        >
+                            <ChefHat size={22} className="shrink-0" />
+                            <span>PRÊT</span>
+                        </button>
+                    )}
+                </div>
+            </footer>
         </div>
     );
 };
