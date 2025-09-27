@@ -62,7 +62,7 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
                 <footer className="border-t border-gray-200 px-5 pb-5 pt-4">
                     <button
                         onClick={() => onReady(order.id)}
-                        className="group inline-flex w-full items-center justify-center gap-3 rounded-lg border-2 border-transparent bg-status-success px-4 py-3 text-lg font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-status-success/70 focus-visible:ring-offset-2 hover:bg-status-success-hover"
+                        className="group inline-flex w-full items-center justify-center gap-3 rounded-lg border-2 border-transparent bg-black px-4 py-3 text-lg font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/70 focus-visible:ring-offset-2 hover:bg-neutral-900"
                     >
                         <ChefHat size={22} className="shrink-0" />
                         <span>PRÊT</span>
