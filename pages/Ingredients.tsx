@@ -59,7 +59,7 @@ const Ingredients: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-heading">Gestion des Ingrédients</h1>
+            <div className="text-heading">Gestion des Ingrédients</div>
 
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="relative w-full sm:w-auto">
