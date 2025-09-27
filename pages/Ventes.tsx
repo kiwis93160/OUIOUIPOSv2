@@ -148,8 +148,7 @@ const Ventes: React.FC = () => {
 
     return (
         <div>
-            <div className="section-title">Plan de salle</div>
-            <div className="status-grid">
+            <div className="mt-6 status-grid">
                 {tables.map(table => (
                     <TableCard key={table.id} table={table} onServe={handleServeOrder} />
                 ))}

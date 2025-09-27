@@ -88,8 +88,7 @@ const ResumeVentes: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="text-3xl font-bold text-white">Résumé des Ventes par Commande</div>
-            <div className="bg-white p-4 rounded-xl shadow-md space-y-4">
+            <div className="mt-6 space-y-4 rounded-xl bg-white p-4 shadow-md">
                  <div className="flex flex-wrap items-end gap-4">
                      <div className="flex-grow">
                         <label className="text-sm font-medium text-gray-700">Date de début</label>
