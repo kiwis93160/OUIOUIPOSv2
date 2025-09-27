@@ -7,6 +7,7 @@ import { Product, Order } from '../types';
 import { Mail, MapPin, Phone, Menu, X } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
+import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 
 type PinInputProps = {
   pin: string;
@@ -268,7 +269,7 @@ const Login: React.FC = () => {
                         <div key={order.id} className="hero-history__item">
                           <div className="hero-history__meta">
                             <p className="hero-history__date">Commande du {new Date(order.date_creation).toLocaleDateString()}</p>
-                            <p className="hero-history__details">{order.items.length} article(s) • {order.total.toFixed(2)}€</p>
+                            <p className="hero-history__details">{order.items.length} article(s) • {formatIntegerAmount(order.total)}€</p>
                           </div>
                           <button
                             type="button"
@@ -310,7 +311,7 @@ const Login: React.FC = () => {
                     <div className="menu-card__body">
                       <h3 className="menu-card__title">{product.nom_produit}</h3>
                       <p className="menu-card__description">{product.description}</p>
-                      <p className="menu-card__price">{product.prix_vente.toFixed(2)} €</p>
+                      <p className="menu-card__price">{formatIntegerAmount(product.prix_vente)} €</p>
                     </div>
                   </article>
                 ))}

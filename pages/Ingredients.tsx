@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { Ingredient } from '../types';
 import Modal from '../components/Modal';
 import { PlusCircle, Edit, Trash2, PackagePlus, Search } from 'lucide-react';
+import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 
 const Ingredients: React.FC = () => {
     const { role } = useAuth();
@@ -105,7 +106,7 @@ const Ingredients: React.FC = () => {
                                         {ing.stock_minimum} {ing.unite}
                                     </td>
                                      <td className={`p-3 ${isLowStock ? 'text-red-800' : 'text-gray-700'}`}>
-                                        {ing.prix_unitaire.toFixed(2)} €
+                                        {formatIntegerAmount(ing.prix_unitaire)} €
                                     </td>
                                     {canEdit && (
                                         <td className="p-3 text-right">

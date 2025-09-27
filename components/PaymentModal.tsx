@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Order } from '../types';
 import Modal from './Modal';
 import { Upload } from 'lucide-react';
+import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, order, onF
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="text-center">
           <p className="text-gray-600">Total à payer</p>
-          <p className="text-4xl font-extrabold text-gray-900">{order.total.toFixed(2)} €</p>
+          <p className="text-4xl font-extrabold text-gray-900">{formatIntegerAmount(order.total)} €</p>
         </div>
 
         <div>

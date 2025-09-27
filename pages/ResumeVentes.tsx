@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
 import { Order } from '../types';
 import { Download, ChevronDown, ChevronRight, User, ShoppingBag } from 'lucide-react';
+import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 
 const ResumeVentes: React.FC = () => {
     const [orders, setOrders] = useState<Order[]>([]);
@@ -57,8 +58,8 @@ const ResumeVentes: React.FC = () => {
                 order.type === 'sur_place' ? 'Sur Place' : 'À Emporter',
                 `"${order.type === 'sur_place' ? (order.table_nom || 'N/A') : (order.clientInfo?.nom || 'N/A')}"`,
                 order.couverts,
-                order.total.toFixed(2),
-                (order.profit || 0).toFixed(2),
+                formatIntegerAmount(order.total),
+                formatIntegerAmount(order.profit || 0),
                 order.payment_method || 'N/A'
             ].join(','))
         ];
@@ -143,8 +144,8 @@ const ResumeVentes: React.FC = () => {
                                             )}
                                         </td>
                                         <td className="p-3 font-semibold text-gray-900">{order.type === 'sur_place' ? (order.table_nom || 'N/A') : (order.clientInfo?.nom || 'N/A')}</td>
-                                        <td className="p-3 text-gray-800 font-bold text-right">{order.total.toFixed(2)} €</td>
-                                        <td className="p-3 font-semibold text-green-600 text-right">{(order.profit || 0).toFixed(2)} €</td>
+                                        <td className="p-3 text-gray-800 font-bold text-right">{formatIntegerAmount(order.total)} €</td>
+                                        <td className="p-3 font-semibold text-green-600 text-right">{formatIntegerAmount(order.profit || 0)} €</td>
                                         <td className="p-3 text-gray-700 capitalize">{order.payment_method || 'N/A'}</td>
                                     </tr>
                                     {expandedOrderId === order.id && (
@@ -154,7 +155,7 @@ const ResumeVentes: React.FC = () => {
                                                     <h4 className="font-semibold mb-2 text-gray-800">Détail des articles :</h4>
                                                     <ul className="list-disc list-inside pl-2 text-gray-700">
                                                     {order.items.map(item => (
-                                                        <li key={item.id}>{item.quantite}x {item.nom_produit} - <span className="font-semibold">{(item.prix_unitaire * item.quantite).toFixed(2)}€</span></li>
+                                                        <li key={item.id}>{item.quantite}x {item.nom_produit} - <span className="font-semibold">{formatIntegerAmount(item.prix_unitaire * item.quantite)}€</span></li>
                                                     ))}
                                                     </ul>
                                                 </div>
@@ -167,8 +168,8 @@ const ResumeVentes: React.FC = () => {
                          <tfoot className="border-t-2 border-gray-300">
                             <tr className="font-bold text-gray-900">
                                 <td colSpan={4} className="p-3 text-right">TOTAUX</td>
-                                <td className="p-3 text-right">{totals.totalSales.toFixed(2)} €</td>
-                                <td className="p-3 text-right text-green-700">{totals.totalProfit.toFixed(2)} €</td>
+                                <td className="p-3 text-right">{formatIntegerAmount(totals.totalSales)} €</td>
+                                <td className="p-3 text-right text-green-700">{formatIntegerAmount(totals.totalProfit)} €</td>
                                 <td></td>
                             </tr>
                         </tfoot>

@@ -5,6 +5,7 @@ import { api, getBusinessDayStart } from '../services/api';
 import { DashboardStats, SalesDataPoint, DashboardPeriod } from '../types';
 import Modal from '../components/Modal';
 import RoleManager from '../components/RoleManager';
+import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 
 const MainStatCard: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
     <div className="ui-card p-6 flex items-center space-x-4">
@@ -112,10 +113,10 @@ const Dashboard: React.FC = () => {
 
             {/* Block 1: Key Indicators */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MainStatCard title={`Ventes (${stats.periodLabel})`} value={`${stats.ventesPeriode.toFixed(2)} €`} icon={<DollarSign size={28}/>} />
-                <MainStatCard title={`Bénéfice (${stats.periodLabel})`} value={`${stats.beneficePeriode.toFixed(2)} €`} icon={<DollarSign size={28}/>} />
+                <MainStatCard title={`Ventes (${stats.periodLabel})`} value={`${formatIntegerAmount(stats.ventesPeriode)} €`} icon={<DollarSign size={28}/>} />
+                <MainStatCard title={`Bénéfice (${stats.periodLabel})`} value={`${formatIntegerAmount(stats.beneficePeriode)} €`} icon={<DollarSign size={28}/>} />
                 <MainStatCard title={`Clients (${stats.periodLabel})`} value={stats.clientsPeriode.toString()} icon={<Users size={28}/>} />
-                <MainStatCard title="Panier Moyen" value={`${stats.panierMoyen.toFixed(2)} €`} icon={<BarChart2 size={28}/>} />
+                <MainStatCard title="Panier Moyen" value={`${formatIntegerAmount(stats.panierMoyen)} €`} icon={<BarChart2 size={28}/>} />
             </div>
 
             {/* Block 2: Operational Status */}
@@ -162,7 +163,7 @@ const Dashboard: React.FC = () => {
                             <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label>
                                 {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                             </Pie>
-                            <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />
+                            <Tooltip formatter={(value: number) => `${formatIntegerAmount(value)} €`} />
                             <Legend/>
                         </PieChart>
                     </ResponsiveContainer>
