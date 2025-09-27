@@ -9,12 +9,6 @@ import { getOrderUrgencyStyles } from '../utils/orderUrgency';
 const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId: string) => void; canMarkReady: boolean }> = ({ order, onReady, canMarkReady }) => {
 
     const urgencyStyles = getOrderUrgencyStyles(order.date_envoi_cuisine || Date.now());
-    const urgencyLabelMap: Record<typeof urgencyStyles.level, string> = {
-        normal: 'Normal',
-        warning: 'À surveiller',
-        critical: 'Critique',
-    };
-
     const groupedItems = useMemo(() => {
         type GroupedItem = {
             key: string;
@@ -63,20 +57,14 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
         <div className={`relative flex h-full flex-col overflow-hidden rounded-xl border bg-white text-gray-900 shadow-lg transition-shadow duration-300 hover:shadow-xl ${urgencyStyles.border}`}>
             <span aria-hidden className={`absolute inset-y-0 left-0 w-1.5 ${urgencyStyles.accent}`} />
             <header className="border-b border-gray-200 px-5 pt-5 pb-4">
-                <div className="flex flex-col gap-4">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-500">Commande</p>
-                            <h3 className="text-2xl font-semibold text-gray-900">
-                                {order.table_nom || `À emporter #${order.id.slice(-4)}`}
-                            </h3>
-                        </div>
-                        <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${urgencyStyles.badge}`}>
-                            <span className={`h-2 w-2 rounded-full ${urgencyStyles.accent}`} />
-                            <span>{urgencyLabelMap[urgencyStyles.level]}</span>
-                        </span>
+                <div className="flex w-full flex-col gap-4">
+                    <div className="space-y-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-500">Commande</p>
+                        <h3 className="w-full text-2xl font-semibold text-gray-900">
+                            {order.table_nom || `À emporter #${order.id.slice(-4)}`}
+                        </h3>
                     </div>
-                    <div className="flex flex-wrap items-end justify-between gap-3">
+                    <div className="flex w-full flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                         <OrderTimer startTime={order.date_envoi_cuisine || Date.now()} className="text-base" />
                         <p className="text-xs font-medium text-gray-500 sm:text-right">
                             Envoyé {new Date(order.date_envoi_cuisine || Date.now()).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
