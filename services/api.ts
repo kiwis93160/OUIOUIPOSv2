@@ -671,9 +671,11 @@ const resolveDashboardPeriodBounds = (period: DashboardPeriod) => {
   return { config, start, end };
 };
 
-const createSalesEntriesForOrder = async (order: Order) => {
+const createSalesEntriesForOrder = async (order: Order): Promise<number> => {
   if (!order.items.length) {
-    return;
+    await supabase.from('sales').delete().eq('order_id', order.id);
+    await supabase.from('orders').update({ profit: 0 }).eq('id', order.id);
+    return 0;
   }
 
   const productIds = Array.from(new Set(order.items.map(item => item.produitRef)));
@@ -698,37 +700,38 @@ const createSalesEntriesForOrder = async (order: Order) => {
     }),
   );
 
-  await supabase.from('sales').delete().eq('order_id', order.id);
-
-  if (!order.items.length) {
-    return;
-  }
-
   const saleDateIso = toIsoString(order.date_servido) ?? new Date().toISOString();
-  await supabase.from('sales').insert(
-    order.items.map(item => {
-      const product = productMap.get(item.produitRef);
-      const cost = product ? calculateCost(product.recipe, ingredientMap) : 0;
-      const categoryId = product?.categoria_id ?? 'unknown';
-      const categoryName = product ? categoryMap.get(categoryId) ?? 'Sans catégorie' : 'Sans catégorie';
+  const salesEntries = order.items.map(item => {
+    const product = productMap.get(item.produitRef);
+    const cost = product ? calculateCost(product.recipe, ingredientMap) : 0;
+    const categoryId = product?.categoria_id ?? 'unknown';
+    const categoryName = product ? categoryMap.get(categoryId) ?? 'Sans catégorie' : 'Sans catégorie';
+    const profit = (item.prix_unitaire - cost) * item.quantite;
 
-      return {
-        order_id: order.id,
-        product_id: item.produitRef,
-        product_name: item.nom_produit,
-        category_id: categoryId,
-        category_name: categoryName,
-        quantity: item.quantite,
-        unit_price: item.prix_unitaire,
-        total_price: item.prix_unitaire * item.quantite,
-        unit_cost: cost,
-        total_cost: cost * item.quantite,
-        profit: (item.prix_unitaire - cost) * item.quantite,
-        payment_method: order.payment_method ?? null,
-        sale_date: saleDateIso,
-      };
-    }),
-  );
+    return {
+      order_id: order.id,
+      product_id: item.produitRef,
+      product_name: item.nom_produit,
+      category_id: categoryId,
+      category_name: categoryName,
+      quantity: item.quantite,
+      unit_price: item.prix_unitaire,
+      total_price: item.prix_unitaire * item.quantite,
+      unit_cost: cost,
+      total_cost: cost * item.quantite,
+      profit,
+      payment_method: order.payment_method ?? null,
+      sale_date: saleDateIso,
+    };
+  });
+
+  const totalProfit = salesEntries.reduce((sum, entry) => sum + entry.profit, 0);
+
+  await supabase.from('sales').delete().eq('order_id', order.id);
+  await supabase.from('sales').insert(salesEntries);
+  await supabase.from('orders').update({ profit: totalProfit }).eq('id', order.id);
+
+  return totalProfit;
 };
 
 const notificationsService = {
@@ -1496,8 +1499,8 @@ export const api = {
     if (!updatedOrder) {
       throw new Error('Order not found after finalization');
     }
-    await createSalesEntriesForOrder(updatedOrder);
-    return updatedOrder;
+    const totalProfit = await createSalesEntriesForOrder(updatedOrder);
+    return { ...updatedOrder, profit: totalProfit };
   },
 
   submitCustomerOrder: async (orderData: {
@@ -1604,8 +1607,8 @@ export const api = {
     if (!updatedOrder) {
       throw new Error('Order not found after delivery');
     }
-    await createSalesEntriesForOrder(updatedOrder);
-    return updatedOrder;
+    const totalProfit = await createSalesEntriesForOrder(updatedOrder);
+    return { ...updatedOrder, profit: totalProfit };
   },
 
   getNotificationCounts: async (): Promise<NotificationCounts> => {
