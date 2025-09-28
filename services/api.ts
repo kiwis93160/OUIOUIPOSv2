@@ -20,8 +20,10 @@ import {
   SoldProduct,
   Sale,
   RoleLogin,
+  SiteContent,
 } from '../types';
-import { ROLE_HOME_PAGE_META_KEY } from '../constants';
+import { ROLE_HOME_PAGE_META_KEY, ROLES, SITE_CUSTOMIZER_PERMISSION_KEY } from '../constants';
+import { resolveSiteContent, sanitizeSiteContentInput } from '../utils/siteContent';
 
 type SupabasePermissions = Role['permissions'] & {
   [key in typeof ROLE_HOME_PAGE_META_KEY]?: string;
@@ -134,6 +136,12 @@ type SupabaseSaleRow = {
   sale_date: string;
 };
 
+type SupabaseSiteContentRow = {
+  id: string;
+  content: Partial<SiteContent> | null;
+  updated_at: string | null;
+};
+
 type SalesPeriod = {
   start?: Date | string;
   end?: Date | string;
@@ -164,6 +172,9 @@ const publishEvent = (event: string) => {
 };
 
 let ordersRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+
+const SITE_CONTENT_TABLE = 'site_content';
+const SITE_CONTENT_SINGLETON_ID = 'default';
 
 const ensureOrdersRealtimeSubscription = () => {
   if (ordersRealtimeChannel || typeof (supabase as { channel?: unknown }).channel !== 'function') {
@@ -284,13 +295,35 @@ const mergeHomePageIntoPermissions = (
   return payload;
 };
 
+const isAdminRoleName = (name?: string | null): boolean => {
+  if (!name) {
+    return false;
+  }
+
+  const normalized = name.trim().toLowerCase();
+  return normalized === ROLES.ADMIN || normalized === 'administrateur';
+};
+
+const withSiteCustomizerPermission = (
+  permissions: Role['permissions'],
+  roleName?: string | null,
+): Role['permissions'] => {
+  const normalized: Role['permissions'] = { ...permissions };
+  if (!(SITE_CUSTOMIZER_PERMISSION_KEY in normalized)) {
+    normalized[SITE_CUSTOMIZER_PERMISSION_KEY] = isAdminRoleName(roleName) ? 'editor' : 'none';
+  }
+
+  return normalized;
+};
+
 const mapRoleRow = (row: SupabaseRoleRow, includePin: boolean): Role => {
   const { permissions, homePage } = extractPermissions(row.permissions);
+  const normalizedPermissions = withSiteCustomizerPermission(permissions, row.name);
   const role: Role = {
     id: row.id,
     name: row.name,
     homePage,
-    permissions,
+    permissions: normalizedPermissions,
 
   };
 
@@ -299,6 +332,14 @@ const mapRoleRow = (row: SupabaseRoleRow, includePin: boolean): Role => {
   }
 
   return role;
+};
+
+const mapSiteContentRow = (row: SupabaseSiteContentRow | null): SiteContent | null => {
+  if (!row?.content) {
+    return null;
+  }
+
+  return resolveSiteContent(row.content);
 };
 
 const mapIngredientRow = (row: SupabaseIngredientRow): Ingredient => ({
@@ -774,6 +815,46 @@ const publishOrderChange = (options?: PublishOrderChangeOptions) => {
 
 export const api = {
   notifications: notificationsService,
+
+  getSiteContent: async (): Promise<SiteContent | null> => {
+    const response = await supabase
+      .from(SITE_CONTENT_TABLE)
+      .select('id, content, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const row = unwrapMaybe<SupabaseSiteContentRow>(
+      response as SupabaseResponse<SupabaseSiteContentRow | null>,
+    );
+
+    return mapSiteContentRow(row);
+  },
+
+  updateSiteContent: async (content: SiteContent): Promise<SiteContent> => {
+    const sanitized = sanitizeSiteContentInput(content);
+
+    const response = await supabase
+      .from(SITE_CONTENT_TABLE)
+      .upsert(
+        {
+          id: SITE_CONTENT_SINGLETON_ID,
+          content: sanitized,
+        },
+        { onConflict: 'id' },
+      )
+      .select('id, content, updated_at')
+      .single();
+
+    const row = unwrap<SupabaseSiteContentRow>(response as SupabaseResponse<SupabaseSiteContentRow>);
+    const mapped = mapSiteContentRow(row);
+
+    if (!mapped) {
+      throw new Error('Contenu du site introuvable après la mise à jour.');
+    }
+
+    return mapped;
+  },
 
   getRoles: async (): Promise<Role[]> => {
     const response = await supabase.from('roles').select('id, name, pin, permissions').order('name');

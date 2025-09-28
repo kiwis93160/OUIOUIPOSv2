@@ -10,6 +10,51 @@ export interface Role {
   };
 }
 
+export interface SiteContent {
+  navigation: {
+    brand: string;
+    links: {
+      home: string;
+      about: string;
+      menu: string;
+      contact: string;
+      loginCta: string;
+    };
+  };
+  hero: {
+    title: string;
+    subtitle: string;
+    ctaLabel: string;
+    backgroundImage: string | null;
+    historyTitle: string;
+    reorderCtaLabel: string;
+  };
+  about: {
+    title: string;
+    description: string;
+    image: string | null;
+  };
+  menu: {
+    title: string;
+    ctaLabel: string;
+    loadingLabel: string;
+    image: string | null;
+  };
+  contact: {
+    title: string;
+    addressLabel: string;
+    address: string;
+    phoneLabel: string;
+    phone: string;
+    emailLabel: string;
+    email: string;
+    image: string | null;
+  };
+  footer: {
+    text: string;
+  };
+}
+
 export interface Ingredient {
   id: string;
   nom: string;

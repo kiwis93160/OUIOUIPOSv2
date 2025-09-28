@@ -1,4 +1,6 @@
-import { LayoutDashboard, Package, Armchair, Soup, UtensilsCrossed, ShoppingBag, AreaChart } from 'lucide-react';
+import { LayoutDashboard, Package, Armchair, Soup, UtensilsCrossed, ShoppingBag, AreaChart, Brush } from 'lucide-react';
+
+export const SITE_CUSTOMIZER_PERMISSION_KEY = '/site-customizer';
 
 export const NAV_LINKS = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permissionKey: '/dashboard' },
@@ -6,6 +8,12 @@ export const NAV_LINKS = [
   { name: 'Plan de Salle', href: '/ventes', icon: Armchair, permissionKey: '/ventes' },
   { name: 'Cuisine', href: '/cocina', icon: Soup, permissionKey: '/cocina' },
   { name: 'Résumé Ventes', href: '/resume-ventes', icon: AreaChart, permissionKey: '/resume-ventes' },
+  {
+    name: 'Personnalisation',
+    href: SITE_CUSTOMIZER_PERMISSION_KEY,
+    icon: Brush,
+    permissionKey: SITE_CUSTOMIZER_PERMISSION_KEY,
+  },
   { name: 'Produits', href: '/produits', icon: UtensilsCrossed, permissionKey: '/produits' },
   { name: 'Ingrédients', href: '/ingredients', icon: Package, permissionKey: '/ingredients' },
 ];
