@@ -8,6 +8,7 @@ import { Mail, MapPin, Phone, Menu, X } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 import { formatIntegerAmount } from '../utils/formatIntegerAmount';
+import useSiteContent from '../hooks/useSiteContent';
 
 type PinInputProps = {
   pin: string;
@@ -117,7 +118,10 @@ const Login: React.FC = () => {
   const pinInputRef = useRef<HTMLInputElement>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
-  
+  const { content: siteContent } = useSiteContent();
+  const { navigation, hero, about, menu: menuContent, contact, footer } = siteContent;
+  const heroBackgroundStyle = hero.backgroundImage ? { backgroundImage: `url('${hero.backgroundImage}')` } : undefined;
+
   const [products, setProducts] = useState<Product[]>([]);
   const [orderHistory, setOrderHistory] = useState<Order[]>([]);
   const [menuLoading, setMenuLoading] = useState(true);
@@ -203,14 +207,14 @@ const Login: React.FC = () => {
     <div className="login-page">
       <header className="login-header">
         <div className="layout-container login-header__inner">
-          <a href="#accueil" className="login-brand">OUIOUITACOS</a>
+          <a href="#accueil" className="login-brand">{navigation.brand}</a>
           <nav className="login-nav" aria-label="Navigation principale">
-            <a href="#accueil" className="login-nav__link">Accueil</a>
-            <a href="#apropos" className="login-nav__link">À propos</a>
-            <a href="#menu" className="login-nav__link">Menu</a>
-            <a href="#contact" className="login-nav__link">Contact</a>
+            <a href="#accueil" className="login-nav__link">{navigation.links.home}</a>
+            <a href="#apropos" className="login-nav__link">{navigation.links.about}</a>
+            <a href="#menu" className="login-nav__link">{navigation.links.menu}</a>
+            <a href="#contact" className="login-nav__link">{navigation.links.contact}</a>
             <button type="button" onClick={() => setIsModalOpen(true)} className="ui-btn ui-btn-accent login-nav__cta">
-              Staff Login
+              {navigation.links.loginCta}
             </button>
           </nav>
           <button type="button" onClick={() => setMobileMenuOpen(true)} className="login-header__menu" aria-label="Ouvrir le menu">
@@ -225,10 +229,18 @@ const Login: React.FC = () => {
             <X size={28} />
           </button>
           <nav className="login-menu-overlay__nav" aria-label="Navigation mobile">
-            <a href="#accueil" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">Accueil</a>
-            <a href="#apropos" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">À propos</a>
-            <a href="#menu" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">Menu</a>
-            <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">Contact</a>
+            <a href="#accueil" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">
+              {navigation.links.home}
+            </a>
+            <a href="#apropos" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">
+              {navigation.links.about}
+            </a>
+            <a href="#menu" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">
+              {navigation.links.menu}
+            </a>
+            <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">
+              {navigation.links.contact}
+            </a>
             <button
               type="button"
               onClick={() => {
@@ -237,33 +249,27 @@ const Login: React.FC = () => {
               }}
               className="ui-btn ui-btn-accent hero-cta"
             >
-              Staff Login
+              {navigation.links.loginCta}
             </button>
           </nav>
         </div>
       )}
 
       <main>
-        <section
-          id="accueil"
-          className="section section-hero"
-          style={{ backgroundImage: "url('https://picsum.photos/seed/tacosbg/1920/1080')" }}
-        >
+        <section id="accueil" className="section section-hero" style={heroBackgroundStyle}>
           <div className="section-hero__inner">
             {activeOrderId ? (
               <CustomerOrderTracker orderId={activeOrderId} onNewOrderClick={handleNewOrder} variant="hero" />
             ) : (
-              <div className="hero-content">
-                <h2 className="hero-title">Le Goût Authentique du Mexique</h2>
-                <p className="hero-subtitle">
-                  Des tacos préparés avec passion, des ingrédients frais et une touche de tradition pour un voyage gustatif inoubliable.
-                </p>
-                <button onClick={() => navigate('/commande-client')} className="ui-btn ui-btn-accent hero-cta">
-                  Commander en ligne
-                </button>
-                {orderHistory.length > 0 && (
-                  <div className="hero-history">
-                    <p className="hero-history__title">Vos dernières commandes</p>
+                <div className="hero-content">
+                  <h2 className="hero-title">{hero.title}</h2>
+                  <p className="hero-subtitle">{hero.subtitle}</p>
+                  <button onClick={() => navigate('/commande-client')} className="ui-btn ui-btn-accent hero-cta">
+                    {hero.ctaLabel}
+                  </button>
+                  {orderHistory.length > 0 && (
+                    <div className="hero-history">
+                      <p className="hero-history__title">{hero.historyTitle}</p>
                     <div className="hero-history__list">
                       {orderHistory.slice(0, 3).map(order => (
                         <div key={order.id} className="hero-history__item">
@@ -276,7 +282,7 @@ const Login: React.FC = () => {
                             onClick={() => handleQuickReorder(order.id)}
                             className="hero-history__cta"
                           >
-                            Commander à nouveau
+                            {hero.reorderCtaLabel}
                           </button>
                         </div>
                       ))}
@@ -290,19 +296,30 @@ const Login: React.FC = () => {
 
         <section id="apropos" className="section section-surface">
           <div className="section-inner section-inner--center">
-            <h2 className="section-title">Notre Histoire</h2>
-            <p className="section-text section-text--muted">
-              Fondé par des passionnés de la cuisine mexicaine, OUIOUITACOS est né d'un désir simple : partager le goût authentique des tacos faits maison.
-              Chaque recette est un héritage familial, chaque ingrédient est choisi avec soin, et chaque plat est préparé avec le cœur. Venez découvrir une explosion de saveurs qui vous transportera directement dans les rues de Mexico.
-            </p>
+            <h2 className="section-title">{about.title}</h2>
+            <p className="section-text section-text--muted">{about.description}</p>
+            {about.image && (
+              <img
+                src={about.image}
+                alt={about.title}
+                className="mt-6 h-64 w-full rounded-xl object-cover shadow-lg"
+              />
+            )}
           </div>
         </section>
 
         <section id="menu" className="section section-muted">
           <div className="section-inner section-inner--wide section-inner--center">
-            <h2 className="section-title">Nos Best-sellers</h2>
+            <h2 className="section-title">{menuContent.title}</h2>
+            {menuContent.image && (
+              <img
+                src={menuContent.image}
+                alt={menuContent.title}
+                className="mb-8 h-64 w-full rounded-xl object-cover shadow-lg"
+              />
+            )}
             {menuLoading ? (
-              <p className="section-text section-text--muted">Chargement du menu...</p>
+              <p className="section-text section-text--muted">{menuContent.loadingLabel}</p>
             ) : (
               <div className="menu-grid">
                 {products.map(product => (
@@ -319,7 +336,7 @@ const Login: React.FC = () => {
             )}
             <div className="section-actions">
               <button onClick={() => navigate('/commande-client')} className="ui-btn ui-btn-primary hero-cta">
-                Voir le menu complet & Commander
+                {menuContent.ctaLabel}
               </button>
             </div>
           </div>
@@ -327,22 +344,29 @@ const Login: React.FC = () => {
 
         <section id="contact" className="section section-surface">
           <div className="section-inner section-inner--wide section-inner--center">
-            <h2 className="section-title">Contactez-nous</h2>
+            <h2 className="section-title">{contact.title}</h2>
+            {contact.image && (
+              <img
+                src={contact.image}
+                alt={contact.title}
+                className="mb-8 h-64 w-full rounded-xl object-cover shadow-lg"
+              />
+            )}
             <div className="contact-grid">
               <div className="contact-card">
                 <MapPin className="contact-card__icon" />
-                <h3 className="contact-card__title">Adresse</h3>
-                <p className="contact-card__text">123 Rue du Taco, 75000 Paris</p>
+                <h3 className="contact-card__title">{contact.addressLabel}</h3>
+                <p className="contact-card__text">{contact.address}</p>
               </div>
               <div className="contact-card">
                 <Phone className="contact-card__icon" />
-                <h3 className="contact-card__title">Téléphone</h3>
-                <p className="contact-card__text">01 23 45 67 89</p>
+                <h3 className="contact-card__title">{contact.phoneLabel}</h3>
+                <p className="contact-card__text">{contact.phone}</p>
               </div>
               <div className="contact-card">
                 <Mail className="contact-card__icon" />
-                <h3 className="contact-card__title">Email</h3>
-                <p className="contact-card__text">contact@ouiouitacos.fr</p>
+                <h3 className="contact-card__title">{contact.emailLabel}</h3>
+                <p className="contact-card__text">{contact.email}</p>
               </div>
             </div>
           </div>
@@ -351,7 +375,9 @@ const Login: React.FC = () => {
 
       <footer className="site-footer">
         <div className="layout-container site-footer__inner">
-          <p>&copy; {new Date().getFullYear()} OUIOUITACOS. Tous droits réservés.</p>
+          <p>
+            &copy; {new Date().getFullYear()} {navigation.brand}. {footer.text}
+          </p>
         </div>
       </footer>
 

@@ -13,7 +13,8 @@ import Produits from './pages/Produits';
 import CommandeClient from './pages/CommandeClient';
 import NotFound from './pages/NotFound';
 import ResumeVentes from './pages/ResumeVentes';
-import { NAV_LINKS } from './constants';
+import SiteCustomization from './pages/SiteCustomization';
+import { NAV_LINKS, SITE_CUSTOMIZER_PERMISSION_KEY } from './constants';
 
 const isPermissionGranted = (permission?: string) =>
   permission === 'editor' || permission === 'readonly';
@@ -64,6 +65,14 @@ const AppRoutes: React.FC = () => {
                 <Route path="resume-ventes" element={<PrivateRoute permissionKey="/resume-ventes"><ResumeVentes /></PrivateRoute>} />
                 <Route path="ingredients" element={<PrivateRoute permissionKey="/ingredients"><Ingredients /></PrivateRoute>} />
                 <Route path="produits" element={<PrivateRoute permissionKey="/produits"><Produits /></PrivateRoute>} />
+                <Route
+                  path={SITE_CUSTOMIZER_PERMISSION_KEY.slice(1)}
+                  element={
+                    <PrivateRoute permissionKey={SITE_CUSTOMIZER_PERMISSION_KEY}>
+                      <SiteCustomization />
+                    </PrivateRoute>
+                  }
+                />
             </Route>
             
             <Route path="*" element={<NotFound />} />

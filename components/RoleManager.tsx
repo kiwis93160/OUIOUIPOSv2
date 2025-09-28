@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Save, Trash2 } from 'lucide-react';
 import Modal from './Modal';
 import { api } from '../services/api';
-import { NAV_LINKS, ROLE_HOME_PAGE_META_KEY } from '../constants';
+import { NAV_LINKS, ROLE_HOME_PAGE_META_KEY, ROLES, SITE_CUSTOMIZER_PERMISSION_KEY } from '../constants';
 import { Role } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -24,12 +24,25 @@ interface RoleFormState {
 const DEFAULT_HOME_PAGE = NAV_LINKS[0]?.permissionKey ?? '/dashboard';
 const isPermissionGranted = (permission?: PermissionLevel) => permission === 'editor' || permission === 'readonly';
 
-const ensureNavPermissions = (permissions?: Role['permissions']): Role['permissions'] => {
+const isAdminRoleName = (name?: string | null): boolean => {
+  if (!name) {
+    return false;
+  }
+
+  const normalized = name.trim().toLowerCase();
+  return normalized === ROLES.ADMIN || normalized === 'administrateur';
+};
+
+const ensureNavPermissions = (permissions?: Role['permissions'], roleName?: string | null): Role['permissions'] => {
   const base: Record<string, PermissionLevel> = { ...(permissions || {}) };
   delete base[ROLE_HOME_PAGE_META_KEY];
   NAV_LINKS.forEach(link => {
     if (!(link.permissionKey in base)) {
-      base[link.permissionKey] = 'none';
+      if (link.permissionKey === SITE_CUSTOMIZER_PERMISSION_KEY && isAdminRoleName(roleName)) {
+        base[link.permissionKey] = 'editor';
+      } else {
+        base[link.permissionKey] = 'none';
+      }
     }
   });
   return base;
@@ -163,7 +176,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
   };
 
   const handleSelectRole = (role: Role) => {
-    const permissions = ensureNavPermissions(role.permissions);
+    const permissions = ensureNavPermissions(role.permissions, role.name);
     setMode('edit');
     setFormState({
       id: role.id,
@@ -216,7 +229,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
     setIsSubmitting(true);
 
     try {
-      const permissions = ensureNavPermissions(formState.permissions);
+      const permissions = ensureNavPermissions(formState.permissions, formState.name);
       const resolvedHomePage = isPermissionGranted(permissions[formState.homePage])
         ? formState.homePage
         : getDefaultHomePage(permissions);
@@ -240,7 +253,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({ isOpen, onClose }) => {
           homePage: resolvedHomePage,
         });
         setStatusMessage('Rôle mis à jour avec succès.');
-        const nextPermissions = ensureNavPermissions(updatedRole.permissions);
+        const nextPermissions = ensureNavPermissions(updatedRole.permissions, updatedRole.name);
         setFormState({
           id: updatedRole.id,
           name: updatedRole.name,
