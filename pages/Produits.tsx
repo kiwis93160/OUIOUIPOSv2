@@ -204,7 +204,14 @@ const ProductCard: React.FC<{ product: Product; category?: Category; onEdit: () 
 
     return (
         <div className="ui-card flex flex-col overflow-hidden">
-            <img src={product.image} alt={product.nom_produit} className="w-full h-40 object-cover" />
+            <div className="relative">
+                <img src={product.image} alt={product.nom_produit} className="w-full h-40 object-cover" />
+                {product.is_best_seller && (
+                    <span className="absolute top-2 left-2 rounded-full bg-brand-primary/90 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-md">
+                        Best seller{product.best_seller_rank ? ` #${product.best_seller_rank}` : ''}
+                    </span>
+                )}
+            </div>
             <div className="p-4 flex flex-col flex-grow">
                 <div className="flex justify-between items-start">
                     <div>
