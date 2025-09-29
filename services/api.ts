@@ -65,6 +65,8 @@ type SupabaseProductRow = {
   categoria_id: string;
   estado: Product['estado'];
   image: string | null;
+  is_best_seller: boolean | null;
+  best_seller_rank: number | null;
   product_recipes: SupabaseRecipeRow[] | null;
 };
 
@@ -372,6 +374,8 @@ const mapProductRow = (row: SupabaseProductRow, ingredientMap?: Map<string, Ingr
     estado: row.estado,
     image: resolveProductImageUrl(row.image),
     recipe,
+    is_best_seller: Boolean(row.is_best_seller),
+    best_seller_rank: row.best_seller_rank,
   };
 
   if (ingredientMap) {
@@ -611,8 +615,10 @@ const selectOrdersQuery = () =>
     )
     .order('date_creation', { ascending: false });
 
-const selectProductsQuery = () =>
-  supabase
+const selectProductsQuery = (
+  options?: { orderBy?: { column: string; ascending?: boolean; nullsFirst?: boolean } },
+) => {
+  let query = supabase
     .from('products')
     .select(
       `
@@ -623,13 +629,26 @@ const selectProductsQuery = () =>
         categoria_id,
         estado,
         image,
+        is_best_seller,
+        best_seller_rank,
         product_recipes (
           ingredient_id,
           qte_utilisee
         )
       `,
-    )
-    .order('nom_produit');
+    );
+
+  if (options?.orderBy) {
+    query = query.order(options.orderBy.column, {
+      ascending: options.orderBy.ascending ?? true,
+      nullsFirst: options.orderBy.nullsFirst,
+    });
+  } else {
+    query = query.order('nom_produit');
+  }
+
+  return query;
+};
 
 const fetchOrderById = async (orderId: string): Promise<Order | null> => {
   const response = await selectOrdersQuery().eq('id', orderId).maybeSingle();
@@ -1172,50 +1191,25 @@ export const api = {
     return rows.map(row => mapProductRow(row, ingredientMap));
   },
 
-  getTopSellingProducts: async (): Promise<Product[]> => {
-    const targetCategories = ['Tacos', 'Quesadillas', 'Entradas'];
-    const salesResponse = await supabase
-      .from('sales')
-      .select('product_id, product_name, category_name, total_price, quantity');
-    const salesRows = unwrap<{
-      product_id: string;
-      product_name: string;
-      category_name: string;
-      total_price: number;
-      quantity: number;
-    }[]>(salesResponse as SupabaseResponse<{
-      product_id: string;
-      product_name: string;
-      category_name: string;
-      total_price: number;
-      quantity: number;
-    }[]>);
+  getBestSellerProducts: async (): Promise<Product[]> => {
+    const [productsResponse, ingredients] = await Promise.all([
+      selectProductsQuery({ orderBy: { column: 'best_seller_rank', ascending: true, nullsFirst: false } })
+        .eq('is_best_seller', true)
+        .limit(6),
+      fetchIngredients(),
+    ]);
 
-    const filtered = salesRows.filter(row => targetCategories.includes(row.category_name));
-    const aggregated = new Map<string, { quantity: number }>();
-
-    filtered.forEach(row => {
-      const current = aggregated.get(row.product_id) ?? { quantity: 0 };
-      current.quantity += row.quantity;
-      aggregated.set(row.product_id, current);
-    });
-
-    const topIds = Array.from(aggregated.entries())
-      .sort((a, b) => b[1].quantity - a[1].quantity)
-      .slice(0, 6)
-      .map(([productId]) => productId);
-
-    if (topIds.length === 0) {
-      return [];
-    }
-
-    const productsResponse = await selectProductsQuery().in('id', topIds);
     const productRows = unwrap<SupabaseProductRow[]>(productsResponse as SupabaseResponse<SupabaseProductRow[]>);
-    const ingredients = await fetchIngredients();
     const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
 
     return productRows
       .filter(row => row.estado !== 'archive')
+      .sort((a, b) => {
+        const rankA = a.best_seller_rank ?? Number.POSITIVE_INFINITY;
+        const rankB = b.best_seller_rank ?? Number.POSITIVE_INFINITY;
+        return rankA - rankB;
+      })
+      .slice(0, 6)
       .map(row => mapProductRow(row, ingredientMap));
   },
 
@@ -1916,7 +1910,8 @@ export const api = {
         categoria_id: product.categoria_id,
         estado: product.estado,
         image: normalizeCloudinaryImageUrl(product.image),
-
+        is_best_seller: product.is_best_seller,
+        best_seller_rank: product.is_best_seller ? product.best_seller_rank : null,
       })
       .select('id')
       .single();
@@ -1967,7 +1962,17 @@ export const api = {
 
     if (rest.image !== undefined) {
       updatePayload.image = normalizeCloudinaryImageUrl(rest.image);
+    }
 
+    if (rest.best_seller_rank !== undefined) {
+      updatePayload.best_seller_rank = rest.best_seller_rank;
+    }
+
+    if (rest.is_best_seller !== undefined) {
+      updatePayload.is_best_seller = rest.is_best_seller;
+      if (!rest.is_best_seller) {
+        updatePayload.best_seller_rank = null;
+      }
     }
 
     if (Object.keys(updatePayload).length > 0) {

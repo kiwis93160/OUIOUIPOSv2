@@ -9,6 +9,8 @@ import Modal from '../components/Modal';
 import { PlusCircle, Edit, Trash2, Search, Settings, GripVertical, CheckCircle, Clock, XCircle, MoreVertical, Upload, HelpCircle } from 'lucide-react';
 import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 
+const BEST_SELLER_RANKS = [1, 2, 3, 4, 5, 6];
+
 const getStatusInfo = (status: Product['estado']) => {
     switch (status) {
         case 'disponible':
@@ -72,6 +74,16 @@ const Produits: React.FC = () => {
             (p.nom_produit.toLowerCase().includes(searchTerm.toLowerCase())) &&
             (categoryFilter === 'all' || p.categoria_id === categoryFilter)
         ), [products, searchTerm, categoryFilter]);
+
+    const occupiedBestSellerPositions = useMemo(() => {
+        const map = new Map<number, Product>();
+        products.forEach(prod => {
+            if (prod.is_best_seller && prod.best_seller_rank != null) {
+                map.set(prod.best_seller_rank, prod);
+            }
+        });
+        return map;
+    }, [products]);
 
     const handleOpenModal = (type: 'product' | 'category' | 'delete', mode: 'add' | 'edit' = 'add', product: Product | null = null) => {
         if (type === 'product') {
@@ -157,6 +169,7 @@ const Produits: React.FC = () => {
                     mode={modalMode}
                     categories={categories}
                     ingredients={ingredients}
+                    occupiedPositions={occupiedBestSellerPositions}
                 />
             )}
             {isCategoryModalOpen && canEdit && (
@@ -231,8 +244,20 @@ const ProductCard: React.FC<{ product: Product; category?: Category; onEdit: () 
 };
 
 
-const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess: () => void; product: Product | null; mode: 'add' | 'edit'; categories: Category[]; ingredients: Ingredient[]; }> = ({ isOpen, onClose, onSuccess, product, mode, categories, ingredients }) => {
-    const [formData, setFormData] = useState({
+type ProductFormState = {
+    nom_produit: string;
+    prix_vente: number;
+    categoria_id: string;
+    estado: Product['estado'];
+    image: string;
+    description: string;
+    recipe: RecipeItem[];
+    is_best_seller: boolean;
+    best_seller_rank: number | null;
+};
+
+const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess: () => void; product: Product | null; mode: 'add' | 'edit'; categories: Category[]; ingredients: Ingredient[]; occupiedPositions: Map<number, Product>; }> = ({ isOpen, onClose, onSuccess, product, mode, categories, ingredients, occupiedPositions }) => {
+    const [formData, setFormData] = useState<ProductFormState>({
         nom_produit: product?.nom_produit || '',
         prix_vente: product?.prix_vente || 0,
         categoria_id: product?.categoria_id || (categories[0]?.id ?? ''),
@@ -240,9 +265,39 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
         image: product?.image ?? '',
         description: product?.description || '',
         recipe: product?.recipe || [],
+        is_best_seller: product?.is_best_seller ?? false,
+        best_seller_rank: product?.best_seller_rank ?? null,
     });
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [isSubmitting, setSubmitting] = useState(false);
+
+    const findFirstAvailablePosition = useCallback(() => {
+        for (const rank of BEST_SELLER_RANKS) {
+            const occupant = occupiedPositions.get(rank);
+            if (!occupant || occupant.id === product?.id) {
+                return rank;
+            }
+        }
+        return null;
+    }, [occupiedPositions, product?.id]);
+
+    const handleBestSellerToggle = useCallback(
+        (checked: boolean) => {
+            setFormData(prev => {
+                if (checked) {
+                    const nextRank = prev.best_seller_rank ?? findFirstAvailablePosition();
+                    return { ...prev, is_best_seller: true, best_seller_rank: nextRank ?? null };
+                }
+                return { ...prev, is_best_seller: false, best_seller_rank: null };
+            });
+        },
+        [findFirstAvailablePosition],
+    );
+
+    const handleBestSellerRankChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = event.target.value;
+        setFormData(prev => ({ ...prev, best_seller_rank: value ? Number(value) : null }));
+    }, []);
 
     const ingredientMap = useMemo(() => new Map(ingredients.map(ing => [ing.id, ing])), [ingredients]);
 
@@ -286,6 +341,17 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
             alert("Veuillez ajouter au moins un ingrédient à la recette.");
             return;
         }
+        if (formData.is_best_seller) {
+            if (formData.best_seller_rank == null) {
+                alert('Veuillez sélectionner une position de best seller disponible.');
+                return;
+            }
+            const occupant = occupiedPositions.get(formData.best_seller_rank);
+            if (occupant && occupant.id !== product?.id) {
+                alert(`La position ${formData.best_seller_rank} est déjà occupée par ${occupant.nom_produit}.`);
+                return;
+            }
+        }
         setSubmitting(true);
         try {
             let imageUrl = formData.image?.trim() ?? '';
@@ -293,7 +359,12 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                 imageUrl = await uploadProductImage(imageFile, formData.nom_produit);
             }
 
-            const finalData = { ...formData, image: imageUrl };
+            const finalData = {
+                ...formData,
+                image: imageUrl,
+                is_best_seller: formData.is_best_seller,
+                best_seller_rank: formData.is_best_seller ? formData.best_seller_rank : null,
+            };
 
             if (mode === 'edit' && product) {
                 await api.updateProduct(product.id, finalData);
@@ -338,6 +409,46 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                                 <option value="agotado_temporal">Rupture (Temp.)</option>
                                 <option value="agotado_indefinido">Indisponible</option>
                             </select>
+                        </div>
+                        <div className="sm:col-span-2 flex items-center gap-2 pt-2">
+                            <input
+                                id="best-seller-toggle"
+                                type="checkbox"
+                                checked={formData.is_best_seller}
+                                onChange={event => handleBestSellerToggle(event.target.checked)}
+                                className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                            />
+                            <label htmlFor="best-seller-toggle" className="text-sm font-medium text-gray-700">Best seller</label>
+                        </div>
+                        <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700" htmlFor="best-seller-rank">Position dans le classement</label>
+                            <select
+                                id="best-seller-rank"
+                                value={formData.best_seller_rank ?? ''}
+                                onChange={handleBestSellerRankChange}
+                                disabled={!formData.is_best_seller}
+                                className="mt-1 ui-select"
+                            >
+                                <option value="">Sélectionner une position</option>
+                                {BEST_SELLER_RANKS.map(rank => {
+                                    const occupant = occupiedPositions.get(rank);
+                                    const isCurrentProduct = occupant?.id === product?.id;
+                                    const isDisabled = Boolean(occupant && !isCurrentProduct);
+                                    const label = occupant
+                                        ? isCurrentProduct
+                                            ? `${rank} – Position actuelle`
+                                            : `${rank} – Occupé par ${occupant.nom_produit}`
+                                        : `${rank}`;
+                                    return (
+                                        <option key={rank} value={rank} disabled={isDisabled}>
+                                            {label}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            {formData.is_best_seller && formData.best_seller_rank === null && (
+                                <p className="mt-1 text-xs text-red-600">Sélectionnez une position disponible pour ce best seller.</p>
+                            )}
                         </div>
                     </div>
 
