@@ -159,6 +159,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     }, []);
 
     useEffect(() => {
+        if (loading || products.length === 0) return;
         if (orderHistory.length === 0 || hasProcessedQueuedReorder) return;
         const queuedReorderId = localStorage.getItem('customer-order-reorder-id');
         if (!queuedReorderId) return;
@@ -168,7 +169,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
         }
         localStorage.removeItem('customer-order-reorder-id');
         setHasProcessedQueuedReorder(true);
-    }, [orderHistory, hasProcessedQueuedReorder]);
+    }, [orderHistory, hasProcessedQueuedReorder, loading, products]);
 
     useEffect(() => {
         fetchData();
@@ -250,8 +251,35 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
         }
     };
 
-     const handleReorder = (pastOrder: Order) => {
-        setCart(pastOrder.items.map(item => ({...item, id: `oi${Date.now()}${item.produitRef}`})));
+    const handleReorder = (pastOrder: Order) => {
+        const timestamp = Date.now();
+        const missingProducts: string[] = [];
+
+        const updatedItems = pastOrder.items.reduce<OrderItem[]>((acc, item, index) => {
+            const product = products.find(p => p.id === item.produitRef);
+
+            if (!product) {
+                missingProducts.push(item.nom_produit || item.produitRef);
+                return acc;
+            }
+
+            acc.push({
+                ...item,
+                id: `oi${timestamp}-${index}`,
+                produitRef: product.id,
+                nom_produit: product.nom_produit,
+                prix_unitaire: product.prix_vente,
+            });
+
+            return acc;
+        }, []);
+
+        setCart(updatedItems);
+
+        if (missingProducts.length > 0) {
+            alert(`Certains articles ne sont plus disponibles et n'ont pas été ajoutés :\n- ${missingProducts.join('\n- ')}`);
+        }
+
         const cartElement = document.getElementById('cart-section');
         if(cartElement) {
              cartElement.scrollIntoView({ behavior: 'smooth' });
