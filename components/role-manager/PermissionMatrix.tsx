@@ -101,7 +101,7 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
 
   if (permissionKeys.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm font-medium text-gray-900">
         Aucune permission disponible pour ce rôle pour le moment.
       </div>
     );
@@ -140,22 +140,22 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
         <div className="max-h-96 overflow-auto">
           <div className="min-w-full">
             <div className="grid grid-cols-[minmax(220px,2fr)_repeat(3,minmax(140px,1fr))]">
-              <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700">
+              <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-900">
                 Section / permission
               </div>
               {PERMISSION_LEVELS.map(level => (
                 <div
                   key={level.value}
-                  className="border-b border-l border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700"
+                  className="border-b border-l border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-900"
                 >
                   <div>{level.label}</div>
-                  <p className="mt-1 text-xs font-normal text-gray-500">{level.headerDescription}</p>
+                  <p className="mt-1 text-xs font-medium text-gray-900">{level.headerDescription}</p>
                 </div>
               ))}
 
               {sections.map(section => (
                 <React.Fragment key={section.id}>
-                  <div className="col-span-4 border-t border-gray-200 bg-gray-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  <div className="col-span-4 border-t border-gray-200 bg-gray-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-900">
                     {section.title}
                   </div>
                   {section.keys.map(key => {
@@ -167,12 +167,12 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                       <React.Fragment key={key}>
                         <div className="border-t border-gray-100 px-4 py-3">
                           <div className="flex items-center justify-between gap-2">
-                            <div className="text-sm font-semibold text-gray-800">{getPermissionLabel(key)}</div>
+                            <div className="text-sm font-semibold text-gray-900">{getPermissionLabel(key)}</div>
                             {isCustom && onRemoveCustomPermission && (
                               <button
                                 type="button"
                                 onClick={() => onRemoveCustomPermission(key)}
-                                className="text-gray-400 transition-colors hover:text-red-500"
+                                className="text-gray-700 transition-colors hover:text-red-600"
                                 title="Supprimer cette permission personnalisée"
                               >
                                 <Trash2 className="h-4 w-4" />
