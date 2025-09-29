@@ -4,7 +4,7 @@ import { DollarSign, Users, Armchair, AlertTriangle, Soup, BarChart2, PieChart a
 import { api, getBusinessDayStart } from '../services/api';
 import { DashboardStats, SalesDataPoint, DashboardPeriod } from '../types';
 import Modal from '../components/Modal';
-import RoleManager from '../components/RoleManager';
+import RoleManager from '../components/role-manager';
 import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 
 const MainStatCard: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
