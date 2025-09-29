@@ -344,11 +344,23 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
     const marginValue = formData.prix_vente - recipeCost;
     const marginPercentage = formData.prix_vente > 0 ? (marginValue / formData.prix_vente) * 100 : 0;
 
-    const handleRecipeChange = (index: number, field: keyof RecipeItem, value: string) => {
+    const handleRecipeChange = (
+        index: number,
+        field: keyof RecipeItem,
+        event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    ) => {
         const newRecipe = [...formData.recipe];
-        const numValue = field === 'qte_utilisee' ? parseFloat(value) : value;
-        newRecipe[index] = { ...newRecipe[index], [field]: numValue };
-        setFormData({ ...formData, recipe: newRecipe });
+        if (field === 'qte_utilisee') {
+            const { valueAsNumber, value } = event.currentTarget;
+            const normalizedValue = Number.isNaN(valueAsNumber) ? Number(value.replace(',', '.')) : valueAsNumber;
+            newRecipe[index] = {
+                ...newRecipe[index],
+                [field]: Number.isNaN(normalizedValue) ? newRecipe[index].qte_utilisee : normalizedValue,
+            };
+        } else {
+            newRecipe[index] = { ...newRecipe[index], [field]: event.currentTarget.value };
+        }
+        setFormData(prev => ({ ...prev, recipe: newRecipe }));
     };
 
     const addRecipeItem = () => {
@@ -420,7 +432,24 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Prix de Vente (€)</label>
-                            <input type="number" step="0.01" min="0" value={formData.prix_vente} onChange={e => setFormData({...formData, prix_vente: parseFloat(e.target.value)})} required className="mt-1 ui-input"/>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={formData.prix_vente}
+                                onChange={event => {
+                                    const { valueAsNumber, value } = event.currentTarget;
+                                    const normalizedValue = Number.isNaN(valueAsNumber)
+                                        ? Number(value.replace(',', '.'))
+                                        : valueAsNumber;
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        prix_vente: Number.isNaN(normalizedValue) ? prev.prix_vente : normalizedValue,
+                                    }));
+                                }}
+                                required
+                                className="mt-1 ui-input"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Catégorie</label>
@@ -534,10 +563,10 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                             {formData.recipe.map((item, index) => (
                                 <div key={index} className="flex items-center gap-2">
                                     <GripVertical className="text-gray-400 cursor-move" size={16}/>
-                                    <select value={item.ingredient_id} onChange={e => handleRecipeChange(index, 'ingredient_id', e.target.value)} className="ui-select flex-grow">
+                                    <select value={item.ingredient_id} onChange={event => handleRecipeChange(index, 'ingredient_id', event)} className="ui-select flex-grow">
                                         {ingredients.map(i => <option key={i.id} value={i.id}>{i.nom}</option>)}
                                     </select>
-                                    <input type="number" placeholder="Qté" value={item.qte_utilisee} onChange={e => handleRecipeChange(index, 'qte_utilisee', e.target.value)} className="ui-input w-24" />
+                                    <input type="number" placeholder="Qté" value={item.qte_utilisee} onChange={event => handleRecipeChange(index, 'qte_utilisee', event)} className="ui-input w-24" />
                                     <span className="text-gray-500 text-sm w-12">{ingredients.find(i => i.id === item.ingredient_id)?.unite === 'kg' ? 'g' : ingredients.find(i => i.id === item.ingredient_id)?.unite}</span>
                                     <button type="button" onClick={() => removeRecipeItem(index)} className="p-1 text-red-500 hover:bg-red-100 rounded-full"><Trash2 size={16}/></button>
                                 </div>
