@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { uploadPaymentReceipt } from '../services/cloudinary';
 import { Order, Product, Category, OrderItem, Ingredient } from '../types';
-import { PlusCircle, MinusCircle, Send, DollarSign, AlertTriangle, Check, ArrowLeft, MessageSquare } from 'lucide-react';
-import { formatIntegerAmount } from '../utils/formatIntegerAmount';
+import { ArrowLeft } from 'lucide-react';
 import PaymentModal from '../components/PaymentModal';
 import Modal from '../components/Modal';
+import ProductGrid from '../components/commande/ProductGrid';
+import OrderSummary from '../components/commande/OrderSummary';
 
 const isPersistedItemId = (value?: string) =>
     !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -320,7 +321,7 @@ const Commande: React.FC = () => {
         scheduleItemsSync();
     }, [scheduleItemsSync, updateOrderItems]);
 
-    const addProductToOrder = (product: Product) => {
+    const addProductToOrder = useCallback((product: Product) => {
         const defaultComment = normalizeComment('');
         const defaultExcludedIngredients: string[] = [];
 
@@ -353,9 +354,9 @@ const Commande: React.FC = () => {
 
             return [...items, newItem];
         });
-    };
+    }, [applyLocalItemsUpdate]);
 
-    const handleQuantityChange = (itemIndex: number, change: number) => {
+    const handleQuantityChange = useCallback((itemIndex: number, change: number) => {
         applyLocalItemsUpdate(items => {
             if (!items[itemIndex]) return items;
             const updatedItems = items.map(item => ({ ...item }));
@@ -369,9 +370,9 @@ const Commande: React.FC = () => {
 
             return updatedItems;
         });
-    };
+    }, [applyLocalItemsUpdate]);
 
-    const handleCommentChange = (itemIndex: number, newComment: string) => {
+    const handleCommentChange = useCallback((itemIndex: number, newComment: string) => {
         updateOrderItems(items => {
             if (!items[itemIndex]) return items;
             const updatedItems = items.map(item => ({ ...item }));
@@ -393,15 +394,15 @@ const Commande: React.FC = () => {
 
             return updatedItems;
         }, { isLocalUpdate: true });
-    };
+    }, [updateOrderItems]);
 
-    const persistCommentChange = (itemIndex: number) => {
+    const persistCommentChange = useCallback((itemIndex: number) => {
         if (!orderRef.current) return;
         updateOrderItems(orderRef.current.items.map(item => ({ ...item })));
         setEditingCommentId(null);
-    }
+    }, [updateOrderItems]);
 
-    const handleSendToKitchen = async () => {
+    const handleSendToKitchen = useCallback(async () => {
         if (!orderRef.current) return;
 
         setIsSendingToKitchen(true);
@@ -438,9 +439,9 @@ const Commande: React.FC = () => {
         } finally {
             setIsSendingToKitchen(false);
         }
-    };
+    }, [navigate, updateOrderItems]);
 
-    const handleServeOrder = async () => {
+    const handleServeOrder = useCallback(async () => {
         if (!order) return;
         try {
             const updatedOrder = await api.markOrderAsServed(order.id);
@@ -448,9 +449,9 @@ const Commande: React.FC = () => {
         } catch (error) {
             console.error("Failed to mark order as served", error);
         }
-    };
-    
-    const handleFinalizeOrder = async (paymentMethod: Order['payment_method'], receiptFile?: File | null) => {
+    }, [order]);
+
+    const handleFinalizeOrder = useCallback(async (paymentMethod: Order['payment_method'], receiptFile?: File | null) => {
         if (!order) return;
         try {
             let receiptUrl = order.payment_receipt_url ?? undefined;
@@ -463,9 +464,9 @@ const Commande: React.FC = () => {
             console.error("Failed to finalize order", error);
             alert("Erreur lors de la finalisation ou du téléversement du justificatif.");
         }
-    };
-    
-    const handleExitAttempt = () => {
+    }, [navigate, order]);
+
+    const handleExitAttempt = useCallback(() => {
         if (order && order.estado_cocina === 'no_enviado' && order.items.length > 0) {
             setExitConfirmOpen(true);
             return;
@@ -476,9 +477,9 @@ const Commande: React.FC = () => {
         } else {
             navigate('/ventes');
         }
-    };
+    }, [hasUnsentChanges, navigate, order]);
 
-    const handleConfirmExit = async () => {
+    const handleConfirmExit = useCallback(async () => {
         try {
             if (order && order.estado_cocina === 'no_enviado') {
                 await api.cancelUnsentTableOrder(order.id);
@@ -491,11 +492,7 @@ const Commande: React.FC = () => {
             setExitConfirmOpen(false);
             navigate('/ventes');
         }
-    };
-
-    const filteredProducts = activeCategoryId === 'all'
-        ? products
-        : products.filter(p => p.categoria_id === activeCategoryId);
+    }, [isOrderSynced, navigate, order, originalOrder, updateOrderItems]);
 
     const orderItems = order?.items ?? [];
 
@@ -510,19 +507,23 @@ const Commande: React.FC = () => {
         }, { pending: [], sent: [] });
     }, [orderItems]);
 
-    const handleProductPointerDown = useCallback((product: Product) => (event: React.PointerEvent<HTMLButtonElement>) => {
-        event.preventDefault();
-        addProductToOrder(product);
-    }, [addProductToOrder]);
-
-    const handleProductKeyDown = useCallback((product: Product) => (event: React.KeyboardEvent<HTMLButtonElement>) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            addProductToOrder(product);
-        }
-    }, [addProductToOrder]);
-
     const hasPendingItems = categorizedItems.pending.length > 0;
+
+    const handleCategoryChange = useCallback((categoryId: string) => {
+        setActiveCategoryId(categoryId);
+    }, []);
+
+    const handleOpenPaymentModal = useCallback(() => {
+        setIsPaymentModalOpen(true);
+    }, []);
+
+    const handleClosePaymentModal = useCallback(() => {
+        setIsPaymentModalOpen(false);
+    }, []);
+
+    const handleEditComment = useCallback((itemId: string | null) => {
+        setEditingCommentId(itemId);
+    }, []);
 
     if (loading) return <div className="text-center p-10 text-gray-800">Chargement de la commande...</div>;
     if (!order) return <div className="text-center p-10 text-red-500">Commande non trouvée.</div>;
@@ -532,7 +533,7 @@ const Commande: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[calc(100vh-12rem)] lg:h-[calc(100vh-10rem)]">
             {/* Menu Section */}
             <div className="lg:col-span-2 ui-card flex flex-col">
-            <div className="p-4 border-b">
+                <div className="p-4 border-b">
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-4">
                             <button onClick={handleExitAttempt} className="ui-btn-dark" title="Retour au plan de salle">
@@ -544,157 +545,38 @@ const Commande: React.FC = () => {
                             <h2 className="text-2xl font-semibold text-white">Table {order.table_nom}</h2>
                         </div>
                     </div>
-                    <div className="flex space-x-2 mt-4 overflow-x-auto pb-2">
-                        <button onClick={() => setActiveCategoryId('all')}
-                            className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap ${activeCategoryId === 'all' ? 'bg-brand-primary text-brand-secondary' : 'bg-gray-200 text-gray-700'}`}>
-                            Tous
-                        </button>
-                        {categories.map(cat => (
-                            <button key={cat.id} onClick={() => setActiveCategoryId(cat.id)}
-                                className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap ${activeCategoryId === cat.id ? 'bg-brand-primary text-brand-secondary' : 'bg-gray-200 text-gray-700'}`}>
-                                {cat.nom}
-                            </button>
-                        ))}
-                    </div>
                 </div>
-                <div className="p-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 overflow-y-auto">
-                    {filteredProducts.map(product => {
-                        const isLowStock = !isProductAvailable(product);
-                        const quantityInCart = productQuantitiesInCart[product.id] || 0;
-                        return (
-                            <button
-                                key={product.id}
-                                type="button"
-                                onPointerDown={handleProductPointerDown(product)}
-                                onKeyDown={handleProductKeyDown(product)}
-                                className={`border rounded-lg p-2 flex flex-col items-center justify-between text-center cursor-pointer hover:shadow-lg transition-all relative focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-gray-900 ${isLowStock ? 'border-yellow-500 border-2' : ''}`}
-                            >
-                                {quantityInCart > 0 && (
-                                    <div className="absolute top-1 left-1 bg-brand-accent text-white rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
-                                        {quantityInCart}
-                                    </div>
-                                )}
-                                {isLowStock && (
-                                    <div className="absolute top-1 right-1 bg-yellow-500 text-white rounded-full p-1" title="Stock bas">
-                                        <AlertTriangle size={16} />
-                                    </div>
-                                )}
-                                <img src={product.image} alt={product.nom_produit} className="w-24 h-24 object-cover rounded-md mb-2" />
-                                <p className="font-semibold text-sm text-gray-800">{product.nom_produit}</p>
-                                <p className="text-xs text-gray-600 px-1 h-10 overflow-hidden flex-grow">{product.description}</p>
-                                <p className="font-bold text-brand-primary mt-1">{formatIntegerAmount(product.prix_vente)} €</p>
-                            </button>
-                        )
-                    })}
-                </div>
+                <ProductGrid
+                    products={products}
+                    categories={categories}
+                    activeCategoryId={activeCategoryId}
+                    onCategoryChange={handleCategoryChange}
+                    quantities={productQuantitiesInCart}
+                    onAdd={addProductToOrder}
+                    isProductAvailable={isProductAvailable}
+                />
             </div>
 
             {/* Order Summary Section */}
-            <div className="ui-card flex flex-col">
-                <div className="p-4 border-b">
-                    <h2 className="text-2xl font-semibold text-brand-secondary">Commande</h2>
-                </div>
-                <div className="flex-1 p-4 space-y-3 overflow-y-auto">
-                    {order.items.length === 0 ? (
-                        <p className="text-gray-500">La commande est vide.</p>
-                    ) : (
-                        <>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold text-brand-secondary">Articles à envoyer</h3>
-                                    <span className="text-sm text-gray-500">{categorizedItems.pending.length}</span>
-                                </div>
-                                {categorizedItems.pending.length === 0 ? (
-                                    <p className="text-sm text-gray-500">Aucun article en attente.</p>
-                                ) : (
-                                    categorizedItems.pending.map(({ item, index }) => (
-                                        <div key={item.id} className="p-3 rounded-lg bg-yellow-100">
-                                            <div className="flex justify-between items-start">
-                                                <p className="font-bold text-gray-900 flex-1">{item.quantite}x {item.nom_produit}</p>
-                                                <p className="font-bold text-gray-900">{formatIntegerAmount(item.quantite * item.prix_unitaire)}€</p>
-                                            </div>
-                                            <div className="flex justify-between items-center mt-2">
-                                                <p className="text-sm text-gray-700">{formatIntegerAmount(item.prix_unitaire)} € /u</p>
-                                                <div className="flex items-center space-x-2 text-gray-800">
-                                                    <button onClick={() => handleQuantityChange(index, -1)} className="p-1"><MinusCircle size={20} /></button>
-                                                    <span className="font-bold w-6 text-center">{item.quantite}</span>
-                                                    <button onClick={() => handleQuantityChange(index, 1)} className="p-1"><PlusCircle size={20} /></button>
-                                                </div>
-                                            </div>
-                                            {(editingCommentId === item.id || item.commentaire) ? (
-                                                <input
-                                                    type="text"
-                                                    placeholder="Ajouter un commentaire..."
-                                                    value={item.commentaire}
-                                                    onChange={(e) => handleCommentChange(index, e.target.value)}
-                                                    onBlur={() => persistCommentChange(index)}
-                                                    autoFocus={editingCommentId === item.id}
-                                                    className="mt-2 ui-input text-sm"
-                                                />
-                                            ) : (
-                                                <button onClick={() => setEditingCommentId(item.id)} className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1">
-                                                    <MessageSquare size={12}/> Ajouter un commentaire
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-
-                            {categorizedItems.sent.length > 0 && (
-                                <div className="space-y-3 pt-6 border-t border-gray-700">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-brand-secondary">Envoyés en cuisine</h3>
-                                        <span className="text-sm text-gray-500">{categorizedItems.sent.length}</span>
-                                    </div>
-                                    {categorizedItems.sent.map(({ item }) => (
-                                        <div key={item.id} className="p-3 rounded-lg bg-green-100">
-                                            <div className="flex justify-between items-start">
-                                                <p className="font-bold text-gray-900 flex-1">{item.quantite}x {item.nom_produit}</p>
-                                                <p className="font-bold text-gray-900">{formatIntegerAmount(item.quantite * item.prix_unitaire)}€</p>
-                                            </div>
-                                            <p className="text-sm text-gray-700 mt-2">{formatIntegerAmount(item.prix_unitaire)} € /u</p>
-                                            {item.commentaire && (
-                                                <p className="mt-2 text-sm italic text-gray-600 pl-2">"{item.commentaire}"</p>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-                <div className="p-4 border-t space-y-4">
-                    <div className="flex justify-between text-2xl font-semibold text-brand-secondary">
-                        <span>Total</span>
-                        <span>{formatIntegerAmount(order.total)} €</span>
-                    </div>
-
-                    {order.estado_cocina === 'listo' && (
-                        <button onClick={handleServeOrder} className="w-full ui-btn-info justify-center py-3">
-                            <Check size={20} /><span>Entregada</span>
-                        </button>
-                    )}
-
-                    <div className="flex space-x-2">
-                        <button onClick={handleSendToKitchen}
-                            disabled={isSendingToKitchen || !hasPendingItems}
-                            className="flex-1 ui-btn-accent justify-center py-3 disabled:opacity-60">
-                            <Send size={20} />
-                            <span>{isSendingToKitchen ? 'Synchronisation…' : 'Envoyer en Cuisine'}</span>
-                        </button>
-                        <button onClick={() => setIsPaymentModalOpen(true)}
-                                disabled={order.estado_cocina !== 'servido'}
-                                className="flex-1 ui-btn-success justify-center py-3 disabled:opacity-60">
-                            <DollarSign size={20} /><span>Finaliser</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <OrderSummary
+                order={order}
+                pendingItems={categorizedItems.pending}
+                sentItems={categorizedItems.sent}
+                editingCommentId={editingCommentId}
+                onEditComment={handleEditComment}
+                onQuantityChange={handleQuantityChange}
+                onCommentChange={handleCommentChange}
+                onCommentPersist={persistCommentChange}
+                onServeOrder={handleServeOrder}
+                onSendToKitchen={handleSendToKitchen}
+                onOpenPaymentModal={handleOpenPaymentModal}
+                isSendingToKitchen={isSendingToKitchen}
+                hasPendingItems={hasPendingItems}
+            />
         </div>
-        <PaymentModal 
+        <PaymentModal
             isOpen={isPaymentModalOpen}
-            onClose={() => setIsPaymentModalOpen(false)}
+            onClose={handleClosePaymentModal}
             order={order}
             onFinalize={handleFinalizeOrder}
         />
