@@ -591,10 +591,13 @@ const Commande: React.FC = () => {
         }, { pending: [], sent: [] });
     }, [orderItems]);
 
-    const handleProductPointerDown = useCallback((product: Product) => (event: React.PointerEvent<HTMLButtonElement>) => {
-        event.preventDefault();
-        addProductToOrder(product);
-    }, [addProductToOrder]);
+    const handleProductPointerDown = useCallback(
+        (_product: Product) => (event: React.PointerEvent<HTMLButtonElement>) => {
+            event.preventDefault();
+            event.currentTarget.focus();
+        },
+        [],
+    );
 
     const handleProductKeyDown = useCallback((product: Product) => (event: React.KeyboardEvent<HTMLButtonElement>) => {
         if (event.key === 'Enter' || event.key === ' ') {
