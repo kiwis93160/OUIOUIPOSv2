@@ -63,14 +63,17 @@ const ProductGridComponent: React.FC<ProductGridProps> = ({
                 {filteredProducts.map((product) => {
                     const isLowStock = !isProductAvailable(product);
                     const quantityInCart = quantities[product.id] || 0;
+                    const handleProductClick = () => onAdd(product);
+                    const handlePointerDown = handleProductPointerDown(product);
+                    const handleKeyDown = handleProductKeyDown(product);
 
                     return (
                         <button
                             key={product.id}
                             type="button"
-                            onClick={() => onAdd(product)}
-                            onPointerDown={handleProductPointerDown(product)}
-                            onKeyDown={handleProductKeyDown(product)}
+                            onClick={handleProductClick}
+                            onPointerDown={handlePointerDown}
+                            onKeyDown={handleKeyDown}
                             className={`border rounded-lg p-2 flex flex-col items-center justify-between text-center cursor-pointer hover:shadow-lg transition-all relative focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-gray-900 ${
                                 isLowStock ? 'border-yellow-500 border-2' : ''
                             }`}
