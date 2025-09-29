@@ -10,6 +10,7 @@ import Modal from '../components/Modal';
 import { createOrderItemsSnapshot, areOrderItemSnapshotsEqual, type OrderItemsSnapshot } from '../utils/orderSync';
 import ProductGrid from '../components/commande/ProductGrid';
 import OrderSummary from '../components/commande/OrderSummary';
+import ItemCustomizationModal, { type ItemCustomizationResult } from '../components/commande/ItemCustomizationModal';
 
 const isPersistedItemId = (value?: string) =>
     !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -41,6 +42,49 @@ const haveSameExcludedIngredients = (a: string[] = [], b: string[] = []) => {
     return sortedA.every((value, index) => value === sortedB[index]);
 };
 
+export const mergeProductIntoPendingItems = (
+    items: OrderItem[],
+    product: Product,
+    result: ItemCustomizationResult,
+    generateId: () => string,
+    defaultExcludedIngredients: string[] = [],
+): OrderItem[] => {
+    const trimmedComment = normalizeComment(result.comment);
+    const sanitizedQuantity = Number.isFinite(result.quantity)
+        ? Math.max(1, Math.floor(result.quantity))
+        : 1;
+
+    if (!trimmedComment) {
+        const existingIndex = items.findIndex(
+            item => item.produitRef === product.id
+                && item.estado === 'en_attente'
+                && normalizeComment(item.commentaire) === ''
+                && haveSameExcludedIngredients(item.excluded_ingredients ?? [], defaultExcludedIngredients),
+        );
+
+        if (existingIndex > -1) {
+            return items.map((item, index) => (
+                index === existingIndex
+                    ? { ...item, quantite: item.quantite + sanitizedQuantity }
+                    : item
+            ));
+        }
+    }
+
+    const newItem: OrderItem = {
+        id: generateId(),
+        produitRef: product.id,
+        nom_produit: product.nom_produit,
+        prix_unitaire: product.prix_vente,
+        quantite: sanitizedQuantity,
+        excluded_ingredients: [...defaultExcludedIngredients],
+        commentaire: trimmedComment,
+        estado: 'en_attente',
+    };
+
+    return [...items, newItem];
+};
+
 type OrderItemsSnapshotCache = {
     source: OrderItem[];
     snapshot: OrderItemsSnapshot;
@@ -63,6 +107,7 @@ const Commande: React.FC = () => {
     const [isExitConfirmOpen, setExitConfirmOpen] = useState(false);
     const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
     const [isSendingToKitchen, setIsSendingToKitchen] = useState(false);
+    const [selectedProductForCustomization, setSelectedProductForCustomization] = useState<Product | null>(null);
 
     const orderRef = useRef<Order | null>(order);
     const originalOrderRef = useRef<Order | null>(originalOrder);
@@ -398,40 +443,24 @@ const Commande: React.FC = () => {
         scheduleItemsSync();
     }, [scheduleItemsSync, updateOrderItems]);
 
-    const addProductToOrder = useCallback((product: Product) => {
-        const defaultComment = normalizeComment('');
-        const defaultExcludedIngredients: string[] = [];
+    const handleProductSelection = useCallback((product: Product) => {
+        setSelectedProductForCustomization(product);
+    }, []);
 
-        applyLocalItemsUpdate(items => {
-            const existingItemIndex = items.findIndex(
-                item => item.produitRef === product.id
-                    && item.estado === 'en_attente'
-                    && normalizeComment(item.commentaire) === defaultComment
-                    && haveSameExcludedIngredients(item.excluded_ingredients ?? [], defaultExcludedIngredients)
-            );
+    const closeCustomizationModal = useCallback(() => {
+        setSelectedProductForCustomization(null);
+    }, []);
 
-            if (existingItemIndex > -1) {
-                return items.map((item, index) => (
-                    index === existingItemIndex
-                        ? { ...item, quantite: item.quantite + 1 }
-                        : item
-                ));
-            }
+    const handleSaveCustomizedProduct = useCallback((result: ItemCustomizationResult) => {
+        if (!selectedProductForCustomization) {
+            return;
+        }
 
-            const newItem: OrderItem = {
-                id: generateTempId(),
-                produitRef: product.id,
-                nom_produit: product.nom_produit,
-                prix_unitaire: product.prix_vente,
-                quantite: 1,
-                excluded_ingredients: [...defaultExcludedIngredients],
-                commentaire: defaultComment,
-                estado: 'en_attente',
-            };
-
-            return [...items, newItem];
-        });
-    }, [applyLocalItemsUpdate]);
+        applyLocalItemsUpdate(items =>
+            mergeProductIntoPendingItems(items, selectedProductForCustomization, result, generateTempId),
+        );
+        setSelectedProductForCustomization(null);
+    }, [applyLocalItemsUpdate, selectedProductForCustomization]);
 
     const handleQuantityChange = useCallback((itemIndex: number, change: number) => {
         applyLocalItemsUpdate(items => {
@@ -602,9 +631,9 @@ const Commande: React.FC = () => {
     const handleProductKeyDown = useCallback((product: Product) => (event: React.KeyboardEvent<HTMLButtonElement>) => {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            addProductToOrder(product);
+            handleProductSelection(product);
         }
-    }, [addProductToOrder]);
+    }, [handleProductSelection]);
 
     const handleOpenPaymentModal = useCallback(() => {
         setIsPaymentModalOpen(true);
@@ -640,7 +669,7 @@ const Commande: React.FC = () => {
                 <ProductGrid
                     filteredProducts={filteredProducts}
                     quantities={productQuantitiesInCart}
-                    onAdd={addProductToOrder}
+                    onAdd={handleProductSelection}
                     activeCategoryId={activeCategoryId}
                     categories={categories}
                     onSelectCategory={setActiveCategoryId}
@@ -667,7 +696,13 @@ const Commande: React.FC = () => {
                 editingCommentId={editingCommentId}
             />
         </div>
-        <PaymentModal 
+        <ItemCustomizationModal
+            isOpen={selectedProductForCustomization !== null}
+            product={selectedProductForCustomization}
+            onClose={closeCustomizationModal}
+            onSave={handleSaveCustomizedProduct}
+        />
+        <PaymentModal
             isOpen={isPaymentModalOpen}
             onClose={() => setIsPaymentModalOpen(false)}
             order={order}
