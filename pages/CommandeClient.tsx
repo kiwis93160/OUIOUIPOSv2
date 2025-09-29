@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { uploadPaymentReceipt } from '../services/cloudinary';
-import { Product, Category, Ingredient, OrderItem, Order } from '../types';
+import { Product, Category, OrderItem, Order } from '../types';
 import Modal from '../components/Modal';
 import { ArrowLeft, ShoppingCart, Plus, Minus, X, Upload, MessageCircle, CheckCircle, History } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
@@ -19,7 +19,6 @@ interface ItemCustomizationModalProps {
   onAddToCart: (item: OrderItem) => void;
   product: Product;
   item?: OrderItem;
-  ingredients: Ingredient[];
 }
 
 const ItemCustomizationModal: React.FC<ItemCustomizationModalProps> = ({ isOpen, onClose, onAddToCart, product, item }) => {
@@ -115,7 +114,6 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
 const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({ onOrderSubmitted }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
-    const [ingredients, setIngredients] = useState<Ingredient[]>([]);
     const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
     const [cart, setCart] = useState<OrderItem[]>([]);
     const [isModalOpen, setModalOpen] = useState(false);
@@ -142,14 +140,12 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
-            const [productsData, categoriesData, ingredientsData] = await Promise.all([
+            const [productsData, categoriesData] = await Promise.all([
                 api.getProducts(),
                 api.getCategories(),
-                api.getIngredients()
             ]);
             setProducts(productsData);
             setCategories(categoriesData);
-            setIngredients(ingredientsData);
         } catch (err) {
             setError('Impossible de charger le menu. Veuillez réessayer plus tard.');
             console.error(err);
@@ -408,7 +404,6 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                     onAddToCart={handleAddToCart}
                     product={selectedProduct.product}
                     item={selectedProduct.item}
-                    ingredients={ingredients}
                 />
             )}
             

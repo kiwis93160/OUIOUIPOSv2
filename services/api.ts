@@ -665,6 +665,43 @@ const fetchIngredients = async (): Promise<Ingredient[]> => {
   return rows.map(mapIngredientRow);
 };
 
+const isPermissionError = (error: unknown): boolean => {
+  if (!error) {
+    return false;
+  }
+
+  if (typeof error === 'string') {
+    return error.toLowerCase().includes('permission');
+  }
+
+  if (error instanceof Error) {
+    return error.message.toLowerCase().includes('permission');
+  }
+
+  if (typeof error === 'object' && 'message' in error) {
+    const message = String((error as { message?: unknown }).message ?? '');
+    return message.toLowerCase().includes('permission');
+  }
+
+  return false;
+};
+
+const fetchIngredientsOrWarn = async (context: string): Promise<Ingredient[]> => {
+  try {
+    return await fetchIngredients();
+  } catch (error) {
+    if (isPermissionError(error)) {
+      console.warn(
+        `[api.${context}] Impossible de récupérer les ingrédients (permissions insuffisantes). Poursuite avec une liste vide.`,
+        error,
+      );
+      return [];
+    }
+
+    throw error;
+  }
+};
+
 const fetchCategories = async (): Promise<Category[]> => {
   const response = await supabase
     .from('categories')
@@ -1184,10 +1221,12 @@ export const api = {
   getProducts: async (): Promise<Product[]> => {
     const [productRows, ingredients] = await Promise.all([
       selectProductsQuery().neq('estado', 'archive'),
-      fetchIngredients(),
+      fetchIngredientsOrWarn('getProducts'),
     ]);
     const rows = unwrap<SupabaseProductRow[]>(productRows as SupabaseResponse<SupabaseProductRow[]>);
-    const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
+    const ingredientMap = ingredients.length > 0
+      ? new Map(ingredients.map(ingredient => [ingredient.id, ingredient]))
+      : undefined;
     return rows.map(row => mapProductRow(row, ingredientMap));
   },
 
@@ -1196,11 +1235,13 @@ export const api = {
       selectProductsQuery({ orderBy: { column: 'best_seller_rank', ascending: true, nullsFirst: false } })
         .eq('is_best_seller', true)
         .limit(6),
-      fetchIngredients(),
+      fetchIngredientsOrWarn('getBestSellerProducts'),
     ]);
 
     const productRows = unwrap<SupabaseProductRow[]>(productsResponse as SupabaseResponse<SupabaseProductRow[]>);
-    const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
+    const ingredientMap = ingredients.length > 0
+      ? new Map(ingredients.map(ingredient => [ingredient.id, ingredient]))
+      : undefined;
 
     return productRows
       .filter(row => row.estado !== 'archive')
