@@ -16,11 +16,15 @@ const saveOrderToHistory = (order: Order) => {
         const historyJSON = localStorage.getItem('customer-order-history');
         const history: Order[] = historyJSON ? JSON.parse(historyJSON) : [];
         const existingIndex = history.findIndex(h => h.id === order.id);
-        if (existingIndex === -1) {
-            history.unshift(order); // Add to the beginning
-            const trimmedHistory = history.slice(0, 10); // Keep last 10 orders
-            localStorage.setItem('customer-order-history', JSON.stringify(trimmedHistory));
+
+        if (existingIndex !== -1) {
+            history.splice(existingIndex, 1);
         }
+
+        history.unshift(order); // Add to the beginning so most recent stays first
+
+        const trimmedHistory = history.slice(0, 10); // Keep last 10 orders
+        localStorage.setItem('customer-order-history', JSON.stringify(trimmedHistory));
     } catch (e) {
         console.error("Failed to save order to history:", e);
     }
