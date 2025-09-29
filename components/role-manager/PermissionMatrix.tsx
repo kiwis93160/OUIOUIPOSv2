@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Trash2 } from 'lucide-react';
 import { NAV_LINKS } from '../../constants';
 import { Role } from '../../types';
 import { PermissionLevel } from './useRoleManager';
@@ -8,6 +9,8 @@ interface PermissionMatrixProps {
   permissions: Role['permissions'];
   onChange: (key: string, value: PermissionLevel) => void;
   getPermissionLabel: (key: string) => string;
+  customPermissions: Record<string, string>;
+  onRemoveCustomPermission?: (key: string) => void;
 }
 
 interface PermissionSection {
@@ -51,6 +54,8 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
   permissions,
   onChange,
   getPermissionLabel,
+  customPermissions,
+  onRemoveCustomPermission,
 }) => {
   const sections = useMemo<PermissionSection[]>(() => {
     if (permissionKeys.length === 0) {
@@ -156,11 +161,24 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                   {section.keys.map(key => {
                     const currentValue = permissions[key] ?? 'none';
                     const inputName = `permission-${key.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+                    const isCustom = key in customPermissions;
 
                     return (
                       <React.Fragment key={key}>
                         <div className="border-t border-gray-100 px-4 py-3">
-                          <div className="text-sm font-semibold text-gray-800">{getPermissionLabel(key)}</div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-sm font-semibold text-gray-800">{getPermissionLabel(key)}</div>
+                            {isCustom && onRemoveCustomPermission && (
+                              <button
+                                type="button"
+                                onClick={() => onRemoveCustomPermission(key)}
+                                className="text-gray-400 transition-colors hover:text-red-500"
+                                title="Supprimer cette permission personnalisée"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {PERMISSION_LEVELS.map(level => {
                           const isActive = currentValue === level.value;

@@ -31,6 +31,8 @@ const RoleManagerDialog: React.FC<RoleManagerDialogProps> = ({ isOpen, onClose }
     resetForm,
     getPermissionLabel,
     isPermissionGranted,
+    handleAddCustomPermission,
+    handleRemoveCustomPermission,
   } = useRoleManager({ isOpen, onClose });
 
   return (
@@ -63,6 +65,8 @@ const RoleManagerDialog: React.FC<RoleManagerDialogProps> = ({ isOpen, onClose }
             onInputChange={handleInputChange}
             onHomePageChange={handleHomePageChange}
             onPermissionChange={handlePermissionChange}
+            onAddCustomPermission={handleAddCustomPermission}
+            onRemoveCustomPermission={handleRemoveCustomPermission}
             onCancel={resetForm}
             isSubmitting={isSubmitting}
             hasAccessibleHomePage={hasAccessibleHomePage}
