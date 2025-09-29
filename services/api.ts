@@ -618,13 +618,22 @@ const selectOrdersQuery = () =>
 type SelectProductsQueryOptions = {
   orderBy?: { column: string; ascending?: boolean; nullsFirst?: boolean };
   includeBestSellerColumns?: boolean;
+  includeRecipes?: boolean;
 };
 
-const buildProductSelectColumns = (includeBestSellerColumns: boolean): string => {
+const buildProductSelectColumns = (includeBestSellerColumns: boolean, includeRecipes: boolean): string => {
   const bestSellerColumns = includeBestSellerColumns
     ? `,
         is_best_seller,
         best_seller_rank`
+    : '';
+
+  const recipeColumns = includeRecipes
+    ? `,
+        product_recipes (
+          ingredient_id,
+          qte_utilisee
+        )`
     : '';
 
   return `
@@ -634,17 +643,16 @@ const buildProductSelectColumns = (includeBestSellerColumns: boolean): string =>
         prix_vente,
         categoria_id,
         estado,
-        image${bestSellerColumns},
-        product_recipes (
-          ingredient_id,
-          qte_utilisee
-        )
+        image${bestSellerColumns}${recipeColumns}
       `;
 };
 
 const selectProductsQuery = (options?: SelectProductsQueryOptions) => {
   const includeBestSellerColumns = options?.includeBestSellerColumns !== false;
-  let query = supabase.from('products').select(buildProductSelectColumns(includeBestSellerColumns));
+  const includeRecipes = options?.includeRecipes !== false;
+  let query = supabase
+    .from('products')
+    .select(buildProductSelectColumns(includeBestSellerColumns, includeRecipes));
 
   if (options?.orderBy) {
     query = query.order(options.orderBy.column, {
@@ -1284,7 +1292,7 @@ export const api = {
         }
 
         return query.eq('is_best_seller', true).order('best_seller_rank', { ascending: true, nullsFirst: false }).limit(6);
-      }),
+      }, { includeRecipes: false }),
       fetchIngredientsOrWarn('getBestSellerProducts'),
     ]);
 
