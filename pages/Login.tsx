@@ -109,6 +109,24 @@ const PinInput = React.forwardRef<HTMLInputElement, PinInputProps>(({ pin, onPin
 
 PinInput.displayName = 'PinInput';
 
+const computeMenuGridClassName = (count: number): string => {
+  if (count === 1) return 'menu-grid menu-grid--single';
+  if (count === 2) return 'menu-grid menu-grid--double';
+  if (count === 3) return 'menu-grid menu-grid--triple';
+  if (count >= 6) return 'menu-grid menu-grid--six';
+  if (count > 0) return 'menu-grid menu-grid--multi';
+  return 'menu-grid';
+};
+
+const computeMenuCardClassName = (count: number): string => {
+  const baseClass = 'ui-card menu-card';
+  if (count === 1) return `${baseClass} menu-card--single`;
+  if (count === 2) return `${baseClass} menu-card--double`;
+  if (count === 3) return `${baseClass} menu-card--triple`;
+  if (count >= 6) return `${baseClass} menu-card--compact`;
+  return baseClass;
+};
+
 
 const Login: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -128,6 +146,10 @@ const Login: React.FC = () => {
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
   const activeOrderId = activeOrder?.orderId ?? null;
+  const bestSellersToDisplay = bestSellers.slice(0, 6);
+  const bestSellerCount = bestSellersToDisplay.length;
+  const menuGridClassName = computeMenuGridClassName(bestSellerCount);
+  const menuCardClassName = computeMenuCardClassName(bestSellerCount);
 
   const submitPin = useCallback(async (pinToSubmit: string) => {
     if (loading) return;
@@ -321,9 +343,9 @@ const Login: React.FC = () => {
             {menuLoading ? (
               <p className="section-text section-text--muted">{menuContent.loadingLabel}</p>
             ) : (
-              <div className="menu-grid">
-                {bestSellers.slice(0, 6).map(product => (
-                  <article key={product.id} className="ui-card menu-card">
+              <div className={menuGridClassName}>
+                {bestSellersToDisplay.map(product => (
+                  <article key={product.id} className={menuCardClassName}>
                     <img src={product.image} alt={product.nom_produit} className="menu-card__media" />
                     <div className="menu-card__body">
                       <h3 className="menu-card__title">{product.nom_produit}</h3>
