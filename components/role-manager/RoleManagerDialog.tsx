@@ -37,43 +37,47 @@ const RoleManagerDialog: React.FC<RoleManagerDialogProps> = ({ isOpen, onClose }
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Gestion des rôles" size="xl">
-      <div className="space-y-6">
+      <div className="flex flex-col gap-6">
         {statusMessage && (
-          <div className="rounded-md bg-green-100 px-4 py-2 text-sm text-green-800">{statusMessage}</div>
+          <div className="rounded-md bg-green-100 px-4 py-2 text-sm font-medium text-green-900">{statusMessage}</div>
         )}
         {errorMessage && (
-          <div className="rounded-md bg-red-100 px-4 py-2 text-sm text-red-800">{errorMessage}</div>
+          <div className="rounded-md bg-red-100 px-4 py-2 text-sm font-medium text-red-900">{errorMessage}</div>
         )}
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <RoleList
-            roles={roles}
-            isFetching={isFetching}
-            onCreateRole={resetForm}
-            onSelectRole={handleSelectRole}
-            onDeleteRole={handleDeleteRole}
-            selectedRoleId={formState.id}
-            isEditing={mode === 'edit'}
-            deletingRoleId={deletingRoleId}
-            getPermissionLabel={getPermissionLabel}
-          />
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
+          <div className="md:w-[38%] md:flex-shrink-0 lg:w-[35%]">
+            <RoleList
+              roles={roles}
+              isFetching={isFetching}
+              onCreateRole={resetForm}
+              onSelectRole={handleSelectRole}
+              onDeleteRole={handleDeleteRole}
+              selectedRoleId={formState.id}
+              isEditing={mode === 'edit'}
+              deletingRoleId={deletingRoleId}
+              getPermissionLabel={getPermissionLabel}
+            />
+          </div>
 
-          <RoleForm
-            mode={mode}
-            formState={formState}
-            onSubmit={handleSubmit}
-            onInputChange={handleInputChange}
-            onHomePageChange={handleHomePageChange}
-            onPermissionChange={handlePermissionChange}
-            onAddCustomPermission={handleAddCustomPermission}
-            onRemoveCustomPermission={handleRemoveCustomPermission}
-            onCancel={resetForm}
-            isSubmitting={isSubmitting}
-            hasAccessibleHomePage={hasAccessibleHomePage}
-            permissionKeys={permissionKeys}
-            getPermissionLabel={getPermissionLabel}
-            isPermissionGranted={isPermissionGranted}
-          />
+          <div className="flex-1">
+            <RoleForm
+              mode={mode}
+              formState={formState}
+              onSubmit={handleSubmit}
+              onInputChange={handleInputChange}
+              onHomePageChange={handleHomePageChange}
+              onPermissionChange={handlePermissionChange}
+              onAddCustomPermission={handleAddCustomPermission}
+              onRemoveCustomPermission={handleRemoveCustomPermission}
+              onCancel={resetForm}
+              isSubmitting={isSubmitting}
+              hasAccessibleHomePage={hasAccessibleHomePage}
+              permissionKeys={permissionKeys}
+              getPermissionLabel={getPermissionLabel}
+              isPermissionGranted={isPermissionGranted}
+            />
+          </div>
         </div>
       </div>
     </Modal>
