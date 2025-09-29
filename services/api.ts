@@ -65,8 +65,8 @@ type SupabaseProductRow = {
   categoria_id: string;
   estado: Product['estado'];
   image: string | null;
-  is_best_seller: boolean | null;
-  best_seller_rank: number | null;
+  is_best_seller: boolean | null | undefined;
+  best_seller_rank: number | null | undefined;
   product_recipes: SupabaseRecipeRow[] | null;
 };
 
@@ -374,8 +374,8 @@ const mapProductRow = (row: SupabaseProductRow, ingredientMap?: Map<string, Ingr
     estado: row.estado,
     image: resolveProductImageUrl(row.image),
     recipe,
-    is_best_seller: Boolean(row.is_best_seller),
-    best_seller_rank: row.best_seller_rank,
+    is_best_seller: row.is_best_seller ?? false,
+    best_seller_rank: row.best_seller_rank ?? null,
   };
 
   if (ingredientMap) {
@@ -615,28 +615,36 @@ const selectOrdersQuery = () =>
     )
     .order('date_creation', { ascending: false });
 
-const selectProductsQuery = (
-  options?: { orderBy?: { column: string; ascending?: boolean; nullsFirst?: boolean } },
-) => {
-  let query = supabase
-    .from('products')
-    .select(
-      `
+type SelectProductsQueryOptions = {
+  orderBy?: { column: string; ascending?: boolean; nullsFirst?: boolean };
+  includeBestSellerColumns?: boolean;
+};
+
+const buildProductSelectColumns = (includeBestSellerColumns: boolean): string => {
+  const bestSellerColumns = includeBestSellerColumns
+    ? `,
+        is_best_seller,
+        best_seller_rank`
+    : '';
+
+  return `
         id,
         nom_produit,
         description,
         prix_vente,
         categoria_id,
         estado,
-        image,
-        is_best_seller,
-        best_seller_rank,
+        image${bestSellerColumns},
         product_recipes (
           ingredient_id,
           qte_utilisee
         )
-      `,
-    );
+      `;
+};
+
+const selectProductsQuery = (options?: SelectProductsQueryOptions) => {
+  const includeBestSellerColumns = options?.includeBestSellerColumns !== false;
+  let query = supabase.from('products').select(buildProductSelectColumns(includeBestSellerColumns));
 
   if (options?.orderBy) {
     query = query.order(options.orderBy.column, {
@@ -648,6 +656,40 @@ const selectProductsQuery = (
   }
 
   return query;
+};
+
+const isMissingBestSellerColumnError = (error: { message?: string } | null): boolean => {
+  if (!error?.message) {
+    return false;
+  }
+
+  const normalizedMessage = error.message.toLowerCase();
+  return (
+    normalizedMessage.includes('does not exist') &&
+    normalizedMessage.includes('column') &&
+    (normalizedMessage.includes('is_best_seller') || normalizedMessage.includes('best_seller_rank'))
+  );
+};
+
+const runProductsQueryWithFallback = async <T>(
+  executor: (
+    query: ReturnType<typeof selectProductsQuery>,
+    includeBestSellerColumns: boolean,
+  ) => Promise<SupabaseResponse<T>>,
+  options?: Omit<SelectProductsQueryOptions, 'includeBestSellerColumns'>,
+): Promise<SupabaseResponse<T>> => {
+  const includeBestSellerColumns = true;
+  let response = await executor(selectProductsQuery({ ...options, includeBestSellerColumns }), includeBestSellerColumns);
+
+  if (isMissingBestSellerColumnError(response.error)) {
+    const fallbackIncludeBestSellerColumns = false;
+    response = await executor(
+      selectProductsQuery({ ...options, includeBestSellerColumns: fallbackIncludeBestSellerColumns }),
+      fallbackIncludeBestSellerColumns,
+    );
+  }
+
+  return response;
 };
 
 const fetchOrderById = async (orderId: string): Promise<Order | null> => {
@@ -776,10 +818,14 @@ const createSalesEntriesForOrder = async (order: Order): Promise<number> => {
   }
 
   const productIds = Array.from(new Set(order.items.map(item => item.produitRef)));
+  const productsPromise =
+    productIds.length > 0
+      ? runProductsQueryWithFallback(query => query.in('id', productIds))
+      : runProductsQueryWithFallback(query => query.limit(0));
   const [categories, ingredients, productsResponse] = await Promise.all([
     fetchCategories(),
     fetchIngredients(),
-    productIds.length > 0 ? selectProductsQuery().in('id', productIds) : selectProductsQuery().limit(0),
+    productsPromise,
   ]);
 
   const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
@@ -1006,7 +1052,7 @@ export const api = {
         fetchTablesWithMeta(),
         fetchIngredients(),
         fetchCategories(),
-        selectProductsQuery(),
+        runProductsQueryWithFallback(query => query),
         selectOrdersQuery().eq('statut', 'finalisee').gte('date_creation', businessDayIso),
         selectOrdersQuery().eq('statut', 'finalisee').gte('date_creation', previousStartIso).lt('date_creation', endIso),
       ]);
@@ -1220,7 +1266,7 @@ export const api = {
 
   getProducts: async (): Promise<Product[]> => {
     const [productRows, ingredients] = await Promise.all([
-      selectProductsQuery().neq('estado', 'archive'),
+      runProductsQueryWithFallback(query => query.neq('estado', 'archive')),
       fetchIngredientsOrWarn('getProducts'),
     ]);
     const rows = unwrap<SupabaseProductRow[]>(productRows as SupabaseResponse<SupabaseProductRow[]>);
@@ -1232,9 +1278,13 @@ export const api = {
 
   getBestSellerProducts: async (): Promise<Product[]> => {
     const [productsResponse, ingredients] = await Promise.all([
-      selectProductsQuery({ orderBy: { column: 'best_seller_rank', ascending: true, nullsFirst: false } })
-        .eq('is_best_seller', true)
-        .limit(6),
+      runProductsQueryWithFallback((query, includeBestSellerColumns) => {
+        if (!includeBestSellerColumns) {
+          return query.limit(0);
+        }
+
+        return query.eq('is_best_seller', true).order('best_seller_rank', { ascending: true, nullsFirst: false }).limit(6);
+      }),
       fetchIngredientsOrWarn('getBestSellerProducts'),
     ]);
 
@@ -1250,8 +1300,9 @@ export const api = {
         const rankB = b.best_seller_rank ?? Number.POSITIVE_INFINITY;
         return rankA - rankB;
       })
-      .slice(0, 6)
-      .map(row => mapProductRow(row, ingredientMap));
+      .map(row => mapProductRow(row, ingredientMap))
+      .filter(product => product.is_best_seller)
+      .slice(0, 6);
   },
 
   getCategories: async (): Promise<Category[]> => {
@@ -1754,7 +1805,7 @@ export const api = {
       selectOrdersQuery().eq('statut', 'finalisee'),
       fetchCategories(),
       fetchIngredients(),
-      selectProductsQuery(),
+      runProductsQueryWithFallback(query => query),
     ]);
     let roleLoginsResult: RoleLogin[] = [];
     let roleLoginsUnavailable = false;
@@ -1969,7 +2020,9 @@ export const api = {
     }
 
     notificationsService.publish('notifications_updated');
-    const productsResponse = await selectProductsQuery().eq('id', insertedRow.id).single();
+    const productsResponse = await runProductsQueryWithFallback(
+      query => query.eq('id', insertedRow.id).single(),
+    );
     const productRow = unwrap<SupabaseProductRow>(productsResponse as SupabaseResponse<SupabaseProductRow>);
     const ingredients = await fetchIngredients();
     const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
@@ -2034,7 +2087,9 @@ export const api = {
     }
 
     notificationsService.publish('notifications_updated');
-    const productsResponse = await selectProductsQuery().eq('id', productId).single();
+    const productsResponse = await runProductsQueryWithFallback(
+      query => query.eq('id', productId).single(),
+    );
     const productRow = unwrap<SupabaseProductRow>(productsResponse as SupabaseResponse<SupabaseProductRow>);
     const ingredients = await fetchIngredients();
     const ingredientMap = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
