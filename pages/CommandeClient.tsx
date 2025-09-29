@@ -129,6 +129,10 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     const [hasProcessedQueuedReorder, setHasProcessedQueuedReorder] = useState(false);
 
     useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, []);
+
+    useEffect(() => {
         try {
             const historyJSON = localStorage.getItem('customer-order-history');
             if (historyJSON) {

@@ -278,6 +278,23 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [isSubmitting, setSubmitting] = useState(false);
 
+    useEffect(() => {
+        if (!isOpen) return;
+
+        setFormData({
+            nom_produit: product?.nom_produit || '',
+            prix_vente: product?.prix_vente || 0,
+            categoria_id: product?.categoria_id || (categories[0]?.id ?? ''),
+            estado: product?.estado || 'disponible',
+            image: product?.image ?? '',
+            description: product?.description || '',
+            recipe: product?.recipe || [],
+            is_best_seller: product?.is_best_seller ?? false,
+            best_seller_rank: product?.best_seller_rank ?? null,
+        });
+        setImageFile(null);
+    }, [isOpen, product, categories]);
+
     const findFirstAvailablePosition = useCallback(() => {
         for (const rank of BEST_SELLER_RANKS) {
             const occupant = occupiedPositions.get(rank);
