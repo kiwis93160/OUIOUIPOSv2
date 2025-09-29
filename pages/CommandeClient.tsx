@@ -293,7 +293,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                         <div className="bg-white p-4 rounded-xl shadow-md mb-8">
                             <h2 className="text-xl font-bold flex items-center gap-2 mb-3 text-gray-700"><History /> Repasser une commande ?</h2>
                             <div className="space-y-2">
-                                {orderHistory.map(order => (
+                                {orderHistory.slice(0, 3).map(order => (
                                     <div key={order.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                                         <div>
                                             <p className="font-semibold text-gray-700">Commande du {new Date(order.date_creation).toLocaleDateString()}</p>
