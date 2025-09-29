@@ -4,7 +4,7 @@ import { Product, Category } from '../../types';
 import { formatIntegerAmount } from '../../utils/formatIntegerAmount';
 
 export interface ProductGridProps {
-    products: Product[];
+    filteredProducts: Product[];
     quantities: Record<string, number>;
     onAdd: (product: Product) => void;
     activeCategoryId: string;
@@ -20,7 +20,7 @@ export interface ProductGridProps {
 }
 
 const ProductGridComponent: React.FC<ProductGridProps> = ({
-    products,
+    filteredProducts,
     quantities,
     onAdd,
     activeCategoryId,
@@ -30,11 +30,6 @@ const ProductGridComponent: React.FC<ProductGridProps> = ({
     handleProductPointerDown,
     handleProductKeyDown,
 }) => {
-    const filteredProducts =
-        activeCategoryId === 'all'
-            ? products
-            : products.filter((product) => product.categoria_id === activeCategoryId);
-
     return (
         <>
             <div className="p-4 border-b">

@@ -73,7 +73,7 @@ const Commande: React.FC = () => {
     const currentItemsSnapshotCacheRef = useRef<OrderItemsSnapshotCache | null>(null);
     const originalItemsSnapshotCacheRef = useRef<OrderItemsSnapshotCache | null>(null);
 
-    const updateSnapshotCache = (
+    const updateSnapshotCache = useCallback((
         cacheRef: MutableRefObject<OrderItemsSnapshotCache | null>,
         items: OrderItem[] | undefined,
         snapshot?: OrderItemsSnapshot,
@@ -86,9 +86,9 @@ const Commande: React.FC = () => {
         const computedSnapshot = snapshot ?? createOrderItemsSnapshot(items);
         cacheRef.current = { source: items, snapshot: computedSnapshot };
         return computedSnapshot;
-    };
+    }, []);
 
-    const getCachedSnapshot = (
+    const getCachedSnapshot = useCallback((
         items: OrderItem[] | undefined,
         cacheRef: MutableRefObject<OrderItemsSnapshotCache | null>,
     ): OrderItemsSnapshot => {
@@ -103,7 +103,7 @@ const Commande: React.FC = () => {
         }
 
         return updateSnapshotCache(cacheRef, items);
-    };
+    }, [updateSnapshotCache]);
 
     useEffect(() => {
         orderRef.current = order;
@@ -130,7 +130,7 @@ const Commande: React.FC = () => {
             : getCachedSnapshot(referenceOrder.items, originalItemsSnapshotCacheRef);
 
         return areOrderItemSnapshotsEqual(referenceSnapshot, currentSnapshot);
-    }, []);
+    }, [getCachedSnapshot]);
 
     const applyPendingServerSnapshot = useCallback(() => {
         const pendingOrder = pendingServerOrderRef.current;
@@ -159,7 +159,7 @@ const Commande: React.FC = () => {
         originalOrderRef.current = originalSnapshot;
         setOriginalOrder(originalSnapshot);
         updateSnapshotCache(originalItemsSnapshotCacheRef, originalSnapshot.items);
-    }, []);
+    }, [getCachedSnapshot, updateSnapshotCache]);
 
     const fetchOrderData = useCallback(async (isRefresh = false) => {
         if (!tableId) return;
@@ -217,7 +217,7 @@ const Commande: React.FC = () => {
         } finally {
             if (!isRefresh) setLoading(false);
         }
-    }, [tableId, navigate, isOrderSynced]);
+    }, [isOrderSynced, navigate, tableId, updateSnapshotCache]);
 
     useEffect(() => {
         fetchOrderData();
@@ -249,6 +249,14 @@ const Commande: React.FC = () => {
             return acc;
         }, {} as { [key: string]: number });
     }, [order]);
+
+    const filteredProducts = useMemo(() => {
+        if (activeCategoryId === 'all') {
+            return products;
+        }
+
+        return products.filter(product => product.categoria_id === activeCategoryId);
+    }, [activeCategoryId, products]);
 
 
     const isProductAvailable = useCallback((product: Product): boolean => {
@@ -360,7 +368,7 @@ const Commande: React.FC = () => {
 
         syncQueueRef.current = syncQueueRef.current.then(runServerSync, runServerSync);
         await syncQueueRef.current;
-    }, [applyPendingServerSnapshot, fetchOrderData]);
+    }, [applyPendingServerSnapshot, fetchOrderData, updateSnapshotCache]);
 
     const scheduleItemsSync = useCallback((delay = 100) => {
         if (itemsSyncTimeoutRef.current !== null) {
@@ -390,7 +398,7 @@ const Commande: React.FC = () => {
         scheduleItemsSync();
     }, [scheduleItemsSync, updateOrderItems]);
 
-    const addProductToOrder = (product: Product) => {
+    const addProductToOrder = useCallback((product: Product) => {
         const defaultComment = normalizeComment('');
         const defaultExcludedIngredients: string[] = [];
 
@@ -423,9 +431,9 @@ const Commande: React.FC = () => {
 
             return [...items, newItem];
         });
-    };
+    }, [applyLocalItemsUpdate]);
 
-    const handleQuantityChange = (itemIndex: number, change: number) => {
+    const handleQuantityChange = useCallback((itemIndex: number, change: number) => {
         applyLocalItemsUpdate(items => {
             if (!items[itemIndex]) return items;
             const updatedItems = items.map(item => ({ ...item }));
@@ -439,9 +447,9 @@ const Commande: React.FC = () => {
 
             return updatedItems;
         });
-    };
+    }, [applyLocalItemsUpdate]);
 
-    const handleCommentChange = (itemIndex: number, newComment: string) => {
+    const handleCommentChange = useCallback((itemIndex: number, newComment: string) => {
         updateOrderItems(items => {
             if (!items[itemIndex]) return items;
             const updatedItems = items.map(item => ({ ...item }));
@@ -463,15 +471,15 @@ const Commande: React.FC = () => {
 
             return updatedItems;
         }, { isLocalUpdate: true });
-    };
+    }, [updateOrderItems]);
 
-    const persistCommentChange = (itemIndex: number) => {
+    const persistCommentChange = useCallback((itemIndex: number) => {
         if (!orderRef.current) return;
         updateOrderItems(orderRef.current.items.map(item => ({ ...item })));
         setEditingCommentId(null);
-    }
+    }, [updateOrderItems]);
 
-    const handleSendToKitchen = async () => {
+    const handleSendToKitchen = useCallback(async () => {
         if (!orderRef.current) return;
 
         setIsSendingToKitchen(true);
@@ -513,9 +521,9 @@ const Commande: React.FC = () => {
         } finally {
             setIsSendingToKitchen(false);
         }
-    };
+    }, [navigate, updateOrderItems, updateSnapshotCache]);
 
-    const handleServeOrder = async () => {
+    const handleServeOrder = useCallback(async () => {
         if (!order) return;
         try {
             const updatedOrder = await api.markOrderAsServed(order.id);
@@ -525,7 +533,7 @@ const Commande: React.FC = () => {
         } catch (error) {
             console.error("Failed to mark order as served", error);
         }
-    };
+    }, [order, updateSnapshotCache]);
     
     const handleFinalizeOrder = async (paymentMethod: Order['payment_method'], receiptFile?: File | null) => {
         if (!order) return;
@@ -603,7 +611,7 @@ const Commande: React.FC = () => {
         setEditingCommentId(itemId);
     }, []);
 
-    const hasPendingItems = categorizedItems.pending.length > 0;
+    const hasPendingItems = useMemo(() => categorizedItems.pending.length > 0, [categorizedItems]);
 
     if (loading) return <div className="text-center p-10 text-gray-800">Chargement de la commande...</div>;
     if (!order) return <div className="text-center p-10 text-red-500">Commande non trouvée.</div>;
@@ -627,7 +635,7 @@ const Commande: React.FC = () => {
                     </div>
                 </div>
                 <ProductGrid
-                    products={products}
+                    filteredProducts={filteredProducts}
                     quantities={productQuantitiesInCart}
                     onAdd={addProductToOrder}
                     activeCategoryId={activeCategoryId}
