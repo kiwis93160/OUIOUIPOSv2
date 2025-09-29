@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import type { MutableRefObject } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { uploadPaymentReceipt } from '../services/cloudinary';
@@ -7,6 +8,7 @@ import { PlusCircle, MinusCircle, Send, DollarSign, AlertTriangle, Check, ArrowL
 import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 import PaymentModal from '../components/PaymentModal';
 import Modal from '../components/Modal';
+import { createOrderItemsSnapshot, areOrderItemSnapshotsEqual, type OrderItemsSnapshot } from '../utils/orderSync';
 
 const isPersistedItemId = (value?: string) =>
     !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -38,6 +40,13 @@ const haveSameExcludedIngredients = (a: string[] = [], b: string[] = []) => {
     return sortedA.every((value, index) => value === sortedB[index]);
 };
 
+type OrderItemsSnapshotCache = {
+    source: OrderItem[];
+    snapshot: OrderItemsSnapshot;
+};
+
+const EMPTY_ORDER_ITEMS_SNAPSHOT = createOrderItemsSnapshot([]);
+
 const Commande: React.FC = () => {
     const { tableId } = useParams<{ tableId: string }>();
     const navigate = useNavigate();
@@ -60,6 +69,40 @@ const Commande: React.FC = () => {
     const pendingServerOrderRef = useRef<Order | null>(null);
     const itemsSyncTimeoutRef = useRef<number | null>(null);
     const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
+    const currentItemsSnapshotCacheRef = useRef<OrderItemsSnapshotCache | null>(null);
+    const originalItemsSnapshotCacheRef = useRef<OrderItemsSnapshotCache | null>(null);
+
+    const updateSnapshotCache = (
+        cacheRef: MutableRefObject<OrderItemsSnapshotCache | null>,
+        items: OrderItem[] | undefined,
+        snapshot?: OrderItemsSnapshot,
+    ): OrderItemsSnapshot => {
+        if (!items || items.length === 0) {
+            cacheRef.current = null;
+            return EMPTY_ORDER_ITEMS_SNAPSHOT;
+        }
+
+        const computedSnapshot = snapshot ?? createOrderItemsSnapshot(items);
+        cacheRef.current = { source: items, snapshot: computedSnapshot };
+        return computedSnapshot;
+    };
+
+    const getCachedSnapshot = (
+        items: OrderItem[] | undefined,
+        cacheRef: MutableRefObject<OrderItemsSnapshotCache | null>,
+    ): OrderItemsSnapshot => {
+        if (!items || items.length === 0) {
+            cacheRef.current = null;
+            return EMPTY_ORDER_ITEMS_SNAPSHOT;
+        }
+
+        const cachedSnapshot = cacheRef.current;
+        if (cachedSnapshot && cachedSnapshot.source === items) {
+            return cachedSnapshot.snapshot;
+        }
+
+        return updateSnapshotCache(cacheRef, items);
+    };
 
     useEffect(() => {
         orderRef.current = order;
@@ -71,31 +114,50 @@ const Commande: React.FC = () => {
 
     const isOrderSynced = useCallback((comparisonOrder?: Order | null) => {
         const currentOrder = orderRef.current;
-        if (!currentOrder) return true;
+        if (!currentOrder) {
+            return true;
+        }
+
         const referenceOrder = comparisonOrder ?? originalOrderRef.current;
-        if (!referenceOrder) return true;
-        return JSON.stringify(referenceOrder.items) === JSON.stringify(currentOrder.items);
+        if (!referenceOrder) {
+            return true;
+        }
+
+        const currentSnapshot = getCachedSnapshot(currentOrder.items, currentItemsSnapshotCacheRef);
+        const referenceSnapshot = comparisonOrder
+            ? createOrderItemsSnapshot(referenceOrder.items)
+            : getCachedSnapshot(referenceOrder.items, originalItemsSnapshotCacheRef);
+
+        return areOrderItemSnapshotsEqual(referenceSnapshot, currentSnapshot);
     }, []);
 
     const applyPendingServerSnapshot = useCallback(() => {
         const pendingOrder = pendingServerOrderRef.current;
-        if (!pendingOrder) return;
+        if (!pendingOrder) {
+            return;
+        }
 
+        const pendingItemsSnapshot = createOrderItemsSnapshot(pendingOrder.items);
         serverOrderRef.current = cloneOrder(pendingOrder);
 
         const currentOrder = orderRef.current;
-        if (currentOrder && JSON.stringify(currentOrder) === JSON.stringify(pendingOrder)) {
-            pendingServerOrderRef.current = null;
-            return;
+        if (currentOrder) {
+            const currentSnapshot = getCachedSnapshot(currentOrder.items, currentItemsSnapshotCacheRef);
+            if (areOrderItemSnapshotsEqual(currentSnapshot, pendingItemsSnapshot)) {
+                pendingServerOrderRef.current = null;
+                return;
+            }
         }
 
         pendingServerOrderRef.current = null;
         orderRef.current = pendingOrder;
         setOrder(pendingOrder);
+        updateSnapshotCache(currentItemsSnapshotCacheRef, pendingOrder.items, pendingItemsSnapshot);
 
         const originalSnapshot = cloneOrder(pendingOrder);
         originalOrderRef.current = originalSnapshot;
         setOriginalOrder(originalSnapshot);
+        updateSnapshotCache(originalItemsSnapshotCacheRef, originalSnapshot.items);
     }, []);
 
     const fetchOrderData = useCallback(async (isRefresh = false) => {
@@ -113,10 +175,12 @@ const Commande: React.FC = () => {
                     pendingServerOrderRef.current = null;
                     setOrder(orderData);
                     orderRef.current = orderData;
+                    updateSnapshotCache(currentItemsSnapshotCacheRef, orderData.items);
 
                     const originalSnapshot = cloneOrder(orderData);
                     originalOrderRef.current = originalSnapshot;
                     setOriginalOrder(originalSnapshot);
+                    updateSnapshotCache(originalItemsSnapshotCacheRef, originalSnapshot.items);
                 } else {
                     const confirmedOrder = originalOrderRef.current;
                     if (confirmedOrder && JSON.stringify(confirmedOrder) === JSON.stringify(orderData)) {
@@ -137,9 +201,11 @@ const Commande: React.FC = () => {
             serverOrderRef.current = cloneOrder(orderData);
             setOrder(orderData);
             orderRef.current = orderData;
+            updateSnapshotCache(currentItemsSnapshotCacheRef, orderData.items);
             const originalSnapshot = cloneOrder(orderData);
             setOriginalOrder(originalSnapshot);
             originalOrderRef.current = originalSnapshot;
+            updateSnapshotCache(originalItemsSnapshotCacheRef, originalSnapshot.items);
             setProducts(productsData);
             setCategories(categoriesData);
             setIngredients(ingredientsData);
@@ -231,6 +297,7 @@ const Commande: React.FC = () => {
 
         setOrder(optimisticOrder);
         orderRef.current = optimisticOrder;
+        updateSnapshotCache(currentItemsSnapshotCacheRef, optimisticOrder.items);
 
         if (options?.isLocalUpdate) return;
 
@@ -270,9 +337,11 @@ const Commande: React.FC = () => {
                 );
                 setOrder(updatedOrder);
                 orderRef.current = updatedOrder;
+                updateSnapshotCache(currentItemsSnapshotCacheRef, updatedOrder.items);
                 const updatedOriginalSnapshot = cloneOrder(updatedOrder);
                 setOriginalOrder(updatedOriginalSnapshot);
                 originalOrderRef.current = updatedOriginalSnapshot;
+                updateSnapshotCache(originalItemsSnapshotCacheRef, updatedOriginalSnapshot.items);
                 serverOrderRef.current = cloneOrder(updatedOrder);
 
                 void api.getIngredients()
@@ -430,7 +499,12 @@ const Commande: React.FC = () => {
 
             const updatedOrder = await api.sendOrderToKitchen(latestOrder.id, itemsToSend);
             setOrder(updatedOrder);
-            setOriginalOrder(JSON.parse(JSON.stringify(updatedOrder)));
+            orderRef.current = updatedOrder;
+            updateSnapshotCache(currentItemsSnapshotCacheRef, updatedOrder.items);
+            const syncedOriginal = cloneOrder(updatedOrder);
+            setOriginalOrder(syncedOriginal);
+            originalOrderRef.current = syncedOriginal;
+            updateSnapshotCache(originalItemsSnapshotCacheRef, syncedOriginal.items);
             navigate('/ventes');
         } catch (error) {
             console.error("Failed to send order to kitchen", error);
@@ -445,6 +519,8 @@ const Commande: React.FC = () => {
         try {
             const updatedOrder = await api.markOrderAsServed(order.id);
             setOrder(updatedOrder);
+            orderRef.current = updatedOrder;
+            updateSnapshotCache(currentItemsSnapshotCacheRef, updatedOrder.items);
         } catch (error) {
             console.error("Failed to mark order as served", error);
         }
