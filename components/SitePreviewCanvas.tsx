@@ -1,6 +1,12 @@
 import React from 'react';
 import { Mail, MapPin, Phone } from 'lucide-react';
 import { SiteContent } from '../types';
+import {
+  createBackgroundStyle,
+  createBodyTextStyle,
+  createHeroBackgroundStyle,
+  createTextStyle,
+} from '../utils/siteStyleHelpers';
 
 export type EditableZoneKey = 'navigation' | 'hero' | 'about' | 'menu' | 'contact' | 'footer';
 
@@ -75,22 +81,51 @@ const placeholderProducts = [
 ];
 
 const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }) => {
-  const heroBackgroundStyle = content.hero.backgroundImage
-    ? { backgroundImage: `url('${content.hero.backgroundImage}')` }
-    : undefined;
+  const navigationBackgroundStyle = createBackgroundStyle(content.navigation.style);
+  const navigationTextStyle = createTextStyle(content.navigation.style);
+  const navigationBodyStyle = createBodyTextStyle(content.navigation.style);
+  const heroBackgroundStyle = createHeroBackgroundStyle(content.hero.style, content.hero.backgroundImage);
+  const heroTextStyle = createTextStyle(content.hero.style);
+  const heroBodyTextStyle = createBodyTextStyle(content.hero.style);
+  const aboutBackgroundStyle = createBackgroundStyle(content.about.style);
+  const aboutTextStyle = createTextStyle(content.about.style);
+  const aboutBodyTextStyle = createBodyTextStyle(content.about.style);
+  const menuBackgroundStyle = createBackgroundStyle(content.menu.style);
+  const menuTextStyle = createTextStyle(content.menu.style);
+  const menuBodyTextStyle = createBodyTextStyle(content.menu.style);
+  const contactBackgroundStyle = createBackgroundStyle(content.contact.style);
+  const contactTextStyle = createTextStyle(content.contact.style);
+  const contactBodyTextStyle = createBodyTextStyle(content.contact.style);
+  const footerBackgroundStyle = createBackgroundStyle(content.footer.style);
+  const footerTextStyle = createBodyTextStyle(content.footer.style);
 
   return (
     <div className="space-y-6 rounded-[2.5rem] border border-gray-200 bg-slate-50 p-6 shadow-inner">
       <EditableZoneFrame zone="navigation" label="Navigation" onEdit={onEdit} contentClassName="pt-16">
-        <header className="login-header">
-          <div className="layout-container login-header__inner">
-            <span className="login-brand">{content.navigation.brand}</span>
+        <header className="login-header" style={navigationBackgroundStyle}>
+          <div className="layout-container login-header__inner" style={navigationTextStyle}>
+            <span className="login-brand" style={navigationTextStyle}>
+              {content.navigation.brand}
+            </span>
             <nav className="login-nav" aria-label="Navigation principale">
-              <span className="login-nav__link">{content.navigation.links.home}</span>
-              <span className="login-nav__link">{content.navigation.links.about}</span>
-              <span className="login-nav__link">{content.navigation.links.menu}</span>
-              <span className="login-nav__link">{content.navigation.links.contact}</span>
-              <button type="button" className="ui-btn ui-btn-accent login-nav__cta" disabled>
+              <span className="login-nav__link" style={navigationBodyStyle}>
+                {content.navigation.links.home}
+              </span>
+              <span className="login-nav__link" style={navigationBodyStyle}>
+                {content.navigation.links.about}
+              </span>
+              <span className="login-nav__link" style={navigationBodyStyle}>
+                {content.navigation.links.menu}
+              </span>
+              <span className="login-nav__link" style={navigationBodyStyle}>
+                {content.navigation.links.contact}
+              </span>
+              <button
+                type="button"
+                className="ui-btn ui-btn-accent login-nav__cta"
+                style={{ fontFamily: content.navigation.style.fontFamily }}
+                disabled
+              >
                 {content.navigation.links.loginCta}
               </button>
             </nav>
@@ -99,24 +134,44 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
       </EditableZoneFrame>
 
       <EditableZoneFrame zone="hero" label="Hero" onEdit={onEdit} className="overflow-hidden" contentClassName="pt-14">
-        <section className="section section-hero" style={heroBackgroundStyle}>
+        <section className="section section-hero" style={{ ...heroBackgroundStyle, ...heroTextStyle }}>
           <div className="section-hero__inner">
-            <div className="hero-content">
-              <h2 className="hero-title">{content.hero.title}</h2>
-              <p className="hero-subtitle">{content.hero.subtitle}</p>
-              <button type="button" className="ui-btn ui-btn-accent hero-cta" disabled>
+            <div className="hero-content" style={heroTextStyle}>
+              <h2 className="hero-title" style={heroTextStyle}>
+                {content.hero.title}
+              </h2>
+              <p className="hero-subtitle" style={heroBodyTextStyle}>
+                {content.hero.subtitle}
+              </p>
+              <button
+                type="button"
+                className="ui-btn ui-btn-accent hero-cta"
+                style={{ fontFamily: content.hero.style.fontFamily }}
+                disabled
+              >
                 {content.hero.ctaLabel}
               </button>
               <div className="hero-history mt-6">
-                <p className="hero-history__title">{content.hero.historyTitle}</p>
+                <p className="hero-history__title" style={heroBodyTextStyle}>
+                  {content.hero.historyTitle}
+                </p>
                 <div className="hero-history__list">
                   {[0, 1, 2].map(index => (
                     <div key={index} className="hero-history__item">
                       <div className="hero-history__meta">
-                        <p className="hero-history__date">Commande du 12/03/2024</p>
-                        <p className="hero-history__details">2 article(s) • 32€</p>
+                        <p className="hero-history__date" style={heroBodyTextStyle}>
+                          Commande du 12/03/2024
+                        </p>
+                        <p className="hero-history__details" style={heroBodyTextStyle}>
+                          2 article(s) • 32€
+                        </p>
                       </div>
-                      <button type="button" className="hero-history__cta" disabled>
+                      <button
+                        type="button"
+                        className="hero-history__cta"
+                        style={{ fontFamily: content.hero.style.fontFamily }}
+                        disabled
+                      >
                         {content.hero.reorderCtaLabel}
                       </button>
                     </div>
@@ -129,10 +184,14 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
       </EditableZoneFrame>
 
       <EditableZoneFrame zone="about" label="À propos" onEdit={onEdit} className="overflow-hidden" contentClassName="pt-14">
-        <section className="section section-surface">
-          <div className="section-inner section-inner--center">
-            <h2 className="section-title">{content.about.title}</h2>
-            <p className="section-text section-text--muted">{content.about.description}</p>
+        <section className="section section-surface" style={{ ...aboutBackgroundStyle, ...aboutTextStyle }}>
+          <div className="section-inner section-inner--center" style={aboutTextStyle}>
+            <h2 className="section-title" style={aboutTextStyle}>
+              {content.about.title}
+            </h2>
+            <p className="section-text section-text--muted" style={aboutBodyTextStyle}>
+              {content.about.description}
+            </p>
             {content.about.image && (
               <img
                 src={content.about.image}
@@ -145,9 +204,11 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
       </EditableZoneFrame>
 
       <EditableZoneFrame zone="menu" label="Menu" onEdit={onEdit} className="overflow-hidden" contentClassName="pt-14">
-        <section className="section section-muted">
-          <div className="section-inner section-inner--wide section-inner--center">
-            <h2 className="section-title">{content.menu.title}</h2>
+        <section className="section section-muted" style={{ ...menuBackgroundStyle, ...menuTextStyle }}>
+          <div className="section-inner section-inner--wide section-inner--center" style={menuTextStyle}>
+            <h2 className="section-title" style={menuTextStyle}>
+              {content.menu.title}
+            </h2>
             {content.menu.image && (
               <img
                 src={content.menu.image}
@@ -160,27 +221,42 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
                 <article key={product.id} className="ui-card menu-card">
                   <div className="h-40 w-full rounded-t-xl bg-gradient-to-br from-orange-200 via-amber-100 to-orange-50" />
                   <div className="menu-card__body">
-                    <h3 className="menu-card__title">{product.name}</h3>
-                    <p className="menu-card__description">{product.description}</p>
-                    <p className="menu-card__price">{product.price}</p>
+                    <h3 className="menu-card__title" style={menuTextStyle}>
+                      {product.name}
+                    </h3>
+                    <p className="menu-card__description" style={menuBodyTextStyle}>
+                      {product.description}
+                    </p>
+                    <p className="menu-card__price" style={menuBodyTextStyle}>
+                      {product.price}
+                    </p>
                   </div>
                 </article>
               ))}
             </div>
             <div className="section-actions">
-              <button type="button" className="ui-btn ui-btn-primary hero-cta" disabled>
+              <button
+                type="button"
+                className="ui-btn ui-btn-primary hero-cta"
+                style={{ fontFamily: content.menu.style.fontFamily }}
+                disabled
+              >
                 {content.menu.ctaLabel}
               </button>
-              <p className="section-text section-text--muted">{content.menu.loadingLabel}</p>
+              <p className="section-text section-text--muted" style={menuBodyTextStyle}>
+                {content.menu.loadingLabel}
+              </p>
             </div>
           </div>
         </section>
       </EditableZoneFrame>
 
       <EditableZoneFrame zone="contact" label="Contact" onEdit={onEdit} className="overflow-hidden" contentClassName="pt-14">
-        <section className="section section-surface">
-          <div className="section-inner section-inner--wide section-inner--center">
-            <h2 className="section-title">{content.contact.title}</h2>
+        <section className="section section-surface" style={{ ...contactBackgroundStyle, ...contactTextStyle }}>
+          <div className="section-inner section-inner--wide section-inner--center" style={contactTextStyle}>
+            <h2 className="section-title" style={contactTextStyle}>
+              {content.contact.title}
+            </h2>
             {content.contact.image && (
               <img
                 src={content.contact.image}
@@ -189,20 +265,32 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
               />
             )}
             <div className="contact-grid">
-              <div className="contact-card">
+              <div className="contact-card" style={contactTextStyle}>
                 <MapPin className="contact-card__icon" />
-                <h3 className="contact-card__title">{content.contact.addressLabel}</h3>
-                <p className="contact-card__text">{content.contact.address}</p>
+                <h3 className="contact-card__title" style={contactTextStyle}>
+                  {content.contact.addressLabel}
+                </h3>
+                <p className="contact-card__text" style={contactBodyTextStyle}>
+                  {content.contact.address}
+                </p>
               </div>
-              <div className="contact-card">
+              <div className="contact-card" style={contactTextStyle}>
                 <Phone className="contact-card__icon" />
-                <h3 className="contact-card__title">{content.contact.phoneLabel}</h3>
-                <p className="contact-card__text">{content.contact.phone}</p>
+                <h3 className="contact-card__title" style={contactTextStyle}>
+                  {content.contact.phoneLabel}
+                </h3>
+                <p className="contact-card__text" style={contactBodyTextStyle}>
+                  {content.contact.phone}
+                </p>
               </div>
-              <div className="contact-card">
+              <div className="contact-card" style={contactTextStyle}>
                 <Mail className="contact-card__icon" />
-                <h3 className="contact-card__title">{content.contact.emailLabel}</h3>
-                <p className="contact-card__text">{content.contact.email}</p>
+                <h3 className="contact-card__title" style={contactTextStyle}>
+                  {content.contact.emailLabel}
+                </h3>
+                <p className="contact-card__text" style={contactBodyTextStyle}>
+                  {content.contact.email}
+                </p>
               </div>
             </div>
           </div>
@@ -210,9 +298,9 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
       </EditableZoneFrame>
 
       <EditableZoneFrame zone="footer" label="Pied de page" onEdit={onEdit} contentClassName="pt-14">
-        <footer className="site-footer">
-          <div className="layout-container site-footer__inner">
-            <p>
+        <footer className="site-footer" style={{ ...footerBackgroundStyle, ...footerTextStyle }}>
+          <div className="layout-container site-footer__inner" style={footerTextStyle}>
+            <p style={footerTextStyle}>
               &copy; {new Date().getFullYear()} {content.navigation.brand}. {content.footer.text}
             </p>
           </div>

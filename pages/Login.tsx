@@ -9,6 +9,12 @@ import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 import useSiteContent from '../hooks/useSiteContent';
+import {
+  createBackgroundStyle,
+  createBodyTextStyle,
+  createHeroBackgroundStyle,
+  createTextStyle,
+} from '../utils/siteStyleHelpers';
 
 type PinInputProps = {
   pin: string;
@@ -138,7 +144,23 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { content: siteContent } = useSiteContent();
   const { navigation, hero, about, menu: menuContent, contact, footer } = siteContent;
-  const heroBackgroundStyle = hero.backgroundImage ? { backgroundImage: `url('${hero.backgroundImage}')` } : undefined;
+  const navigationBackgroundStyle = createBackgroundStyle(navigation.style);
+  const navigationTextStyle = createTextStyle(navigation.style);
+  const navigationBodyStyle = createBodyTextStyle(navigation.style);
+  const heroBackgroundStyle = createHeroBackgroundStyle(hero.style, hero.backgroundImage);
+  const heroTextStyle = createTextStyle(hero.style);
+  const heroBodyTextStyle = createBodyTextStyle(hero.style);
+  const aboutBackgroundStyle = createBackgroundStyle(about.style);
+  const aboutTextStyle = createTextStyle(about.style);
+  const aboutBodyTextStyle = createBodyTextStyle(about.style);
+  const menuBackgroundStyle = createBackgroundStyle(menuContent.style);
+  const menuTextStyle = createTextStyle(menuContent.style);
+  const menuBodyTextStyle = createBodyTextStyle(menuContent.style);
+  const contactBackgroundStyle = createBackgroundStyle(contact.style);
+  const contactTextStyle = createTextStyle(contact.style);
+  const contactBodyTextStyle = createBodyTextStyle(contact.style);
+  const footerBackgroundStyle = createBackgroundStyle(footer.style);
+  const footerTextStyle = createBodyTextStyle(footer.style);
 
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [orderHistory, setOrderHistory] = useState<Order[]>([]);
@@ -227,40 +249,80 @@ const Login: React.FC = () => {
 
   return (
     <div className="login-page">
-      <header className="login-header">
-        <div className="layout-container login-header__inner">
-          <a href="#accueil" className="login-brand">{navigation.brand}</a>
+      <header className="login-header" style={navigationBackgroundStyle}>
+        <div className="layout-container login-header__inner" style={navigationTextStyle}>
+          <a href="#accueil" className="login-brand" style={navigationTextStyle}>
+            {navigation.brand}
+          </a>
           <nav className="login-nav" aria-label="Navigation principale">
-            <a href="#accueil" className="login-nav__link">{navigation.links.home}</a>
-            <a href="#apropos" className="login-nav__link">{navigation.links.about}</a>
-            <a href="#menu" className="login-nav__link">{navigation.links.menu}</a>
-            <a href="#contact" className="login-nav__link">{navigation.links.contact}</a>
-            <button type="button" onClick={() => setIsModalOpen(true)} className="ui-btn ui-btn-accent login-nav__cta">
+            <a href="#accueil" className="login-nav__link" style={navigationBodyStyle}>
+              {navigation.links.home}
+            </a>
+            <a href="#apropos" className="login-nav__link" style={navigationBodyStyle}>
+              {navigation.links.about}
+            </a>
+            <a href="#menu" className="login-nav__link" style={navigationBodyStyle}>
+              {navigation.links.menu}
+            </a>
+            <a href="#contact" className="login-nav__link" style={navigationBodyStyle}>
+              {navigation.links.contact}
+            </a>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="ui-btn ui-btn-accent login-nav__cta"
+              style={{ fontFamily: navigation.style.fontFamily }}
+            >
               {navigation.links.loginCta}
             </button>
           </nav>
-          <button type="button" onClick={() => setMobileMenuOpen(true)} className="login-header__menu" aria-label="Ouvrir le menu">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="login-header__menu"
+            aria-label="Ouvrir le menu"
+          >
             <Menu size={24} />
           </button>
         </div>
       </header>
 
       {isMobileMenuOpen && (
-        <div className="login-menu-overlay" role="dialog" aria-modal="true">
+        <div className="login-menu-overlay" role="dialog" aria-modal="true" style={navigationBackgroundStyle}>
           <button type="button" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__close" aria-label="Fermer le menu">
             <X size={28} />
           </button>
-          <nav className="login-menu-overlay__nav" aria-label="Navigation mobile">
-            <a href="#accueil" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">
+          <nav className="login-menu-overlay__nav" aria-label="Navigation mobile" style={navigationTextStyle}>
+            <a
+              href="#accueil"
+              onClick={() => setMobileMenuOpen(false)}
+              className="login-menu-overlay__link"
+              style={navigationBodyStyle}
+            >
               {navigation.links.home}
             </a>
-            <a href="#apropos" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">
+            <a
+              href="#apropos"
+              onClick={() => setMobileMenuOpen(false)}
+              className="login-menu-overlay__link"
+              style={navigationBodyStyle}
+            >
               {navigation.links.about}
             </a>
-            <a href="#menu" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">
+            <a
+              href="#menu"
+              onClick={() => setMobileMenuOpen(false)}
+              className="login-menu-overlay__link"
+              style={navigationBodyStyle}
+            >
               {navigation.links.menu}
             </a>
-            <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="login-menu-overlay__link">
+            <a
+              href="#contact"
+              onClick={() => setMobileMenuOpen(false)}
+              className="login-menu-overlay__link"
+              style={navigationBodyStyle}
+            >
               {navigation.links.contact}
             </a>
             <button
@@ -270,6 +332,7 @@ const Login: React.FC = () => {
                 setMobileMenuOpen(false);
               }}
               className="ui-btn ui-btn-accent hero-cta"
+              style={{ fontFamily: navigation.style.fontFamily }}
             >
               {navigation.links.loginCta}
             </button>
@@ -278,31 +341,46 @@ const Login: React.FC = () => {
       )}
 
       <main>
-        <section id="accueil" className="section section-hero" style={heroBackgroundStyle}>
+        <section id="accueil" className="section section-hero" style={{ ...heroBackgroundStyle, ...heroTextStyle }}>
           <div className="section-hero__inner">
             {activeOrderId ? (
               <CustomerOrderTracker orderId={activeOrderId} onNewOrderClick={handleNewOrder} variant="hero" />
             ) : (
-                <div className="hero-content">
-                  <h2 className="hero-title">{hero.title}</h2>
-                  <p className="hero-subtitle">{hero.subtitle}</p>
-                  <button onClick={() => navigate('/commande-client')} className="ui-btn ui-btn-accent hero-cta">
-                    {hero.ctaLabel}
-                  </button>
-                  {orderHistory.length > 0 && (
-                    <div className="hero-history">
-                      <p className="hero-history__title">{hero.historyTitle}</p>
+              <div className="hero-content" style={heroTextStyle}>
+                <h2 className="hero-title" style={heroTextStyle}>
+                  {hero.title}
+                </h2>
+                <p className="hero-subtitle" style={heroBodyTextStyle}>
+                  {hero.subtitle}
+                </p>
+                <button
+                  onClick={() => navigate('/commande-client')}
+                  className="ui-btn ui-btn-accent hero-cta"
+                  style={{ fontFamily: hero.style.fontFamily }}
+                >
+                  {hero.ctaLabel}
+                </button>
+                {orderHistory.length > 0 && (
+                  <div className="hero-history">
+                    <p className="hero-history__title" style={heroBodyTextStyle}>
+                      {hero.historyTitle}
+                    </p>
                     <div className="hero-history__list">
                       {orderHistory.slice(0, 3).map(order => (
                         <div key={order.id} className="hero-history__item">
                           <div className="hero-history__meta">
-                            <p className="hero-history__date">Commande du {new Date(order.date_creation).toLocaleDateString()}</p>
-                            <p className="hero-history__details">{order.items.length} article(s) • {formatIntegerAmount(order.total)}€</p>
+                            <p className="hero-history__date" style={heroBodyTextStyle}>
+                              Commande du {new Date(order.date_creation).toLocaleDateString()}
+                            </p>
+                            <p className="hero-history__details" style={heroBodyTextStyle}>
+                              {order.items.length} article(s) • {formatIntegerAmount(order.total)}€
+                            </p>
                           </div>
                           <button
                             type="button"
                             onClick={() => handleQuickReorder(order.id)}
                             className="hero-history__cta"
+                            style={{ fontFamily: hero.style.fontFamily }}
                           >
                             {hero.reorderCtaLabel}
                           </button>
@@ -316,10 +394,18 @@ const Login: React.FC = () => {
           </div>
         </section>
 
-        <section id="apropos" className="section section-surface">
-          <div className="section-inner section-inner--center">
-            <h2 className="section-title">{about.title}</h2>
-            <p className="section-text section-text--muted">{about.description}</p>
+        <section
+          id="apropos"
+          className="section section-surface"
+          style={{ ...aboutBackgroundStyle, ...aboutTextStyle }}
+        >
+          <div className="section-inner section-inner--center" style={aboutTextStyle}>
+            <h2 className="section-title" style={aboutTextStyle}>
+              {about.title}
+            </h2>
+            <p className="section-text section-text--muted" style={aboutBodyTextStyle}>
+              {about.description}
+            </p>
             {about.image && (
               <img
                 src={about.image}
@@ -330,9 +416,15 @@ const Login: React.FC = () => {
           </div>
         </section>
 
-        <section id="menu" className="section section-muted">
-          <div className="section-inner section-inner--wide section-inner--center">
-            <h2 className="section-title">{menuContent.title}</h2>
+        <section
+          id="menu"
+          className="section section-muted"
+          style={{ ...menuBackgroundStyle, ...menuTextStyle }}
+        >
+          <div className="section-inner section-inner--wide section-inner--center" style={menuTextStyle}>
+            <h2 className="section-title" style={menuTextStyle}>
+              {menuContent.title}
+            </h2>
             {menuContent.image && (
               <img
                 src={menuContent.image}
@@ -341,32 +433,50 @@ const Login: React.FC = () => {
               />
             )}
             {menuLoading ? (
-              <p className="section-text section-text--muted">{menuContent.loadingLabel}</p>
+              <p className="section-text section-text--muted" style={menuBodyTextStyle}>
+                {menuContent.loadingLabel}
+              </p>
             ) : (
               <div className={menuGridClassName}>
                 {bestSellersToDisplay.map(product => (
                   <article key={product.id} className={menuCardClassName}>
                     <img src={product.image} alt={product.nom_produit} className="menu-card__media" />
                     <div className="menu-card__body">
-                      <h3 className="menu-card__title">{product.nom_produit}</h3>
-                      <p className="menu-card__description">{product.description}</p>
-                      <p className="menu-card__price">{formatIntegerAmount(product.prix_vente)} €</p>
+                      <h3 className="menu-card__title" style={menuTextStyle}>
+                        {product.nom_produit}
+                      </h3>
+                      <p className="menu-card__description" style={menuBodyTextStyle}>
+                        {product.description}
+                      </p>
+                      <p className="menu-card__price" style={menuBodyTextStyle}>
+                        {formatIntegerAmount(product.prix_vente)} €
+                      </p>
                     </div>
                   </article>
                 ))}
               </div>
             )}
             <div className="section-actions">
-              <button onClick={() => navigate('/commande-client')} className="ui-btn ui-btn-primary hero-cta">
+              <button
+                onClick={() => navigate('/commande-client')}
+                className="ui-btn ui-btn-primary hero-cta"
+                style={{ fontFamily: menuContent.style.fontFamily }}
+              >
                 {menuContent.ctaLabel}
               </button>
             </div>
           </div>
         </section>
 
-        <section id="contact" className="section section-surface">
-          <div className="section-inner section-inner--wide section-inner--center">
-            <h2 className="section-title">{contact.title}</h2>
+        <section
+          id="contact"
+          className="section section-surface"
+          style={{ ...contactBackgroundStyle, ...contactTextStyle }}
+        >
+          <div className="section-inner section-inner--wide section-inner--center" style={contactTextStyle}>
+            <h2 className="section-title" style={contactTextStyle}>
+              {contact.title}
+            </h2>
             {contact.image && (
               <img
                 src={contact.image}
@@ -375,29 +485,41 @@ const Login: React.FC = () => {
               />
             )}
             <div className="contact-grid">
-              <div className="contact-card">
+              <div className="contact-card" style={contactTextStyle}>
                 <MapPin className="contact-card__icon" />
-                <h3 className="contact-card__title">{contact.addressLabel}</h3>
-                <p className="contact-card__text">{contact.address}</p>
+                <h3 className="contact-card__title" style={contactTextStyle}>
+                  {contact.addressLabel}
+                </h3>
+                <p className="contact-card__text" style={contactBodyTextStyle}>
+                  {contact.address}
+                </p>
               </div>
-              <div className="contact-card">
+              <div className="contact-card" style={contactTextStyle}>
                 <Phone className="contact-card__icon" />
-                <h3 className="contact-card__title">{contact.phoneLabel}</h3>
-                <p className="contact-card__text">{contact.phone}</p>
+                <h3 className="contact-card__title" style={contactTextStyle}>
+                  {contact.phoneLabel}
+                </h3>
+                <p className="contact-card__text" style={contactBodyTextStyle}>
+                  {contact.phone}
+                </p>
               </div>
-              <div className="contact-card">
+              <div className="contact-card" style={contactTextStyle}>
                 <Mail className="contact-card__icon" />
-                <h3 className="contact-card__title">{contact.emailLabel}</h3>
-                <p className="contact-card__text">{contact.email}</p>
+                <h3 className="contact-card__title" style={contactTextStyle}>
+                  {contact.emailLabel}
+                </h3>
+                <p className="contact-card__text" style={contactBodyTextStyle}>
+                  {contact.email}
+                </p>
               </div>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="site-footer">
-        <div className="layout-container site-footer__inner">
-          <p>
+      <footer className="site-footer" style={{ ...footerBackgroundStyle, ...footerTextStyle }}>
+        <div className="layout-container site-footer__inner" style={footerTextStyle}>
+          <p style={footerTextStyle}>
             &copy; {new Date().getFullYear()} {navigation.brand}. {footer.text}
           </p>
         </div>
