@@ -122,7 +122,7 @@ const Login: React.FC = () => {
   const { navigation, hero, about, menu: menuContent, contact, footer } = siteContent;
   const heroBackgroundStyle = hero.backgroundImage ? { backgroundImage: `url('${hero.backgroundImage}')` } : undefined;
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [orderHistory, setOrderHistory] = useState<Order[]>([]);
   const [menuLoading, setMenuLoading] = useState(true);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -164,8 +164,8 @@ const Login: React.FC = () => {
     const fetchMenuPreview = async () => {
       try {
         setMenuLoading(true);
-        const topProducts = await api.getTopSellingProducts();
-        setProducts(topProducts);
+        const bestSellerProducts = await api.getBestSellerProducts();
+        setBestSellers(bestSellerProducts.slice(0, 6));
       } catch (error) {
         console.error("Failed to fetch menu preview:", error);
       } finally {
@@ -322,7 +322,7 @@ const Login: React.FC = () => {
               <p className="section-text section-text--muted">{menuContent.loadingLabel}</p>
             ) : (
               <div className="menu-grid">
-                {products.map(product => (
+                {bestSellers.slice(0, 6).map(product => (
                   <article key={product.id} className="ui-card menu-card">
                     <img src={product.image} alt={product.nom_produit} className="menu-card__media" />
                     <div className="menu-card__body">

@@ -79,6 +79,8 @@ export interface Product {
   image: string; // URL from Cloud Storage
   recipe: RecipeItem[];
   cout_revient?: number;
+  is_best_seller: boolean;
+  best_seller_rank: number | null;
 }
 
 export interface Category {
