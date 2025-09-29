@@ -4,11 +4,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { uploadPaymentReceipt } from '../services/cloudinary';
 import { Order, Product, Category, OrderItem, Ingredient } from '../types';
-import { PlusCircle, MinusCircle, Send, DollarSign, AlertTriangle, Check, ArrowLeft, MessageSquare } from 'lucide-react';
+import { PlusCircle, MinusCircle, Send, DollarSign, Check, ArrowLeft, MessageSquare } from 'lucide-react';
 import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 import PaymentModal from '../components/PaymentModal';
 import Modal from '../components/Modal';
 import { createOrderItemsSnapshot, areOrderItemSnapshotsEqual, type OrderItemsSnapshot } from '../utils/orderSync';
+import ProductGrid from '../components/commande/ProductGrid';
 
 const isPersistedItemId = (value?: string) =>
     !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -569,10 +570,6 @@ const Commande: React.FC = () => {
         }
     };
 
-    const filteredProducts = activeCategoryId === 'all'
-        ? products
-        : products.filter(p => p.categoria_id === activeCategoryId);
-
     const orderItems = order?.items ?? [];
 
     const categorizedItems = useMemo(() => {
@@ -608,7 +605,7 @@ const Commande: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[calc(100vh-12rem)] lg:h-[calc(100vh-10rem)]">
             {/* Menu Section */}
             <div className="lg:col-span-2 ui-card flex flex-col">
-            <div className="p-4 border-b">
+                <div className="p-4">
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-4">
                             <button onClick={handleExitAttempt} className="ui-btn-dark" title="Retour au plan de salle">
@@ -620,49 +617,18 @@ const Commande: React.FC = () => {
                             <h2 className="text-2xl font-semibold text-white">Table {order.table_nom}</h2>
                         </div>
                     </div>
-                    <div className="flex space-x-2 mt-4 overflow-x-auto pb-2">
-                        <button onClick={() => setActiveCategoryId('all')}
-                            className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap ${activeCategoryId === 'all' ? 'bg-brand-primary text-brand-secondary' : 'bg-gray-200 text-gray-700'}`}>
-                            Tous
-                        </button>
-                        {categories.map(cat => (
-                            <button key={cat.id} onClick={() => setActiveCategoryId(cat.id)}
-                                className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap ${activeCategoryId === cat.id ? 'bg-brand-primary text-brand-secondary' : 'bg-gray-200 text-gray-700'}`}>
-                                {cat.nom}
-                            </button>
-                        ))}
-                    </div>
                 </div>
-                <div className="p-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 overflow-y-auto">
-                    {filteredProducts.map(product => {
-                        const isLowStock = !isProductAvailable(product);
-                        const quantityInCart = productQuantitiesInCart[product.id] || 0;
-                        return (
-                            <button
-                                key={product.id}
-                                type="button"
-                                onPointerDown={handleProductPointerDown(product)}
-                                onKeyDown={handleProductKeyDown(product)}
-                                className={`border rounded-lg p-2 flex flex-col items-center justify-between text-center cursor-pointer hover:shadow-lg transition-all relative focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-gray-900 ${isLowStock ? 'border-yellow-500 border-2' : ''}`}
-                            >
-                                {quantityInCart > 0 && (
-                                    <div className="absolute top-1 left-1 bg-brand-accent text-white rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
-                                        {quantityInCart}
-                                    </div>
-                                )}
-                                {isLowStock && (
-                                    <div className="absolute top-1 right-1 bg-yellow-500 text-white rounded-full p-1" title="Stock bas">
-                                        <AlertTriangle size={16} />
-                                    </div>
-                                )}
-                                <img src={product.image} alt={product.nom_produit} className="w-24 h-24 object-cover rounded-md mb-2" />
-                                <p className="font-semibold text-sm text-gray-800">{product.nom_produit}</p>
-                                <p className="text-xs text-gray-600 px-1 h-10 overflow-hidden flex-grow">{product.description}</p>
-                                <p className="font-bold text-brand-primary mt-1">{formatIntegerAmount(product.prix_vente)} €</p>
-                            </button>
-                        )
-                    })}
-                </div>
+                <ProductGrid
+                    products={products}
+                    quantities={productQuantitiesInCart}
+                    onAdd={addProductToOrder}
+                    activeCategoryId={activeCategoryId}
+                    categories={categories}
+                    onSelectCategory={setActiveCategoryId}
+                    isProductAvailable={isProductAvailable}
+                    handleProductPointerDown={handleProductPointerDown}
+                    handleProductKeyDown={handleProductKeyDown}
+                />
             </div>
 
             {/* Order Summary Section */}
