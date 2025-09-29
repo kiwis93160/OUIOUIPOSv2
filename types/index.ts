@@ -10,6 +10,19 @@ export interface Role {
   };
 }
 
+export interface SectionBackgroundStyle {
+  type: 'color' | 'image';
+  color: string;
+  image: string | null;
+}
+
+export interface SectionStyle {
+  background: SectionBackgroundStyle;
+  fontFamily: string;
+  fontSize: string;
+  textColor: string;
+}
+
 export interface SiteContent {
   navigation: {
     brand: string;
@@ -20,6 +33,7 @@ export interface SiteContent {
       contact: string;
       loginCta: string;
     };
+    style: SectionStyle;
   };
   hero: {
     title: string;
@@ -28,17 +42,20 @@ export interface SiteContent {
     backgroundImage: string | null;
     historyTitle: string;
     reorderCtaLabel: string;
+    style: SectionStyle;
   };
   about: {
     title: string;
     description: string;
     image: string | null;
+    style: SectionStyle;
   };
   menu: {
     title: string;
     ctaLabel: string;
     loadingLabel: string;
     image: string | null;
+    style: SectionStyle;
   };
   contact: {
     title: string;
@@ -49,9 +66,11 @@ export interface SiteContent {
     emailLabel: string;
     email: string;
     image: string | null;
+    style: SectionStyle;
   };
   footer: {
     text: string;
+    style: SectionStyle;
   };
 }
 

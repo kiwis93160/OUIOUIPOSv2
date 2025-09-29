@@ -1,7 +1,22 @@
-import { SiteContent } from '../types';
+import { SectionStyle, SiteContent } from '../types';
 import { normalizeCloudinaryImageUrl } from '../services/cloudinary';
 
 const trimOrEmpty = (value: string): string => value.trim();
+
+const isValidHexColor = (value: string | null | undefined): value is string =>
+  typeof value === 'string' && /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(value.trim());
+
+export const ALLOWED_FONT_FAMILIES = ['Inter', 'Poppins', 'Playfair Display', 'Roboto', 'Montserrat'] as const;
+export const ALLOWED_FONT_SIZES = ['14px', '16px', '18px', '20px', '24px'] as const;
+
+const resolveFontFamily = (value: string | null | undefined, fallback: string): string =>
+  value && ALLOWED_FONT_FAMILIES.includes(value as (typeof ALLOWED_FONT_FAMILIES)[number]) ? value : fallback;
+
+const resolveFontSize = (value: string | null | undefined, fallback: string): string =>
+  value && ALLOWED_FONT_SIZES.includes(value as (typeof ALLOWED_FONT_SIZES)[number]) ? value : fallback;
+
+const resolveColor = (value: string | null | undefined, fallback: string): string =>
+  isValidHexColor(value) ? value.trim() : fallback;
 
 const resolveString = (value: string | null | undefined, fallback: string): string => {
   if (typeof value !== 'string') {
@@ -30,6 +45,109 @@ const sanitizeImage = (value: string | null | undefined): string | null => {
   return normalized ?? null;
 };
 
+const DEFAULT_NAVIGATION_STYLE: SectionStyle = {
+  background: {
+    type: 'color',
+    color: '#0f172a',
+    image: null,
+  },
+  fontFamily: 'Inter',
+  fontSize: '16px',
+  textColor: '#f1f5f9',
+};
+
+const DEFAULT_HERO_STYLE: SectionStyle = {
+  background: {
+    type: 'image',
+    color: '#0f172a',
+    image: 'https://picsum.photos/seed/tacosbg/1920/1080',
+  },
+  fontFamily: 'Inter',
+  fontSize: '18px',
+  textColor: '#f8fafc',
+};
+
+const DEFAULT_ABOUT_STYLE: SectionStyle = {
+  background: {
+    type: 'color',
+    color: '#ffffff',
+    image: null,
+  },
+  fontFamily: 'Inter',
+  fontSize: '16px',
+  textColor: '#0f172a',
+};
+
+const DEFAULT_MENU_STYLE: SectionStyle = {
+  background: {
+    type: 'color',
+    color: '#f8fafc',
+    image: null,
+  },
+  fontFamily: 'Inter',
+  fontSize: '16px',
+  textColor: '#111827',
+};
+
+const DEFAULT_CONTACT_STYLE: SectionStyle = {
+  background: {
+    type: 'color',
+    color: '#ffffff',
+    image: null,
+  },
+  fontFamily: 'Inter',
+  fontSize: '16px',
+  textColor: '#111827',
+};
+
+const DEFAULT_FOOTER_STYLE: SectionStyle = {
+  background: {
+    type: 'color',
+    color: '#0f172a',
+    image: null,
+  },
+  fontFamily: 'Inter',
+  fontSize: '14px',
+  textColor: '#e2e8f0',
+};
+
+const resolveSectionStyle = (style: Partial<SectionStyle> | undefined, fallback: SectionStyle): SectionStyle => {
+  const backgroundType = style?.background?.type === 'image' ? 'image' : 'color';
+  const backgroundColor = resolveColor(style?.background?.color, fallback.background.color);
+  const backgroundImage =
+    backgroundType === 'image'
+      ? resolveImage(style?.background?.image ?? undefined, fallback.background.image)
+      : null;
+
+  return {
+    background: {
+      type: backgroundType,
+      color: backgroundType === 'color' ? backgroundColor : resolveColor(style?.background?.color, fallback.background.color),
+      image: backgroundType === 'image' ? backgroundImage : null,
+    },
+    fontFamily: resolveFontFamily(style?.fontFamily ?? null, fallback.fontFamily),
+    fontSize: resolveFontSize(style?.fontSize ?? null, fallback.fontSize),
+    textColor: resolveColor(style?.textColor ?? null, fallback.textColor),
+  };
+};
+
+const sanitizeSectionStyle = (style: SectionStyle | undefined, fallback: SectionStyle): SectionStyle => {
+  const backgroundType = style?.background?.type === 'image' ? 'image' : 'color';
+  const sanitizedColor = resolveColor(style?.background?.color ?? null, fallback.background.color);
+  const sanitizedImage = backgroundType === 'image' ? sanitizeImage(style?.background?.image ?? null) : null;
+
+  return {
+    background: {
+      type: backgroundType,
+      color: sanitizedColor,
+      image: backgroundType === 'image' ? sanitizedImage : null,
+    },
+    fontFamily: resolveFontFamily(style?.fontFamily ?? null, fallback.fontFamily),
+    fontSize: resolveFontSize(style?.fontSize ?? null, fallback.fontSize),
+    textColor: resolveColor(style?.textColor ?? null, fallback.textColor),
+  };
+};
+
 export const DEFAULT_SITE_CONTENT: SiteContent = {
   navigation: {
     brand: 'OUIOUITACOS',
@@ -40,6 +158,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       contact: 'Contact',
       loginCta: 'Staff Login',
     },
+    style: DEFAULT_NAVIGATION_STYLE,
   },
   hero: {
     title: 'Le Goût Authentique du Mexique',
@@ -49,18 +168,21 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     backgroundImage: 'https://picsum.photos/seed/tacosbg/1920/1080',
     historyTitle: 'Vos dernières commandes',
     reorderCtaLabel: 'Commander à nouveau',
+    style: DEFAULT_HERO_STYLE,
   },
   about: {
     title: 'Notre Histoire',
     description:
       "Fondé par des passionnés de la cuisine mexicaine, OUIOUITACOS est né d'un désir simple : partager le goût authentique des tacos faits maison. Chaque recette est un héritage familial, chaque ingrédient est choisi avec soin, et chaque plat est préparé avec le cœur. Venez découvrir une explosion de saveurs qui vous transportera directement dans les rues de Mexico.",
     image: null,
+    style: DEFAULT_ABOUT_STYLE,
   },
   menu: {
     title: 'Nos Best-sellers',
     ctaLabel: 'Voir le menu complet & Commander',
     loadingLabel: 'Chargement du menu...',
     image: null,
+    style: DEFAULT_MENU_STYLE,
   },
   contact: {
     title: 'Contactez-nous',
@@ -71,9 +193,11 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     emailLabel: 'Email',
     email: 'contact@ouiouitacos.fr',
     image: null,
+    style: DEFAULT_CONTACT_STYLE,
   },
   footer: {
     text: 'Tous droits réservés.',
+    style: DEFAULT_FOOTER_STYLE,
   },
 };
 
@@ -89,6 +213,7 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
         contact: resolveString(content?.navigation?.links?.contact, base.navigation.links.contact),
         loginCta: resolveString(content?.navigation?.links?.loginCta, base.navigation.links.loginCta),
       },
+      style: resolveSectionStyle(content?.navigation?.style, base.navigation.style),
     },
     hero: {
       title: resolveString(content?.hero?.title, base.hero.title),
@@ -97,17 +222,20 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
       backgroundImage: resolveImage(content?.hero?.backgroundImage, base.hero.backgroundImage),
       historyTitle: resolveString(content?.hero?.historyTitle, base.hero.historyTitle),
       reorderCtaLabel: resolveString(content?.hero?.reorderCtaLabel, base.hero.reorderCtaLabel),
+      style: resolveSectionStyle(content?.hero?.style, base.hero.style),
     },
     about: {
       title: resolveString(content?.about?.title, base.about.title),
       description: resolveString(content?.about?.description, base.about.description),
       image: resolveImage(content?.about?.image, base.about.image),
+      style: resolveSectionStyle(content?.about?.style, base.about.style),
     },
     menu: {
       title: resolveString(content?.menu?.title, base.menu.title),
       ctaLabel: resolveString(content?.menu?.ctaLabel, base.menu.ctaLabel),
       loadingLabel: resolveString(content?.menu?.loadingLabel, base.menu.loadingLabel),
       image: resolveImage(content?.menu?.image, base.menu.image),
+      style: resolveSectionStyle(content?.menu?.style, base.menu.style),
     },
     contact: {
       title: resolveString(content?.contact?.title, base.contact.title),
@@ -118,9 +246,11 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
       emailLabel: resolveString(content?.contact?.emailLabel, base.contact.emailLabel),
       email: resolveString(content?.contact?.email, base.contact.email),
       image: resolveImage(content?.contact?.image, base.contact.image),
+      style: resolveSectionStyle(content?.contact?.style, base.contact.style),
     },
     footer: {
       text: resolveString(content?.footer?.text, base.footer.text),
+      style: resolveSectionStyle(content?.footer?.style, base.footer.style),
     },
   };
 };
@@ -135,6 +265,7 @@ export const sanitizeSiteContentInput = (content: SiteContent): SiteContent => (
       contact: trimOrEmpty(content.navigation.links.contact),
       loginCta: trimOrEmpty(content.navigation.links.loginCta),
     },
+    style: sanitizeSectionStyle(content.navigation.style, DEFAULT_NAVIGATION_STYLE),
   },
   hero: {
     title: trimOrEmpty(content.hero.title),
@@ -143,17 +274,20 @@ export const sanitizeSiteContentInput = (content: SiteContent): SiteContent => (
     backgroundImage: sanitizeImage(content.hero.backgroundImage),
     historyTitle: trimOrEmpty(content.hero.historyTitle),
     reorderCtaLabel: trimOrEmpty(content.hero.reorderCtaLabel),
+    style: sanitizeSectionStyle(content.hero.style, DEFAULT_HERO_STYLE),
   },
   about: {
     title: trimOrEmpty(content.about.title),
     description: trimOrEmpty(content.about.description),
     image: sanitizeImage(content.about.image),
+    style: sanitizeSectionStyle(content.about.style, DEFAULT_ABOUT_STYLE),
   },
   menu: {
     title: trimOrEmpty(content.menu.title),
     ctaLabel: trimOrEmpty(content.menu.ctaLabel),
     loadingLabel: trimOrEmpty(content.menu.loadingLabel),
     image: sanitizeImage(content.menu.image),
+    style: sanitizeSectionStyle(content.menu.style, DEFAULT_MENU_STYLE),
   },
   contact: {
     title: trimOrEmpty(content.contact.title),
@@ -164,8 +298,10 @@ export const sanitizeSiteContentInput = (content: SiteContent): SiteContent => (
     emailLabel: trimOrEmpty(content.contact.emailLabel),
     email: trimOrEmpty(content.contact.email),
     image: sanitizeImage(content.contact.image),
+    style: sanitizeSectionStyle(content.contact.style, DEFAULT_CONTACT_STYLE),
   },
   footer: {
     text: trimOrEmpty(content.footer.text),
+    style: sanitizeSectionStyle(content.footer.style, DEFAULT_FOOTER_STYLE),
   },
 });
