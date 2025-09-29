@@ -12,6 +12,7 @@ export interface RoleFormState {
   pin: string;
   homePage: string;
   permissions: Role['permissions'];
+  customPermissions: Record<string, string>;
 }
 
 interface UseRoleManagerArgs {
@@ -33,6 +34,7 @@ const isAdminRoleName = (name?: string | null): boolean => {
 const ensureNavPermissions = (
   permissions?: Role['permissions'],
   roleName?: string | null,
+  customPermissions: Record<string, string> = {},
 ): Role['permissions'] => {
   const base: Record<string, PermissionLevel> = { ...(permissions || {}) };
   delete base[ROLE_HOME_PAGE_META_KEY];
@@ -47,6 +49,12 @@ const ensureNavPermissions = (
     }
   });
 
+  Object.keys(customPermissions).forEach(key => {
+    if (!(key in base)) {
+      base[key] = 'none';
+    }
+  });
+
   return base;
 };
 
@@ -55,13 +63,14 @@ const getDefaultHomePage = (permissions: Role['permissions']): string => {
   return accessibleLink?.permissionKey ?? DEFAULT_HOME_PAGE;
 };
 
-const createEmptyFormState = (): RoleFormState => {
-  const permissions = ensureNavPermissions();
+const createEmptyFormState = (customPermissions: Record<string, string>): RoleFormState => {
+  const permissions = ensureNavPermissions(undefined, undefined, customPermissions);
   return {
     name: '',
     pin: '',
     permissions,
     homePage: getDefaultHomePage(permissions),
+    customPermissions: { ...customPermissions },
   };
 };
 
@@ -70,7 +79,8 @@ export const isPermissionGranted = (permission?: PermissionLevel) => permission 
 export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
   const { refreshRole, role: currentRole } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
-  const [formState, setFormState] = useState<RoleFormState>(createEmptyFormState);
+  const [customPermissionRegistry, setCustomPermissionRegistry] = useState<Record<string, string>>({});
+  const [formState, setFormState] = useState<RoleFormState>(() => createEmptyFormState({}));
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [isFetching, setIsFetching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,6 +91,12 @@ export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
   const permissionKeys = useMemo(() => {
     const navKeys = NAV_LINKS.map(link => link.permissionKey);
     const extraKeys = new Set<string>();
+
+    Object.keys(customPermissionRegistry).forEach(key => {
+      if (!navKeys.includes(key)) {
+        extraKeys.add(key);
+      }
+    });
 
     roles.forEach(role => {
       Object.keys(role.permissions).forEach(key => {
@@ -94,7 +110,7 @@ export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
     });
 
     return [...navKeys, ...Array.from(extraKeys)];
-  }, [roles]);
+  }, [roles, customPermissionRegistry]);
 
   const hasAccessibleHomePage = useMemo(
     () => NAV_LINKS.some(link => isPermissionGranted(formState.permissions[link.permissionKey])),
@@ -106,6 +122,25 @@ export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
     try {
       const fetchedRoles = await api.getRoles();
       setRoles(fetchedRoles);
+      setCustomPermissionRegistry(prev => {
+        const next = { ...prev };
+        let hasChanged = false;
+        const navKeys = new Set(NAV_LINKS.map(link => link.permissionKey));
+
+        fetchedRoles.forEach(role => {
+          Object.keys(role.permissions).forEach(key => {
+            if (key === ROLE_HOME_PAGE_META_KEY || navKeys.has(key)) {
+              return;
+            }
+            if (!(key in next)) {
+              next[key] = key;
+              hasChanged = true;
+            }
+          });
+        });
+
+        return hasChanged ? next : prev;
+      });
       setErrorMessage(null);
     } catch (error) {
       console.error('Failed to load roles:', error);
@@ -117,8 +152,8 @@ export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
 
   const resetForm = useCallback(() => {
     setMode('create');
-    setFormState(createEmptyFormState());
-  }, []);
+    setFormState(createEmptyFormState(customPermissionRegistry));
+  }, [customPermissionRegistry]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -150,10 +185,46 @@ export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
     });
   }, [formState.permissions]);
 
-  const getPermissionLabel = useCallback((key: string) => {
-    const navLink = NAV_LINKS.find(link => link.permissionKey === key);
-    return navLink ? navLink.name : key;
-  }, []);
+  useEffect(() => {
+    setFormState(prev => {
+      const prevCustom = prev.customPermissions;
+      const nextCustom = customPermissionRegistry;
+
+      const prevKeys = Object.keys(prevCustom);
+      const nextKeys = Object.keys(nextCustom);
+
+      if (
+        prevKeys.length === nextKeys.length &&
+        prevKeys.every(key => nextCustom[key] === prevCustom[key])
+      ) {
+        return prev;
+      }
+
+      const nextPermissions = ensureNavPermissions(prev.permissions, prev.name, nextCustom);
+      const nextHomePage = isPermissionGranted(nextPermissions[prev.homePage])
+        ? prev.homePage
+        : getDefaultHomePage(nextPermissions);
+
+      return {
+        ...prev,
+        customPermissions: { ...nextCustom },
+        permissions: nextPermissions,
+        homePage: nextHomePage,
+      };
+    });
+  }, [customPermissionRegistry]);
+
+  const getPermissionLabel = useCallback(
+    (key: string) => {
+      const navLink = NAV_LINKS.find(link => link.permissionKey === key);
+      if (navLink) {
+        return navLink.name;
+      }
+
+      return customPermissionRegistry[key] ?? key;
+    },
+    [customPermissionRegistry],
+  );
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -181,7 +252,25 @@ export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
   };
 
   const handleSelectRole = (role: Role) => {
-    const permissions = ensureNavPermissions(role.permissions, role.name);
+    const navKeys = new Set(NAV_LINKS.map(link => link.permissionKey));
+    const nextCustomPermissions = { ...customPermissionRegistry };
+    let hasChanged = false;
+
+    Object.keys(role.permissions).forEach(key => {
+      if (key === ROLE_HOME_PAGE_META_KEY || navKeys.has(key)) {
+        return;
+      }
+      if (!(key in nextCustomPermissions)) {
+        nextCustomPermissions[key] = key;
+        hasChanged = true;
+      }
+    });
+
+    if (hasChanged) {
+      setCustomPermissionRegistry(nextCustomPermissions);
+    }
+
+    const permissions = ensureNavPermissions(role.permissions, role.name, hasChanged ? nextCustomPermissions : customPermissionRegistry);
     setMode('edit');
     setFormState({
       id: role.id,
@@ -189,6 +278,7 @@ export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
       pin: role.pin ?? '',
       permissions,
       homePage: role.homePage ?? getDefaultHomePage(permissions),
+      customPermissions: { ...(hasChanged ? nextCustomPermissions : customPermissionRegistry) },
     });
     setStatusMessage(null);
     setErrorMessage(null);
@@ -234,7 +324,11 @@ export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
     setIsSubmitting(true);
 
     try {
-      const permissions = ensureNavPermissions(formState.permissions, formState.name);
+      const permissions = ensureNavPermissions(
+        formState.permissions,
+        formState.name,
+        customPermissionRegistry,
+      );
       const resolvedHomePage = isPermissionGranted(permissions[formState.homePage])
         ? formState.homePage
         : getDefaultHomePage(permissions);
@@ -258,13 +352,18 @@ export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
           homePage: resolvedHomePage,
         });
         setStatusMessage('Rôle mis à jour avec succès.');
-        const nextPermissions = ensureNavPermissions(updatedRole.permissions, updatedRole.name);
+        const nextPermissions = ensureNavPermissions(
+          updatedRole.permissions,
+          updatedRole.name,
+          customPermissionRegistry,
+        );
         setFormState({
           id: updatedRole.id,
           name: updatedRole.name,
           pin: updatedRole.pin ?? '',
           permissions: nextPermissions,
           homePage: updatedRole.homePage ?? getDefaultHomePage(nextPermissions),
+          customPermissions: { ...customPermissionRegistry },
         });
         await loadRoles();
         if (currentRole?.id === updatedRole.id) {
@@ -284,6 +383,69 @@ export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
     setStatusMessage(null);
     setErrorMessage(null);
     onClose();
+  };
+
+  const handleAddCustomPermission = (key: string, label: string) => {
+    if (NAV_LINKS.some(link => link.permissionKey === key)) {
+      return;
+    }
+
+    setCustomPermissionRegistry(prev => {
+      if (prev[key] === label) {
+        return prev;
+      }
+
+      const next = { ...prev, [key]: label };
+
+      setFormState(prevForm => {
+        const nextPermissions = ensureNavPermissions(prevForm.permissions, prevForm.name, next);
+        if (!(key in nextPermissions)) {
+          nextPermissions[key] = 'none';
+        }
+
+        return {
+          ...prevForm,
+          customPermissions: { ...next },
+          permissions: nextPermissions,
+        };
+      });
+
+      return next;
+    });
+  };
+
+  const handleRemoveCustomPermission = (key: string) => {
+    if (NAV_LINKS.some(link => link.permissionKey === key)) {
+      return;
+    }
+
+    setCustomPermissionRegistry(prev => {
+      if (!(key in prev)) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[key];
+
+      setFormState(prevForm => {
+        const { [key]: _removedCustom, ...restCustom } = prevForm.customPermissions;
+        const nextPermissionsBase = { ...prevForm.permissions };
+        delete nextPermissionsBase[key];
+        const nextPermissions = ensureNavPermissions(nextPermissionsBase, prevForm.name, next);
+        const nextHomePage = isPermissionGranted(nextPermissions[prevForm.homePage])
+          ? prevForm.homePage
+          : getDefaultHomePage(nextPermissions);
+
+        return {
+          ...prevForm,
+          customPermissions: { ...restCustom },
+          permissions: nextPermissions,
+          homePage: nextHomePage,
+        };
+      });
+
+      return next;
+    });
   };
 
   return {
@@ -307,6 +469,8 @@ export const useRoleManager = ({ isOpen, onClose }: UseRoleManagerArgs) => {
     resetForm,
     getPermissionLabel,
     isPermissionGranted,
+    handleAddCustomPermission,
+    handleRemoveCustomPermission,
   };
 };
 
