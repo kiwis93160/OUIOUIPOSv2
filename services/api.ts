@@ -2078,19 +2078,22 @@ export const api = {
     }
 
     if (Object.keys(updatePayload).length > 0) {
-      await supabase.from('products').update(updatePayload).eq('id', productId);
+      const updateResponse = await supabase.from('products').update(updatePayload).eq('id', productId);
+      unwrap(updateResponse as SupabaseResponse<unknown>);
     }
 
     if (recipe) {
-      await supabase.from('product_recipes').delete().eq('product_id', productId);
+      const deleteRecipeResponse = await supabase.from('product_recipes').delete().eq('product_id', productId);
+      unwrap(deleteRecipeResponse as SupabaseResponse<unknown>);
       if (recipe.length > 0) {
-        await supabase.from('product_recipes').insert(
+        const insertRecipeResponse = await supabase.from('product_recipes').insert(
           recipe.map(item => ({
             product_id: productId,
             ingredient_id: item.ingredient_id,
             qte_utilisee: item.qte_utilisee,
           })),
         );
+        unwrap(insertRecipeResponse as SupabaseResponse<unknown>);
       }
     }
 

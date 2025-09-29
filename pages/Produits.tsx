@@ -104,6 +104,8 @@ const Produits: React.FC = () => {
             fetchData();
         } catch (error) {
             console.error("Failed to update status", error);
+            const message = error instanceof Error ? error.message : "Une erreur inconnue s'est produite.";
+            alert(`Échec de la mise à jour du statut du produit : ${message}`);
         }
     }
 
