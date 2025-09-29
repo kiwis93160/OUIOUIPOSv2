@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LogOut, FileText, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { NAV_LINKS } from '../constants';
+import { NAV_LINKS, SITE_CUSTOMIZER_PERMISSION_KEY } from '../constants';
 import { NotificationCounts } from '../types';
 
 interface SidebarProps {
@@ -34,6 +34,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
   const visibleNavLinks = useMemo(
     () => NAV_LINKS.filter(link => permissions?.[link.permissionKey] && permissions?.[link.permissionKey] !== 'none'),
     [permissions],
+  );
+
+  const customizationLink = useMemo(
+    () => visibleNavLinks.find(link => link.permissionKey === SITE_CUSTOMIZER_PERMISSION_KEY),
+    [visibleNavLinks],
+  );
+
+  const standardNavLinks = useMemo(
+    () => visibleNavLinks.filter(link => link.permissionKey !== SITE_CUSTOMIZER_PERMISSION_KEY),
+    [visibleNavLinks],
   );
 
   useEffect(() => {
@@ -114,7 +124,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
         <div className="app-sidebar__content">
           <div className="app-sidebar__scroll-region">
             <nav className="app-sidebar__nav">
-              {visibleNavLinks.map(link => {
+              {standardNavLinks.map(link => {
                 let notificationContent: React.ReactNode = null;
 
                 if (notifications) {
@@ -186,6 +196,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
           </div>
 
           <div className="app-sidebar__section">
+            {customizationLink && (
+              <button
+                onClick={() => {
+                  handleNavLinkClick();
+                  navigate(customizationLink.href);
+                }}
+                className="app-sidebar__action"
+              >
+                <customizationLink.icon size={22} />
+                <span className="font-semibold">{customizationLink.name}</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 onReportClick();
