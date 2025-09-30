@@ -1,4 +1,10 @@
-import { SectionStyle, SiteContent } from '../types';
+import {
+  CustomizationAsset,
+  CustomizationAssetType,
+  SectionStyle,
+  SiteAssets,
+  SiteContent,
+} from '../types';
 import { normalizeCloudinaryImageUrl } from '../services/cloudinary';
 
 const trimOrEmpty = (value: string): string => value.trim();
@@ -40,6 +46,88 @@ const resolveImage = (value: string | null | undefined, fallback: string | null)
 const sanitizeImage = (value: string | null | undefined): string | null => {
   const normalized = normalizeCloudinaryImageUrl(value);
   return normalized ?? null;
+};
+
+const ASSET_TYPES: CustomizationAssetType[] = ['image', 'video', 'audio', 'font', 'raw'];
+
+const generateAssetId = (): string => `asset-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const resolveAssetType = (type: unknown): CustomizationAssetType =>
+  ASSET_TYPES.includes(type as CustomizationAssetType) ? (type as CustomizationAssetType) : 'raw';
+
+const resolveAssetTimestamp = (value: unknown): string => {
+  if (typeof value === 'string') {
+    const timestamp = Date.parse(value);
+    if (!Number.isNaN(timestamp)) {
+      return new Date(timestamp).toISOString();
+    }
+  }
+  return new Date().toISOString();
+};
+
+const resolveAssetBytes = (value: unknown): number => {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return 0;
+  }
+  return Math.round(numeric);
+};
+
+const sanitizeCustomizationAsset = (asset: Partial<CustomizationAsset> | null | undefined): CustomizationAsset | null => {
+  if (!asset) {
+    return null;
+  }
+
+  const normalizedUrl = normalizeCloudinaryImageUrl(asset.url ?? undefined);
+  if (!normalizedUrl) {
+    return null;
+  }
+
+  const id = typeof asset.id === 'string' && asset.id.trim().length > 0 ? asset.id.trim() : generateAssetId();
+  const name = typeof asset.name === 'string' && asset.name.trim().length > 0 ? asset.name.trim() : id;
+  const format = typeof asset.format === 'string' && asset.format.trim().length > 0 ? asset.format.trim() : 'application/octet-stream';
+  const type = resolveAssetType(asset.type);
+  const bytes = resolveAssetBytes(asset.bytes);
+  const createdAt = resolveAssetTimestamp(asset.createdAt);
+
+  return {
+    id,
+    name,
+    url: normalizedUrl,
+    format,
+    bytes,
+    type,
+    createdAt,
+  };
+};
+
+const resolveSiteAssets = (assets: Partial<SiteAssets> | null | undefined, fallback: SiteAssets): SiteAssets => {
+  if (!assets) {
+    return fallback;
+  }
+
+  const library = Array.isArray(assets.library)
+    ? (assets.library
+        .map(entry => sanitizeCustomizationAsset(entry))
+        .filter(Boolean) as CustomizationAsset[])
+    : fallback.library;
+
+  return {
+    library,
+  };
+};
+
+const sanitizeSiteAssets = (assets: SiteAssets | undefined, fallback: SiteAssets): SiteAssets => {
+  const source = assets ?? fallback;
+  const library = Array.isArray(source.library)
+    ? (source.library
+        .map(entry => sanitizeCustomizationAsset(entry))
+        .filter(Boolean) as CustomizationAsset[])
+    : fallback.library;
+
+  return {
+    library,
+  };
 };
 
 const DEFAULT_NAVIGATION_STYLE: SectionStyle = {
@@ -106,6 +194,10 @@ const DEFAULT_FOOTER_STYLE: SectionStyle = {
   fontFamily: 'Inter',
   fontSize: '14px',
   textColor: '#e2e8f0',
+};
+
+const DEFAULT_SITE_ASSETS: SiteAssets = {
+  library: [],
 };
 
 const resolveSectionStyle = (style: Partial<SectionStyle> | undefined, fallback: SectionStyle): SectionStyle => {
@@ -196,6 +288,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     text: 'Tous droits réservés.',
     style: DEFAULT_FOOTER_STYLE,
   },
+  assets: DEFAULT_SITE_ASSETS,
 };
 
 export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteContent => {
@@ -249,6 +342,7 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
       text: resolveString(content?.footer?.text, base.footer.text),
       style: resolveSectionStyle(content?.footer?.style, base.footer.style),
     },
+    assets: resolveSiteAssets(content?.assets ?? null, DEFAULT_SITE_ASSETS),
   };
 };
 
@@ -301,4 +395,5 @@ export const sanitizeSiteContentInput = (content: SiteContent): SiteContent => (
     text: trimOrEmpty(content.footer.text),
     style: sanitizeSectionStyle(content.footer.style, DEFAULT_FOOTER_STYLE),
   },
+  assets: sanitizeSiteAssets(content.assets, DEFAULT_SITE_ASSETS),
 });
