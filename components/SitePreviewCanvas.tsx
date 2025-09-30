@@ -1,6 +1,6 @@
 import React from 'react';
 import { Edit2, Mail, MapPin, Phone } from 'lucide-react';
-import { SiteContent } from '../types';
+import { Product, SiteContent } from '../types';
 import {
   createBackgroundStyle,
   createBodyTextStyle,
@@ -74,6 +74,7 @@ export const resolveZoneFromElement = (element: EditableElementKey): EditableZon
 
 interface SitePreviewCanvasProps {
   content: SiteContent;
+  bestSellerProducts: Product[];
   onEdit: (element: EditableElementKey, meta: { zone: EditableZoneKey; anchor: DOMRect | null }) => void;
   activeZone?: EditableZoneKey | null;
 }
@@ -157,28 +158,12 @@ const SectionCard: React.FC<SectionCardProps> = ({ children, className, zone, ac
   );
 };
 
-const placeholderProducts = [
-  {
-    id: '1',
-    name: 'Taco al Pastor',
-    description: 'Porc mariné, ananas rôti et coriandre fraîche.',
-    price: formatCurrencyCOP(12900),
-  },
-  {
-    id: '2',
-    name: 'Burrito Barbacoa',
-    description: 'Bœuf effiloché, haricots noirs et pico de gallo.',
-    price: formatCurrencyCOP(14500),
-  },
-  {
-    id: '3',
-    name: 'Quesadilla Verde',
-    description: 'Fromage fondant, courgettes grillées et salsa verde.',
-    price: formatCurrencyCOP(11400),
-  },
-];
-
-const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit, activeZone }) => {
+const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
+  content,
+  bestSellerProducts,
+  onEdit,
+  activeZone,
+}) => {
   const navigationBackgroundStyle = createBackgroundStyle(content.navigation.style);
   const navigationTextStyle = createTextStyle(content.navigation.style);
   const navigationBodyStyle = createBodyTextStyle(content.navigation.style);
@@ -486,22 +471,43 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit, 
                 </EditableElement>
               )}
               <div className="menu-grid">
-                {placeholderProducts.map(product => (
-                  <article key={product.id} className="ui-card menu-card">
-                    <div className="h-40 w-full rounded-t-xl bg-gradient-to-br from-orange-200 via-amber-100 to-orange-50" />
-                    <div className="menu-card__body">
-                      <h3 className="menu-card__title" style={menuTextStyle}>
-                        {product.name}
-                      </h3>
-                      <p className="menu-card__description" style={menuBodyTextStyle}>
-                        {product.description}
-                      </p>
-                      <p className="menu-card__price" style={menuBodyTextStyle}>
-                        {product.price}
-                      </p>
-                    </div>
-                  </article>
-                ))}
+                {bestSellerProducts.length > 0 ? (
+                  bestSellerProducts.map(product => {
+                    const hasImage = Boolean(product.image);
+                    return (
+                      <article key={product.id} className="ui-card menu-card">
+                        {hasImage ? (
+                          <img
+                            src={product.image}
+                            alt={product.nom_produit}
+                            className="h-40 w-full rounded-t-xl object-cover"
+                          />
+                        ) : (
+                          <div className="h-40 w-full rounded-t-xl bg-gradient-to-br from-orange-200 via-amber-100 to-orange-50" />
+                        )}
+                        <div className="menu-card__body">
+                          <h3 className="menu-card__title" style={menuTextStyle}>
+                            {product.nom_produit}
+                          </h3>
+                          {product.description && (
+                            <p className="menu-card__description" style={menuBodyTextStyle}>
+                              {product.description}
+                            </p>
+                          )}
+                          <p className="menu-card__price" style={menuBodyTextStyle}>
+                            {formatCurrencyCOP(product.prix_vente)}
+                          </p>
+                        </div>
+                      </article>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center">
+                    <p className="text-sm text-slate-500" style={menuBodyTextStyle}>
+                      Aucun best seller sélectionné pour le moment.
+                    </p>
+                  </div>
+                )}
               </div>
               <EditableElement
                 id="menu.ctaLabel"

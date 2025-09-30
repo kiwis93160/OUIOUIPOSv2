@@ -10,6 +10,7 @@ import useSiteContent, { DEFAULT_SITE_CONTENT } from '../hooks/useSiteContent';
 import {
   CustomizationAsset,
   CustomizationAssetType,
+  Product,
   SectionStyle,
   SiteContent,
 } from '../types';
@@ -19,6 +20,7 @@ import SitePreviewCanvas, {
   EditableElementKey,
   EditableZoneKey,
 } from '../components/SitePreviewCanvas';
+import { api } from '../services/api';
 import {
   Archive,
   CheckCircle2,
@@ -438,6 +440,12 @@ type EditorContext = {
   setMenuFieldValue: (key: MenuFieldKey, value: string) => void;
   setContactFieldValue: (key: ContactFieldKey, value: string) => void;
   setFooterTextValue: (value: string) => void;
+  bestSellerProducts: Product[];
+  bestSellerLoading: boolean;
+  bestSellerError: string | null;
+  refreshBestSellerProducts: () => Promise<void>;
+  updateProduct: (productId: string, updates: Partial<Product>) => Promise<void>;
+  isBestSellerUpdating: (productId: string) => boolean;
 };
 
 const SiteCustomization: React.FC = () => {
@@ -459,8 +467,59 @@ const SiteCustomization: React.FC = () => {
   const [assetLibraryOpen, setAssetLibraryOpen] = useState(false);
   const [pendingAssetField, setPendingAssetField] = useState<ImageFieldKey | null>(null);
   const [editorAnchor, setEditorAnchor] = useState<DOMRect | null>(null);
+  const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
+  const [bestSellerLoading, setBestSellerLoading] = useState(false);
+  const [bestSellerError, setBestSellerError] = useState<string | null>(null);
+  const [updatingProducts, setUpdatingProducts] = useState<Record<string, boolean>>({});
 
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const isBestSellerUpdating = useCallback(
+    (productId: string) => Boolean(updatingProducts[productId]),
+    [updatingProducts],
+  );
+
+  const loadBestSellerProducts = useCallback(async () => {
+    setBestSellerLoading(true);
+    try {
+      const products = await api.getBestSellerProducts();
+      setBestSellerProducts(products);
+      setBestSellerError(null);
+    } catch (error) {
+      console.error('Failed to fetch best seller products', error);
+      setBestSellerError("Impossible de charger les best sellers. Veuillez réessayer.");
+    } finally {
+      setBestSellerLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadBestSellerProducts();
+  }, [loadBestSellerProducts]);
+
+  const handleUpdateProduct = useCallback(
+    async (productId: string, updates: Partial<Product>) => {
+      setUpdatingProducts(prev => ({
+        ...prev,
+        [productId]: true,
+      }));
+      try {
+        await api.updateProduct(productId, updates);
+        await loadBestSellerProducts();
+        setBestSellerError(null);
+      } catch (error) {
+        console.error('Failed to update product', error);
+        setBestSellerError("Impossible de mettre à jour le produit. Veuillez réessayer.");
+      } finally {
+        setUpdatingProducts(prev => {
+          const next = { ...prev };
+          delete next[productId];
+          return next;
+        });
+      }
+    },
+    [loadBestSellerProducts],
+  );
 
   useEffect(() => {
     setDraft(content);
@@ -980,6 +1039,12 @@ const SiteCustomization: React.FC = () => {
     handleImageInputChange,
     handleImageUpload,
     handleClearImage,
+    bestSellerProducts,
+    bestSellerLoading,
+    bestSellerError,
+    refreshBestSellerProducts: loadBestSellerProducts,
+    updateProduct: handleUpdateProduct,
+    isBestSellerUpdating,
     handleStyleFontFamilyChange: (zone, value) => {
       updateZoneStyle(zone, style => ({
         ...style,
@@ -1108,7 +1173,12 @@ const SiteCustomization: React.FC = () => {
           </div>
         ) : (
           <>
-            <SitePreviewCanvas content={previewContent} activeZone={activeZone} onEdit={handleEditElement} />
+            <SitePreviewCanvas
+              content={previewContent}
+              bestSellerProducts={bestSellerProducts}
+              activeZone={activeZone}
+              onEdit={handleEditElement}
+            />
             <FloatingZoneEditor
               zone={activeZone}
               guidedMode={guidedMode}
@@ -1593,6 +1663,50 @@ const ZoneEditorContent: React.FC<{
   onOpenAssets: (field: ImageFieldKey) => void;
 }> = ({ zone, context, activeElement, onOpenAssets }) => {
   const { draft } = context;
+  const [rankDrafts, setRankDrafts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setRankDrafts(prev => {
+      const next: Record<string, string> = {};
+      context.bestSellerProducts.forEach(product => {
+        next[product.id] = prev[product.id] ?? (product.best_seller_rank?.toString() ?? '');
+      });
+      return next;
+    });
+  }, [context.bestSellerProducts]);
+
+  const handleBestSellerRankChange = useCallback((productId: string, value: string) => {
+    if (/^\d*$/.test(value)) {
+      setRankDrafts(prev => ({
+        ...prev,
+        [productId]: value,
+      }));
+    }
+  }, []);
+
+  const handleBestSellerRankSubmit = useCallback(
+    async (productId: string) => {
+      const product = context.bestSellerProducts.find(item => item.id === productId);
+      const currentValue = product?.best_seller_rank?.toString() ?? '';
+      const rawValue = (rankDrafts[productId] ?? currentValue).trim();
+      if (rawValue === currentValue) {
+        return;
+      }
+      const rankValue = rawValue === '' ? null : Number.parseInt(rawValue, 10);
+      if (rawValue !== '' && Number.isNaN(rankValue)) {
+        return;
+      }
+      await context.updateProduct(productId, { best_seller_rank: rankValue });
+    },
+    [context, rankDrafts],
+  );
+
+  const handleBestSellerToggle = useCallback(
+    async (productId: string, isBestSeller: boolean) => {
+      await context.updateProduct(productId, { is_best_seller: isBestSeller });
+    },
+    [context],
+  );
 
   switch (zone) {
     case 'navigation':
@@ -1843,6 +1957,105 @@ const ZoneEditorContent: React.FC<{
             isUploading={context.isUploading}
             onOpenAssets={onOpenAssets}
           />
+
+          <FieldCard
+            label="Gestion des best sellers"
+            description="Ajustez l'ordre et la sélection des produits mis en avant dans la section menu."
+          >
+            <div className="space-y-3 text-sm">
+              <p className="text-xs text-slate-500">
+                Les best sellers apparaissent automatiquement dans la prévisualisation à droite.
+              </p>
+              {context.bestSellerError && (
+                <p className="text-xs text-red-600">{context.bestSellerError}</p>
+              )}
+              {context.bestSellerLoading ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Chargement des best sellers…
+                </div>
+              ) : context.bestSellerProducts.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+                  Aucun produit best seller sélectionné pour le moment.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {context.bestSellerProducts.map(product => {
+                    const currentRank = product.best_seller_rank?.toString() ?? '';
+                    const draftRank = rankDrafts[product.id] ?? currentRank;
+                    const hasChanges = draftRank !== currentRank;
+                    const updating = context.isBestSellerUpdating(product.id);
+                    return (
+                      <div key={product.id} className="rounded-xl border border-slate-200 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-slate-800">{product.nom_produit}</p>
+                            {product.description && (
+                              <p className="text-xs text-slate-500">{product.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                              Rang
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="\\d*"
+                                className="ui-input h-9 w-20 text-sm"
+                                value={draftRank}
+                                onChange={event =>
+                                  handleBestSellerRankChange(product.id, event.target.value)
+                                }
+                                disabled={updating}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              className="ui-btn ui-btn-secondary"
+                              onClick={() => void handleBestSellerRankSubmit(product.id)}
+                              disabled={!hasChanges || updating}
+                            >
+                              Mettre à jour
+                            </button>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                          <label className="inline-flex items-center gap-2 font-medium text-slate-600">
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                              checked={product.is_best_seller}
+                              onChange={event =>
+                                void handleBestSellerToggle(product.id, event.target.checked)
+                              }
+                              disabled={updating}
+                            />
+                            Afficher dans la sélection
+                          </label>
+                          {updating && (
+                            <span className="inline-flex items-center gap-2 text-slate-500">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                              Mise à jour…
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <button
+                type="button"
+                className="ui-btn ui-btn-ghost"
+                onClick={() => void context.refreshBestSellerProducts()}
+                disabled={context.bestSellerLoading}
+              >
+                Rafraîchir la liste
+              </button>
+            </div>
+          </FieldCard>
         </div>
       );
 
