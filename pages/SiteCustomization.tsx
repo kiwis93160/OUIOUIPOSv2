@@ -454,6 +454,11 @@ type EditorContext = {
   isBestSellerUpdating: (productId: string) => boolean;
 };
 
+type ActiveElementState = {
+  element: EditableElementKey;
+  anchor: DOMRect | null;
+};
+
 const SiteCustomization: React.FC = () => {
   const { content, loading, error, updateContent } = useSiteContent();
   const [draft, setDraft] = useState<SiteContent>(content);
@@ -465,14 +470,13 @@ const SiteCustomization: React.FC = () => {
     ...INITIAL_IMAGE_ERRORS,
   });
   const [uploadingField, setUploadingField] = useState<ImageFieldKey | null>(null);
-  const [activeElement, setActiveElement] = useState<EditableElementKey | null>(null);
+  const [activeElementState, setActiveElementState] = useState<ActiveElementState | null>(null);
   const [activeZone, setActiveZone] = useState<EditableZoneKey>('navigation');
   const [guidedMode, setGuidedMode] = useState(true);
   const [assetUploading, setAssetUploading] = useState(false);
   const [assetError, setAssetError] = useState<string | null>(null);
   const [assetLibraryOpen, setAssetLibraryOpen] = useState(false);
   const [pendingAssetField, setPendingAssetField] = useState<ImageFieldKey | null>(null);
-  const [editorAnchor, setEditorAnchor] = useState<DOMRect | null>(null);
   const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
   const [bestSellerLoading, setBestSellerLoading] = useState(false);
   const [bestSellerError, setBestSellerError] = useState<string | null>(null);
@@ -535,20 +539,6 @@ const SiteCustomization: React.FC = () => {
     setImageErrors({ ...INITIAL_IMAGE_ERRORS });
     setAssetError(null);
   }, [content]);
-
-  useEffect(() => {
-    if (!activeElement) {
-      return;
-    }
-    const targetId = EDITABLE_ELEMENT_INPUT_IDS[activeElement];
-    if (!targetId) {
-      return;
-    }
-    const element = document.getElementById(targetId);
-    if (element instanceof HTMLElement) {
-      element.focus({ preventScroll: true });
-    }
-  }, [activeElement]);
 
   const previewContent = useMemo(() => resolveSiteContent(draft), [draft]);
 
@@ -974,7 +964,6 @@ const SiteCustomization: React.FC = () => {
       ...prev,
       [field]: null,
     }));
-    setActiveElement(field as EditableElementKey);
     setStatusMessage('Ressource appliquée à la section sélectionnée.');
     if (pendingAssetField && pendingAssetField === field) {
       setPendingAssetField(null);
@@ -1004,7 +993,7 @@ const SiteCustomization: React.FC = () => {
     setStatusMessage(null);
     setFormError(null);
     setImageErrors({ ...INITIAL_IMAGE_ERRORS });
-    setActiveElement(null);
+    setActiveElementState(null);
     setActiveZone('navigation');
     setPendingAssetField(null);
     setAssetLibraryOpen(false);
@@ -1026,15 +1015,13 @@ const SiteCustomization: React.FC = () => {
     element: EditableElementKey,
     meta: { zone: EditableZoneKey; anchor: DOMRect | null },
   ) => {
-    setActiveElement(element);
+    setActiveElementState({ element, anchor: meta.anchor ?? null });
     setActiveZone(meta.zone);
-    setEditorAnchor(meta.anchor);
   };
 
   const handleSelectZone = (zone: EditableZoneKey) => {
     setActiveZone(zone);
-    setActiveElement(null);
-    setEditorAnchor(null);
+    setActiveElementState(null);
   };
 
   const zoneChecklist = useMemo(() => createZoneChecklist(draft), [draft]);
@@ -1204,15 +1191,19 @@ const SiteCustomization: React.FC = () => {
             <FloatingZoneEditor
               zone={activeZone}
               guidedMode={guidedMode}
-              activeElement={activeElement}
-              anchorRect={editorAnchor}
               containerRef={previewContainerRef}
               checklist={zoneChecklist[activeZone]}
               zoneStatuses={zoneStatuses}
-              onClose={() => setActiveElement(null)}
+              onClose={() => setActiveElementState(null)}
               onNavigate={handleSelectZone}
               onOpenAssets={openAssetLibrary}
               context={context}
+            />
+            <ElementEditorModal
+              active={activeElementState}
+              context={context}
+              onClose={() => setActiveElementState(null)}
+              onOpenAssets={openAssetLibrary}
             />
           </>
         )}
@@ -1678,13 +1669,11 @@ const ZoneStyleEditor: React.FC<{
   );
 };
 
-const ZoneEditorContent: React.FC<{
-  zone: EditableZoneKey;
-  context: EditorContext;
-  activeElement: EditableElementKey | null;
-  onOpenAssets: (field: ImageFieldKey) => void;
-}> = ({ zone, context, activeElement, onOpenAssets }) => {
-  const { draft, imageErrors } = context;
+
+const ZoneEditorContent: React.FC<{ zone: EditableZoneKey; context: EditorContext }> = ({
+  zone,
+  context,
+}) => {
   const [rankDrafts, setRankDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -1730,37 +1719,223 @@ const ZoneEditorContent: React.FC<{
     [context],
   );
 
-  switch (zone) {
-    case 'navigation':
-      return (
-        <div className="space-y-4">
-          <MediaInputField
-            field="navigation.brandLogo"
-            label="Logo principal"
-            value={draft.navigation.brandLogo}
-            imageErrors={imageErrors}
-            handleImageInputChange={context.handleImageInputChange}
-            handleImageUpload={context.handleImageUpload}
-            handleClearImage={context.handleClearImage}
-            isUploading={context.isUploading}
-            onOpenAssets={onOpenAssets}
-          />
-          <MediaInputField
-            field="navigation.staffLogo"
-            label="Logo espace équipe"
-            value={draft.navigation.staffLogo}
-            imageErrors={imageErrors}
-            handleImageInputChange={context.handleImageInputChange}
-            handleImageUpload={context.handleImageUpload}
-            handleClearImage={context.handleClearImage}
-            isUploading={context.isUploading}
-            onOpenAssets={onOpenAssets}
-          />
-          <FieldCard
-            label="Nom de la marque"
-            htmlFor="brand-name"
-            active={activeElement === 'navigation.brand'}
+  if (zone !== 'menu') {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4">
+      <FieldCard
+        label="Gestion des best sellers"
+        description="Ajustez l'ordre et la sélection des produits mis en avant dans la section menu."
+      >
+        <div className="space-y-3 text-sm">
+          <p className="text-xs text-slate-500">
+            Les best sellers apparaissent automatiquement dans la prévisualisation à droite.
+          </p>
+          {context.bestSellerError && <p className="text-xs text-red-600">{context.bestSellerError}</p>}
+          {context.bestSellerLoading ? (
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              Chargement des best sellers…
+            </div>
+          ) : context.bestSellerProducts.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+              Aucun produit best seller configuré pour le moment.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {context.bestSellerProducts.map(product => {
+                const rankDraft = rankDrafts[product.id] ?? '';
+                return (
+                  <div
+                    key={product.id}
+                    className="flex flex-col gap-2 rounded-2xl border border-slate-200 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex flex-1 items-center gap-3">
+                      <div className="h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                        {product.image_url ? (
+                          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+                            Pas d'image
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{product.name}</p>
+                        <p className="text-xs text-slate-500">
+                          {formatCurrencyCOP(product.price_cents / 100)} · {product.category_name ?? 'Sans catégorie'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:w-72">
+                      <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Position dans la liste
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          className="ui-input w-20"
+                          value={rankDraft}
+                          onChange={event => handleBestSellerRankChange(product.id, event.target.value)}
+                          onBlur={() => void handleBestSellerRankSubmit(product.id)}
+                          onKeyDown={event => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              void handleBestSellerRankSubmit(product.id);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="ui-btn ui-btn-secondary"
+                          onClick={() => void handleBestSellerRankSubmit(product.id)}
+                          disabled={context.isBestSellerUpdating(product.id)}
+                        >
+                          Mettre à jour
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-slate-500">
+                        <span>Inclure dans la sélection</span>
+                        <button
+                          type="button"
+                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                            product.is_best_seller
+                              ? 'border-emerald-300 bg-emerald-50 text-emerald-600'
+                              : 'border-slate-200 text-slate-500 hover:border-brand-primary/40 hover:text-brand-primary'
+                          }`}
+                          onClick={() => void handleBestSellerToggle(product.id, !product.is_best_seller)}
+                        >
+                          {product.is_best_seller ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                          ) : (
+                            <Circle className="h-3.5 w-3.5" aria-hidden="true" />
+                          )}
+                          {product.is_best_seller ? 'Actif' : 'Désactivé'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </FieldCard>
+    </div>
+  );
+};
+
+
+type ElementEditorConfig = {
+  title: string;
+  description?: string;
+  content: React.ReactNode;
+};
+
+const getElementEditorConfig = (
+  element: EditableElementKey,
+  context: EditorContext,
+  onOpenAssets: (field?: ImageFieldKey) => void,
+): ElementEditorConfig | null => {
+  const { draft, imageErrors } = context;
+
+  const renderBackgroundEditor = (zone: EditableZoneKey, label?: string) => {
+    const style = context.draft[zone].style;
+    const backgroundField = STYLE_BACKGROUND_FIELD_KEYS[zone];
+    const resolvedLabel = label ?? IMAGE_FIELD_LABELS[backgroundField];
+    const validateCssValue = (property: string, value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return { valid: true, message: null } as const;
+      }
+      if (typeof window === 'undefined' || typeof window.CSS === 'undefined') {
+        return { valid: true, message: null } as const;
+      }
+      return window.CSS.supports(property, trimmed)
+        ? { valid: true, message: null }
+        : { valid: false, message: 'Cette valeur ne semble pas être reconnue comme une valeur CSS valide.' };
+    };
+
+    const backgroundColorValidation =
+      style.background.type === 'color'
+        ? validateCssValue('background-color', style.background.color)
+        : { valid: true, message: null };
+
+    return (
+      <FieldCard label={resolvedLabel} htmlFor={`${zone}-background-type`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            id={`${zone}-background-type`}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+              style.background.type === 'color'
+                ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
+                : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
+            }`}
+            onClick={() => context.handleStyleBackgroundTypeChange(zone, 'color')}
           >
+            Couleur
+          </button>
+          <button
+            type="button"
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+              style.background.type === 'image'
+                ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
+                : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
+            }`}
+            onClick={() => context.handleStyleBackgroundTypeChange(zone, 'image')}
+          >
+            Image
+          </button>
+        </div>
+        {style.background.type === 'color' ? (
+          <div className="mt-3 space-y-2">
+            <input
+              id={`${zone}-background-color`}
+              className={`ui-input w-full ${
+                backgroundColorValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+              }`}
+              value={style.background.color}
+              onChange={event => context.handleStyleBackgroundColorChange(zone, event.target.value)}
+              placeholder="Ex: rgba(255, 255, 255, 0.85)"
+            />
+            {!backgroundColorValidation.valid && (
+              <p className="text-xs text-red-600">{backgroundColorValidation.message}</p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {COLOR_SUGGESTIONS.map(color => (
+                <ColorChip
+                  key={color}
+                  value={color}
+                  onSelect={value => context.handleStyleBackgroundColorChange(zone, value)}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <MediaInputField
+            field={backgroundField}
+            label={IMAGE_FIELD_LABELS[backgroundField]}
+            value={style.background.image}
+            imageErrors={imageErrors}
+            handleImageInputChange={context.handleImageInputChange}
+            handleImageUpload={context.handleImageUpload}
+            handleClearImage={context.handleClearImage}
+            isUploading={context.isUploading}
+            onOpenAssets={field => onOpenAssets(field)}
+          />
+        )}
+      </FieldCard>
+    );
+  };
+
+  switch (element) {
+    case 'navigation.brand':
+      return {
+        title: 'Nom de la marque',
+        content: (
+          <FieldCard label="Nom de la marque" htmlFor="brand-name">
             <input
               id="brand-name"
               className="ui-input w-full"
@@ -1769,34 +1944,37 @@ const ZoneEditorContent: React.FC<{
             />
             <SuggestionChips options={NAVIGATION_BRAND_SUGGESTIONS} onSelect={context.setBrandValue} />
           </FieldCard>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            {(['home', 'about', 'menu', 'contact'] as NavigationFieldKey[]).map(key => (
-              <FieldCard
-                key={key}
-                label={`Lien ${NAVIGATION_LINK_SUGGESTIONS[key][0] ?? key}`}
-                htmlFor={`nav-${key}`}
-                active={activeElement === (`navigation.links.${key}` as EditableElementKey)}
-              >
-                <input
-                  id={`nav-${key}`}
-                  className="ui-input w-full"
-                  value={draft.navigation.links[key]}
-                  onChange={context.handleNavigationChange(key)}
-                />
-                <SuggestionChips
-                  options={NAVIGATION_LINK_SUGGESTIONS[key]}
-                  onSelect={value => context.setNavigationLinkValue(key, value)}
-                />
-              </FieldCard>
-            ))}
-          </div>
-
-          <FieldCard
-            label="Bouton d'accès équipe"
-            htmlFor="nav-login"
-            active={activeElement === 'navigation.links.loginCta'}
-          >
+        ),
+      };
+    case 'navigation.links.home':
+    case 'navigation.links.about':
+    case 'navigation.links.menu':
+    case 'navigation.links.contact': {
+      const key = element.split('.')[2] as NavigationFieldKey;
+      const label = `Lien ${NAVIGATION_LINK_SUGGESTIONS[key][0] ?? key}`;
+      return {
+        title: label,
+        content: (
+          <FieldCard label={label} htmlFor={`nav-${key}`}>
+            <input
+              id={`nav-${key}`}
+              className="ui-input w-full"
+              value={draft.navigation.links[key]}
+              onChange={context.handleNavigationChange(key)}
+            />
+            <SuggestionChips
+              options={NAVIGATION_LINK_SUGGESTIONS[key]}
+              onSelect={value => context.setNavigationLinkValue(key, value)}
+            />
+          </FieldCard>
+        ),
+      };
+    }
+    case 'navigation.links.loginCta':
+      return {
+        title: "Bouton d'accès équipe",
+        content: (
+          <FieldCard label="Bouton d'accès équipe" htmlFor="nav-login">
             <input
               id="nav-login"
               className="ui-input w-full"
@@ -1808,13 +1986,52 @@ const ZoneEditorContent: React.FC<{
               onSelect={value => context.setNavigationLinkValue('loginCta', value)}
             />
           </FieldCard>
-        </div>
-      );
-
-    case 'hero':
-      return (
-        <div className="space-y-4">
-          <FieldCard label="Titre principal" htmlFor="hero-title" active={activeElement === 'hero.title'}>
+        ),
+      };
+    case 'navigation.brandLogo':
+      return {
+        title: 'Logo principal',
+        content: (
+          <MediaInputField
+            field="navigation.brandLogo"
+            label={IMAGE_FIELD_LABELS['navigation.brandLogo']}
+            value={draft.navigation.brandLogo}
+            imageErrors={imageErrors}
+            handleImageInputChange={context.handleImageInputChange}
+            handleImageUpload={context.handleImageUpload}
+            handleClearImage={context.handleClearImage}
+            isUploading={context.isUploading}
+            onOpenAssets={field => onOpenAssets(field)}
+          />
+        ),
+      };
+    case 'navigation.staffLogo':
+      return {
+        title: "Logo d'accès équipe",
+        content: (
+          <MediaInputField
+            field="navigation.staffLogo"
+            label={IMAGE_FIELD_LABELS['navigation.staffLogo']}
+            value={draft.navigation.staffLogo}
+            imageErrors={imageErrors}
+            handleImageInputChange={context.handleImageInputChange}
+            handleImageUpload={context.handleImageUpload}
+            handleClearImage={context.handleClearImage}
+            isUploading={context.isUploading}
+            onOpenAssets={field => onOpenAssets(field)}
+          />
+        ),
+      };
+    case 'navigation.style.background':
+      return {
+        title: IMAGE_FIELD_LABELS['navigation.style.background'],
+        content: renderBackgroundEditor('navigation'),
+      };
+    case 'hero.title':
+      return {
+        title: 'Titre principal',
+        content: (
+          <FieldCard label="Titre principal" htmlFor="hero-title">
             <input
               id="hero-title"
               className="ui-input w-full"
@@ -1826,8 +2043,13 @@ const ZoneEditorContent: React.FC<{
               onSelect={value => context.setHeroFieldValue('title', value)}
             />
           </FieldCard>
-
-          <FieldCard label="Sous-titre" htmlFor="hero-subtitle" active={activeElement === 'hero.subtitle'}>
+        ),
+      };
+    case 'hero.subtitle':
+      return {
+        title: 'Sous-titre',
+        content: (
+          <FieldCard label="Sous-titre" htmlFor="hero-subtitle">
             <textarea
               id="hero-subtitle"
               className="ui-textarea w-full"
@@ -1840,43 +2062,49 @@ const ZoneEditorContent: React.FC<{
               onSelect={value => context.setHeroFieldValue('subtitle', value)}
             />
           </FieldCard>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FieldCard label="CTA principal" htmlFor="hero-cta" active={activeElement === 'hero.ctaLabel'}>
-              <input
-                id="hero-cta"
-                className="ui-input w-full"
-                value={draft.hero.ctaLabel}
-                onChange={context.handleHeroFieldChange('ctaLabel')}
-              />
-              <SuggestionChips
-                options={HERO_CTA_SUGGESTIONS}
-                onSelect={value => context.setHeroFieldValue('ctaLabel', value)}
-              />
-            </FieldCard>
-            <FieldCard
-              label="CTA historique"
-              htmlFor="hero-reorder"
-              active={activeElement === 'hero.reorderCtaLabel'}
-            >
-              <input
-                id="hero-reorder"
-                className="ui-input w-full"
-                value={draft.hero.reorderCtaLabel}
-                onChange={context.handleHeroFieldChange('reorderCtaLabel')}
-              />
-              <SuggestionChips
-                options={HERO_REORDER_SUGGESTIONS}
-                onSelect={value => context.setHeroFieldValue('reorderCtaLabel', value)}
-              />
-            </FieldCard>
-          </div>
-
-          <FieldCard
-            label="Titre du bloc historique"
-            htmlFor="hero-history"
-            active={activeElement === 'hero.historyTitle'}
-          >
+        ),
+      };
+    case 'hero.ctaLabel':
+      return {
+        title: 'CTA principal',
+        content: (
+          <FieldCard label="CTA principal" htmlFor="hero-cta">
+            <input
+              id="hero-cta"
+              className="ui-input w-full"
+              value={draft.hero.ctaLabel}
+              onChange={context.handleHeroFieldChange('ctaLabel')}
+            />
+            <SuggestionChips
+              options={HERO_CTA_SUGGESTIONS}
+              onSelect={value => context.setHeroFieldValue('ctaLabel', value)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'hero.reorderCtaLabel':
+      return {
+        title: 'CTA historique',
+        content: (
+          <FieldCard label="CTA historique" htmlFor="hero-reorder">
+            <input
+              id="hero-reorder"
+              className="ui-input w-full"
+              value={draft.hero.reorderCtaLabel}
+              onChange={context.handleHeroFieldChange('reorderCtaLabel')}
+            />
+            <SuggestionChips
+              options={HERO_REORDER_SUGGESTIONS}
+              onSelect={value => context.setHeroFieldValue('reorderCtaLabel', value)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'hero.historyTitle':
+      return {
+        title: 'Titre du bloc historique',
+        content: (
+          <FieldCard label="Titre du bloc historique" htmlFor="hero-history">
             <input
               id="hero-history"
               className="ui-input w-full"
@@ -1888,38 +2116,50 @@ const ZoneEditorContent: React.FC<{
               onSelect={value => context.setHeroFieldValue('historyTitle', value)}
             />
           </FieldCard>
-
+        ),
+      };
+    case 'hero.backgroundImage':
+      return {
+        title: 'Visuel de fond',
+        content: (
           <MediaInputField
             field="hero.backgroundImage"
             label={IMAGE_FIELD_LABELS['hero.backgroundImage']}
             value={draft.hero.backgroundImage}
-            imageErrors={context.imageErrors}
+            imageErrors={imageErrors}
             handleImageInputChange={context.handleImageInputChange}
             handleImageUpload={context.handleImageUpload}
             handleClearImage={context.handleClearImage}
             isUploading={context.isUploading}
-            onOpenAssets={onOpenAssets}
+            onOpenAssets={field => onOpenAssets(field)}
           />
-        </div>
-      );
-
-    case 'about':
-      return (
-        <div className="space-y-4">
-          <FieldCard label="Titre" htmlFor="about-title" active={activeElement === 'about.title'}>
+        ),
+      };
+    case 'hero.style.background':
+      return {
+        title: IMAGE_FIELD_LABELS['hero.style.background'],
+        content: renderBackgroundEditor('hero'),
+      };
+    case 'about.title':
+      return {
+        title: 'Titre',
+        content: (
+          <FieldCard label="Titre" htmlFor="about-title">
             <input
               id="about-title"
               className="ui-input w-full"
               value={draft.about.title}
               onChange={context.handleAboutTitleChange}
             />
-            <SuggestionChips
-              options={ABOUT_TITLE_SUGGESTIONS}
-              onSelect={context.setAboutTitleValue}
-            />
+            <SuggestionChips options={ABOUT_TITLE_SUGGESTIONS} onSelect={context.setAboutTitleValue} />
           </FieldCard>
-
-          <FieldCard label="Description" htmlFor="about-description" active={activeElement === 'about.description'}>
+        ),
+      };
+    case 'about.description':
+      return {
+        title: 'Description',
+        content: (
+          <FieldCard label="Description" htmlFor="about-description">
             <textarea
               id="about-description"
               className="ui-textarea w-full"
@@ -1927,30 +2167,37 @@ const ZoneEditorContent: React.FC<{
               value={draft.about.description}
               onChange={context.handleAboutChange}
             />
-            <SuggestionChips
-              options={ABOUT_DESCRIPTION_SUGGESTIONS}
-              onSelect={context.setAboutDescriptionValue}
-            />
+            <SuggestionChips options={ABOUT_DESCRIPTION_SUGGESTIONS} onSelect={context.setAboutDescriptionValue} />
           </FieldCard>
-
+        ),
+      };
+    case 'about.image':
+      return {
+        title: 'Image de section',
+        content: (
           <MediaInputField
             field="about.image"
             label={IMAGE_FIELD_LABELS['about.image']}
             value={draft.about.image}
-            imageErrors={context.imageErrors}
+            imageErrors={imageErrors}
             handleImageInputChange={context.handleImageInputChange}
             handleImageUpload={context.handleImageUpload}
             handleClearImage={context.handleClearImage}
             isUploading={context.isUploading}
-            onOpenAssets={onOpenAssets}
+            onOpenAssets={field => onOpenAssets(field)}
           />
-        </div>
-      );
-
-    case 'menu':
-      return (
-        <div className="space-y-4">
-          <FieldCard label="Titre" htmlFor="menu-title" active={activeElement === 'menu.title'}>
+        ),
+      };
+    case 'about.style.background':
+      return {
+        title: IMAGE_FIELD_LABELS['about.style.background'],
+        content: renderBackgroundEditor('about'),
+      };
+    case 'menu.title':
+      return {
+        title: 'Titre',
+        content: (
+          <FieldCard label="Titre" htmlFor="menu-title">
             <input
               id="menu-title"
               className="ui-input w-full"
@@ -1958,155 +2205,68 @@ const ZoneEditorContent: React.FC<{
               onChange={context.handleMenuFieldChange('title')}
             />
           </FieldCard>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FieldCard label="CTA" htmlFor="menu-cta" active={activeElement === 'menu.ctaLabel'}>
-              <input
-                id="menu-cta"
-                className="ui-input w-full"
-                value={draft.menu.ctaLabel}
-                onChange={context.handleMenuFieldChange('ctaLabel')}
-              />
-              <SuggestionChips
-                options={MENU_CTA_SUGGESTIONS}
-                onSelect={value => context.setMenuFieldValue('ctaLabel', value)}
-              />
-            </FieldCard>
-            <FieldCard
-              label="Message de chargement"
-              htmlFor="menu-loading"
-              active={activeElement === 'menu.loadingLabel'}
-            >
-              <input
-                id="menu-loading"
-                className="ui-input w-full"
-                value={draft.menu.loadingLabel}
-                onChange={context.handleMenuFieldChange('loadingLabel')}
-              />
-              <SuggestionChips
-                options={MENU_LOADING_SUGGESTIONS}
-                onSelect={value => context.setMenuFieldValue('loadingLabel', value)}
-              />
-            </FieldCard>
-          </div>
-
+        ),
+      };
+    case 'menu.ctaLabel':
+      return {
+        title: 'CTA',
+        content: (
+          <FieldCard label="CTA" htmlFor="menu-cta">
+            <input
+              id="menu-cta"
+              className="ui-input w-full"
+              value={draft.menu.ctaLabel}
+              onChange={context.handleMenuFieldChange('ctaLabel')}
+            />
+            <SuggestionChips options={MENU_CTA_SUGGESTIONS} onSelect={value => context.setMenuFieldValue('ctaLabel', value)} />
+          </FieldCard>
+        ),
+      };
+    case 'menu.loadingLabel':
+      return {
+        title: 'Message de chargement',
+        content: (
+          <FieldCard label="Message de chargement" htmlFor="menu-loading">
+            <input
+              id="menu-loading"
+              className="ui-input w-full"
+              value={draft.menu.loadingLabel}
+              onChange={context.handleMenuFieldChange('loadingLabel')}
+            />
+            <SuggestionChips
+              options={MENU_LOADING_SUGGESTIONS}
+              onSelect={value => context.setMenuFieldValue('loadingLabel', value)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'menu.image':
+      return {
+        title: 'Visuel de la section menu',
+        content: (
           <MediaInputField
             field="menu.image"
             label={IMAGE_FIELD_LABELS['menu.image']}
             value={draft.menu.image}
-            imageErrors={context.imageErrors}
+            imageErrors={imageErrors}
             handleImageInputChange={context.handleImageInputChange}
             handleImageUpload={context.handleImageUpload}
             handleClearImage={context.handleClearImage}
             isUploading={context.isUploading}
-            onOpenAssets={onOpenAssets}
+            onOpenAssets={field => onOpenAssets(field)}
           />
-
-          <FieldCard
-            label="Gestion des best sellers"
-            description="Ajustez l'ordre et la sélection des produits mis en avant dans la section menu."
-          >
-            <div className="space-y-3 text-sm">
-              <p className="text-xs text-slate-500">
-                Les best sellers apparaissent automatiquement dans la prévisualisation à droite.
-              </p>
-              {context.bestSellerError && (
-                <p className="text-xs text-red-600">{context.bestSellerError}</p>
-              )}
-              {context.bestSellerLoading ? (
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  Chargement des best sellers…
-                </div>
-              ) : context.bestSellerProducts.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
-                  Aucun produit best seller sélectionné pour le moment.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {context.bestSellerProducts.map(product => {
-                    const currentRank = product.best_seller_rank?.toString() ?? '';
-                    const draftRank = rankDrafts[product.id] ?? currentRank;
-                    const hasChanges = draftRank !== currentRank;
-                    const updating = context.isBestSellerUpdating(product.id);
-                    return (
-                      <div key={product.id} className="rounded-xl border border-slate-200 p-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-slate-800">{product.nom_produit}</p>
-                            {product.description && (
-                              <p className="text-xs text-slate-500">{product.description}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <label className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                              Rang
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                pattern="\\d*"
-                                className="ui-input h-9 w-20 text-sm"
-                                value={draftRank}
-                                onChange={event =>
-                                  handleBestSellerRankChange(product.id, event.target.value)
-                                }
-                                disabled={updating}
-                              />
-                            </label>
-                            <button
-                              type="button"
-                              className="ui-btn ui-btn-secondary"
-                              onClick={() => void handleBestSellerRankSubmit(product.id)}
-                              disabled={!hasChanges || updating}
-                            >
-                              Mettre à jour
-                            </button>
-                          </div>
-                        </div>
-                        <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                          <label className="inline-flex items-center gap-2 font-medium text-slate-600">
-                            <input
-                              type="checkbox"
-                              className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                              checked={product.is_best_seller}
-                              onChange={event =>
-                                void handleBestSellerToggle(product.id, event.target.checked)
-                              }
-                              disabled={updating}
-                            />
-                            Afficher dans la sélection
-                          </label>
-                          {updating && (
-                            <span className="inline-flex items-center gap-2 text-slate-500">
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                              Mise à jour…
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-              <button
-                type="button"
-                className="ui-btn ui-btn-ghost"
-                onClick={() => void context.refreshBestSellerProducts()}
-                disabled={context.bestSellerLoading}
-              >
-                Rafraîchir la liste
-              </button>
-            </div>
-          </FieldCard>
-        </div>
-      );
-
-    case 'contact':
-      return (
-        <div className="space-y-4">
-          <FieldCard label="Titre" htmlFor="contact-title" active={activeElement === 'contact.title'}>
+        ),
+      };
+    case 'menu.style.background':
+      return {
+        title: IMAGE_FIELD_LABELS['menu.style.background'],
+        content: renderBackgroundEditor('menu'),
+      };
+    case 'contact.title':
+      return {
+        title: 'Titre',
+        content: (
+          <FieldCard label="Titre" htmlFor="contact-title">
             <input
               id="contact-title"
               className="ui-input w-full"
@@ -2114,124 +2274,339 @@ const ZoneEditorContent: React.FC<{
               onChange={context.handleContactFieldChange('title')}
             />
           </FieldCard>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FieldCard
-              label="Label adresse"
-              htmlFor="contact-address-label"
-              active={activeElement === 'contact.addressLabel'}
-            >
-              <input
-                id="contact-address-label"
-                className="ui-input w-full"
-                value={draft.contact.addressLabel}
-                onChange={context.handleContactFieldChange('addressLabel')}
-              />
-            </FieldCard>
-            <FieldCard label="Adresse" htmlFor="contact-address" active={activeElement === 'contact.address'}>
-              <input
-                id="contact-address"
-                className="ui-input w-full"
-                value={draft.contact.address}
-                onChange={context.handleContactFieldChange('address')}
-              />
-              <SuggestionChips
-                options={CONTACT_ADDRESS_SUGGESTIONS}
-                onSelect={value => context.setContactFieldValue('address', value)}
-              />
-            </FieldCard>
-            <FieldCard
-              label="Label téléphone"
-              htmlFor="contact-phone-label"
-              active={activeElement === 'contact.phoneLabel'}
-            >
-              <input
-                id="contact-phone-label"
-                className="ui-input w-full"
-                value={draft.contact.phoneLabel}
-                onChange={context.handleContactFieldChange('phoneLabel')}
-              />
-            </FieldCard>
-            <FieldCard label="Téléphone" htmlFor="contact-phone" active={activeElement === 'contact.phone'}>
-              <input
-                id="contact-phone"
-                className="ui-input w-full"
-                value={draft.contact.phone}
-                onChange={context.handleContactFieldChange('phone')}
-              />
-              <SuggestionChips
-                options={CONTACT_PHONE_SUGGESTIONS}
-                onSelect={value => context.setContactFieldValue('phone', value)}
-              />
-            </FieldCard>
-            <FieldCard
-              label="Label email"
-              htmlFor="contact-email-label"
-              active={activeElement === 'contact.emailLabel'}
-            >
-              <input
-                id="contact-email-label"
-                className="ui-input w-full"
-                value={draft.contact.emailLabel}
-                onChange={context.handleContactFieldChange('emailLabel')}
-              />
-            </FieldCard>
-            <FieldCard label="Email" htmlFor="contact-email" active={activeElement === 'contact.email'}>
-              <input
-                id="contact-email"
-                className="ui-input w-full"
-                value={draft.contact.email}
-                onChange={context.handleContactFieldChange('email')}
-              />
-              <SuggestionChips
-                options={CONTACT_EMAIL_SUGGESTIONS}
-                onSelect={value => context.setContactFieldValue('email', value)}
-              />
-            </FieldCard>
-          </div>
-
+        ),
+      };
+    case 'contact.addressLabel':
+      return {
+        title: 'Label adresse',
+        content: (
+          <FieldCard label="Label adresse" htmlFor="contact-address-label">
+            <input
+              id="contact-address-label"
+              className="ui-input w-full"
+              value={draft.contact.addressLabel}
+              onChange={context.handleContactFieldChange('addressLabel')}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'contact.address':
+      return {
+        title: 'Adresse',
+        content: (
+          <FieldCard label="Adresse" htmlFor="contact-address">
+            <input
+              id="contact-address"
+              className="ui-input w-full"
+              value={draft.contact.address}
+              onChange={context.handleContactFieldChange('address')}
+            />
+            <SuggestionChips
+              options={CONTACT_ADDRESS_SUGGESTIONS}
+              onSelect={value => context.setContactFieldValue('address', value)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'contact.phoneLabel':
+      return {
+        title: 'Label téléphone',
+        content: (
+          <FieldCard label="Label téléphone" htmlFor="contact-phone-label">
+            <input
+              id="contact-phone-label"
+              className="ui-input w-full"
+              value={draft.contact.phoneLabel}
+              onChange={context.handleContactFieldChange('phoneLabel')}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'contact.phone':
+      return {
+        title: 'Téléphone',
+        content: (
+          <FieldCard label="Téléphone" htmlFor="contact-phone">
+            <input
+              id="contact-phone"
+              className="ui-input w-full"
+              value={draft.contact.phone}
+              onChange={context.handleContactFieldChange('phone')}
+            />
+            <SuggestionChips
+              options={CONTACT_PHONE_SUGGESTIONS}
+              onSelect={value => context.setContactFieldValue('phone', value)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'contact.emailLabel':
+      return {
+        title: 'Label email',
+        content: (
+          <FieldCard label="Label email" htmlFor="contact-email-label">
+            <input
+              id="contact-email-label"
+              className="ui-input w-full"
+              value={draft.contact.emailLabel}
+              onChange={context.handleContactFieldChange('emailLabel')}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'contact.email':
+      return {
+        title: 'Email',
+        content: (
+          <FieldCard label="Email" htmlFor="contact-email">
+            <input
+              id="contact-email"
+              className="ui-input w-full"
+              value={draft.contact.email}
+              onChange={context.handleContactFieldChange('email')}
+            />
+            <SuggestionChips
+              options={CONTACT_EMAIL_SUGGESTIONS}
+              onSelect={value => context.setContactFieldValue('email', value)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'contact.image':
+      return {
+        title: 'Visuel de la section contact',
+        content: (
           <MediaInputField
             field="contact.image"
             label={IMAGE_FIELD_LABELS['contact.image']}
             value={draft.contact.image}
-            imageErrors={context.imageErrors}
+            imageErrors={imageErrors}
             handleImageInputChange={context.handleImageInputChange}
             handleImageUpload={context.handleImageUpload}
             handleClearImage={context.handleClearImage}
             isUploading={context.isUploading}
-            onOpenAssets={onOpenAssets}
+            onOpenAssets={field => onOpenAssets(field)}
           />
-        </div>
-      );
-
-    case 'footer':
-      return (
-        <div className="space-y-4">
-          <FieldCard label="Texte" htmlFor="footer-text" active={activeElement === 'footer.text'}>
+        ),
+      };
+    case 'contact.style.background':
+      return {
+        title: IMAGE_FIELD_LABELS['contact.style.background'],
+        content: renderBackgroundEditor('contact'),
+      };
+    case 'footer.text':
+      return {
+        title: 'Texte de pied de page',
+        content: (
+          <FieldCard label="Texte" htmlFor="footer-text">
             <input
               id="footer-text"
               className="ui-input w-full"
               value={draft.footer.text}
               onChange={context.handleFooterTextChange}
             />
-            <SuggestionChips
-              options={FOOTER_TEXT_SUGGESTIONS}
-              onSelect={context.setFooterTextValue}
-            />
+            <SuggestionChips options={FOOTER_TEXT_SUGGESTIONS} onSelect={context.setFooterTextValue} />
           </FieldCard>
-        </div>
-      );
-
+        ),
+      };
+    case 'footer.style.background':
+      return {
+        title: IMAGE_FIELD_LABELS['footer.style.background'],
+        content: renderBackgroundEditor('footer'),
+      };
     default:
       return null;
   }
 };
 
+const ElementEditorModal: React.FC<{
+  active: ActiveElementState | null;
+  context: EditorContext;
+  onClose: () => void;
+  onOpenAssets: (field?: ImageFieldKey) => void;
+}> = ({ active, context, onClose, onOpenAssets }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = useState<{
+    top: number | string;
+    left: number | string;
+    transform?: string;
+    width: number;
+  }>({
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 360,
+  });
+
+  useLayoutEffect(() => {
+    if (!active) {
+      return;
+    }
+
+    const updatePosition = () => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      const width = Math.min(420, window.innerWidth - 32);
+      if (active.anchor) {
+        const anchor = active.anchor;
+        const left = Math.min(
+          Math.max(16, anchor.left + anchor.width / 2 - width / 2),
+          Math.max(16, window.innerWidth - width - 16),
+        );
+        const top = Math.min(Math.max(16, anchor.bottom + 12), Math.max(16, window.innerHeight - 16));
+        setPosition({ top, left, width });
+      } else {
+        setPosition({ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width });
+      }
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [active]);
+
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      } else if (event.key === 'Tab') {
+        const container = containerRef.current;
+        if (!container) {
+          return;
+        }
+        const focusable = Array.from(
+          container.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+          ),
+        );
+        if (focusable.length === 0) {
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey) {
+          if (document.activeElement === first || !container.contains(document.activeElement)) {
+            last.focus();
+            event.preventDefault();
+          }
+        } else if (document.activeElement === last) {
+          first.focus();
+          event.preventDefault();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [active, onClose]);
+
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+    const frame = window.setTimeout(() => {
+      const container = containerRef.current;
+      if (!container) {
+        return;
+      }
+      const focusTarget =
+        container.querySelector<HTMLElement>(
+          'input, textarea, select, button:not([data-close="true"]), [tabindex]:not([tabindex="-1"])',
+        ) ?? container;
+      focusTarget.focus({ preventScroll: true });
+    }, 0);
+    return () => window.clearTimeout(frame);
+  }, [active]);
+
+  if (!active) {
+    return null;
+  }
+
+  const zone = resolveZoneFromElement(active.element);
+  const zoneMetadata = ZONE_STEPS.find(step => step.key === zone);
+  const config = getElementEditorConfig(active.element, context, onOpenAssets);
+
+  if (!config) {
+    return null;
+  }
+
+  const dialogStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: position.top,
+    left: position.left,
+    width: position.width,
+    maxWidth: 'calc(100% - 32px)',
+  };
+
+  if (position.transform) {
+    dialogStyle.transform = position.transform;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-slate-900/40" aria-hidden="true" onClick={onClose} />
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="element-editor-title"
+        aria-describedby={config.description ? 'element-editor-description' : undefined}
+        className="pointer-events-auto"
+        style={dialogStyle}
+        tabIndex={-1}
+      >
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl focus:outline-none">
+          <header className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              {zoneMetadata && (
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
+                  {zoneMetadata.label}
+                </p>
+              )}
+              <h2 id="element-editor-title" className="text-lg font-semibold text-slate-900">
+                {config.title}
+              </h2>
+              {config.description && (
+                <p id="element-editor-description" className="text-sm text-slate-500">
+                  {config.description}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              data-close="true"
+              onClick={onClose}
+              className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+              aria-label="Fermer l’éditeur"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </header>
+          <div className="mt-4 space-y-4">{config.content}</div>
+          <footer className="mt-6 flex justify-end">
+            <button type="button" className="ui-btn ui-btn-secondary" onClick={onClose}>
+              Fermer
+            </button>
+          </footer>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const FloatingZoneEditor: React.FC<{
   zone: EditableZoneKey;
   guidedMode: boolean;
-  activeElement: EditableElementKey | null;
-  anchorRect: DOMRect | null;
   containerRef: React.RefObject<HTMLDivElement>;
   checklist: ChecklistItem[];
   zoneStatuses: ZoneStatusRecord;
@@ -2242,8 +2617,6 @@ const FloatingZoneEditor: React.FC<{
 }> = ({
   zone,
   guidedMode,
-  activeElement,
-  anchorRect,
   containerRef,
   checklist,
   zoneStatuses,
@@ -2283,21 +2656,18 @@ const FloatingZoneEditor: React.FC<{
       }
       const containerRect = container.getBoundingClientRect();
       const width = Math.min(420, containerRect.width - 32);
-      let left = containerRect.width / 2 - width / 2;
-      let top = 24;
-      if (anchorRect) {
-        top = anchorRect.bottom - containerRect.top + 16;
-        left = anchorRect.left - containerRect.left;
-      }
-      left = Math.min(Math.max(16, left), Math.max(16, containerRect.width - width - 16));
-      top = Math.max(16, top);
+      const left = Math.min(
+        Math.max(16, containerRect.width / 2 - width / 2),
+        Math.max(16, containerRect.width - width - 16),
+      );
+      const top = 24;
       setCardStyle({ top, left, width });
     };
 
     updatePosition();
     window.addEventListener('resize', updatePosition);
     return () => window.removeEventListener('resize', updatePosition);
-  }, [anchorRect, containerRef, zone]);
+  }, [containerRef, zone]);
 
   if (!containerRef.current) {
     return null;
@@ -2351,12 +2721,7 @@ const FloatingZoneEditor: React.FC<{
 
           <div className="mt-5 space-y-6">
             {guidedMode && <Checklist items={checklist} />}
-            <ZoneEditorContent
-              zone={zone}
-              context={context}
-              activeElement={activeElement}
-              onOpenAssets={onOpenAssets}
-            />
+            <ZoneEditorContent zone={zone} context={context} />
             <ZoneStyleEditor
               zone={zone}
               style={context.draft[zone].style}
