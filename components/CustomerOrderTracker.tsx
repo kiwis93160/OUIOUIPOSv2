@@ -42,27 +42,36 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
     const [isReceiptModalOpen, setReceiptModalOpen] = useState(false);
 
     const steps = [
-        { name: 'En attente', icon: FileText },
-        { name: 'En préparation', icon: ChefHat },
-        { name: 'Prête', icon: PackageCheck },
-        { name: 'Terminée', icon: CheckCircle }
+        { name: 'Enviado', icon: FileText },
+        { name: 'Validado', icon: CheckCircle },
+        { name: 'En preparacion', icon: ChefHat },
+        { name: 'Listo', icon: PackageCheck }
     ];
 
     const getCurrentStepIndex = useCallback((order: Order | null): number => {
         if (!order) return -1;
 
-        const isDelivered =
+        if (
             order.statut === 'finalisee' ||
             order.estado_cocina === 'servido' ||
-            order.estado_cocina === 'entregada';
-
-        if (isDelivered) {
+            order.estado_cocina === 'entregada' ||
+            order.estado_cocina === 'listo'
+        ) {
             return 3;
         }
 
-        if (order.estado_cocina === 'listo') return 2;
-        if (order.estado_cocina === 'recibido') return 1;
-        if (order.statut === 'pendiente_validacion') return 0;
+        if (order.estado_cocina === 'recibido') {
+            return 2;
+        }
+
+        if (order.statut === 'en_cours') {
+            return 1;
+        }
+
+        if (order.statut === 'pendiente_validacion' || order.estado_cocina === 'no_enviado') {
+            return 0;
+        }
+
         return -1;
     }, []);
 
@@ -113,7 +122,8 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
     const isOrderCompleted =
         order?.statut === 'finalisee' ||
         order?.estado_cocina === 'servido' ||
-        order?.estado_cocina === 'entregada';
+        order?.estado_cocina === 'entregada' ||
+        order?.estado_cocina === 'listo';
 
     const containerClasses = variant === 'page'
       ? "container mx-auto p-4 lg:p-8"
@@ -188,7 +198,7 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
                         ))}
                     </div>
                     <div className={`flex justify-between font-bold text-lg border-t pt-2 ${variant === 'hero' ? 'text-white border-gray-500' : 'text-gray-800'}`}>
-                        <span>Total (pesos colombianos)</span>
+                        <span>Total</span>
                         <span>{formatCurrencyCOP(order.total)}</span>
                     </div>
 
@@ -206,7 +216,7 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
                     {isOrderCompleted && (
                         <div className="flex justify-center">
                             <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700">
-                                <CheckCircle size={16} /> Terminée
+                                <CheckCircle size={16} /> Pedido listo
                             </span>
                         </div>
                     )}

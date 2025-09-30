@@ -7,7 +7,6 @@ export const NAV_LINKS = [
   { name: 'À Emporter', href: '/para-llevar', icon: ShoppingBag, permissionKey: '/para-llevar' },
   { name: 'Plan de Salle', href: '/ventes', icon: Armchair, permissionKey: '/ventes' },
   { name: 'Cuisine', href: '/cocina', icon: Soup, permissionKey: '/cocina' },
-  { name: 'Résumé Ventes', href: '/resume-ventes', icon: AreaChart, permissionKey: '/resume-ventes' },
   {
     name: 'Personnalisation',
     href: SITE_CUSTOMIZER_PERMISSION_KEY,
@@ -16,6 +15,7 @@ export const NAV_LINKS = [
   },
   { name: 'Produits', href: '/produits', icon: UtensilsCrossed, permissionKey: '/produits' },
   { name: 'Ingrédients', href: '/ingredients', icon: Package, permissionKey: '/ingredients' },
+  { name: 'Résumé Ventes', href: '/resume-ventes', icon: AreaChart, permissionKey: '/resume-ventes' },
 ];
 
 export const ROLES = {

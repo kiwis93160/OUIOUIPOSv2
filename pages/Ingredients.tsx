@@ -87,7 +87,7 @@ const Ingredients: React.FC = () => {
                                 <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Nom</th>
                                 <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Stock Actuel</th>
                                 <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Stock Minimum</th>
-                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Prix unitaire moyen (pesos colombianos)</th>
+                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Prix unitaire moyen</th>
                                 {canEdit && <th className="p-3 text-right text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>}
                             </tr>
                         </thead>
@@ -238,7 +238,7 @@ const ResupplyModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess:
                     <input type="number" id="quantity" min="0.01" step="0.01" value={quantity} onChange={e => setQuantity(parseFloat(e.target.value))} required className="mt-1 ui-input"/>
                 </div>
                 <div>
-                    <label htmlFor="unitPrice" className="block text-sm font-medium text-gray-700">Prix par unité (pesos colombianos/{ingredient.unite})</label>
+                    <label htmlFor="unitPrice" className="block text-sm font-medium text-gray-700">Prix par unité ({ingredient.unite})</label>
                     <input type="number" id="unitPrice" min="0" step="0.01" value={unitPrice} onChange={e => setUnitPrice(parseFloat(e.target.value))} required className="mt-1 ui-input"/>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">

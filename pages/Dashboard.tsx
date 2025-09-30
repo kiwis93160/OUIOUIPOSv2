@@ -8,25 +8,25 @@ import RoleManager from '../components/role-manager';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
 const MainStatCard: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
-    <div className="ui-card p-6 flex items-center space-x-4">
+    <div className="ui-card p-6 flex items-center space-x-4 min-w-0">
         <div className="p-4 bg-brand-primary/20 text-brand-primary rounded-full">
             {icon}
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-500">{title}</p>
-            <p className="text-2xl md:text-3xl xl:text-4xl font-bold text-gray-800">{value}</p>
+            <p className="text-2xl md:text-3xl xl:text-4xl font-bold text-gray-800 break-words leading-tight">{value}</p>
         </div>
     </div>
 );
 
 const OpStatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; onClick?: () => void }> = ({ title, value, icon, onClick }) => (
-    <div className={`ui-card p-4 flex items-center space-x-3 ${onClick ? 'cursor-pointer hover:bg-gray-50' : ''}`} onClick={onClick}>
+    <div className={`ui-card p-4 flex items-center space-x-3 min-w-0 ${onClick ? 'cursor-pointer hover:bg-gray-50' : ''}`} onClick={onClick}>
         <div className="p-3 bg-gray-100 text-gray-600 rounded-lg">
             {icon}
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
             <p className="text-xs text-gray-500">{title}</p>
-            <p className="text-lg sm:text-xl xl:text-2xl font-bold text-gray-800">{value}</p>
+            <p className="text-lg sm:text-xl xl:text-2xl font-bold text-gray-800 break-words leading-tight">{value}</p>
         </div>
     </div>
 );
@@ -113,10 +113,10 @@ const Dashboard: React.FC = () => {
 
             {/* Block 1: Key Indicators */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MainStatCard title={`Ventas (${stats.periodLabel}) · pesos colombianos`} value={formatCurrencyCOP(stats.ventesPeriode)} icon={<DollarSign size={28}/>} />
-                <MainStatCard title={`Beneficio (${stats.periodLabel}) · pesos colombianos`} value={formatCurrencyCOP(stats.beneficePeriode)} icon={<DollarSign size={28}/>} />
+                <MainStatCard title={`Ventas (${stats.periodLabel})`} value={formatCurrencyCOP(stats.ventesPeriode)} icon={<DollarSign size={28}/>} />
+                <MainStatCard title={`Beneficio (${stats.periodLabel})`} value={formatCurrencyCOP(stats.beneficePeriode)} icon={<DollarSign size={28}/>} />
                 <MainStatCard title={`Clientes (${stats.periodLabel})`} value={stats.clientsPeriode.toString()} icon={<Users size={28}/>} />
-                <MainStatCard title="Ticket promedio (pesos colombianos)" value={formatCurrencyCOP(stats.panierMoyen)} icon={<BarChart2 size={28}/>} />
+                <MainStatCard title="Ticket promedio" value={formatCurrencyCOP(stats.panierMoyen)} icon={<BarChart2 size={28}/>} />
             </div>
 
             {/* Block 2: Operational Status */}
@@ -142,8 +142,8 @@ const Dashboard: React.FC = () => {
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Bar dataKey="ventes" fill="#8884d8" name={`${stats.periodLabel} (pesos colombianos)`} />
-                        <Bar dataKey="ventesPeriodePrecedente" fill="#d8d6f5" name="Periodo anterior (pesos colombianos)" />
+                        <Bar dataKey="ventes" fill="#8884d8" name={`${stats.periodLabel}`} />
+                        <Bar dataKey="ventesPeriodePrecedente" fill="#d8d6f5" name="Periodo anterior" />
                     </BarChart>
                 </ResponsiveContainer>
             </div>

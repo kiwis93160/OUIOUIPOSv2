@@ -137,7 +137,7 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
             </div>
             <div className="p-4 border-t space-y-4">
                 <div className="flex justify-between text-2xl font-semibold text-brand-secondary">
-                    <span>Total (pesos colombianos)</span>
+                    <span>Total</span>
                     <span>{formatCurrencyCOP(total)}</span>
                 </div>
 

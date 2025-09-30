@@ -29,7 +29,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, order, onF
     <Modal isOpen={isOpen} onClose={onClose} title={`Finalizar el pedido #${order.id.slice(-4)}`}>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="text-center">
-          <p className="text-gray-600">Total a pagar (pesos colombianos)</p>
+          <p className="text-gray-600">Total a pagar</p>
           <p className="text-4xl font-extrabold text-gray-900">{formatCurrencyCOP(order.total)}</p>
         </div>
 
