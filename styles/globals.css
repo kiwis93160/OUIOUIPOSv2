@@ -483,10 +483,26 @@ body {
 }
 
 .login-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(0.6rem, 1.5vw, 0.9rem);
   font-size: clamp(1.75rem, 4vw, 2.25rem);
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--color-accent);
+}
+
+.login-brand__logo {
+  width: clamp(2.5rem, 5vw, 3rem);
+  height: clamp(2.5rem, 5vw, 3rem);
+  flex: 0 0 auto;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px color-mix(in srgb, var(--color-heading) 25%, transparent));
+}
+
+.login-brand__name {
+  line-height: 1.1;
 }
 
 .login-nav {
@@ -512,12 +528,42 @@ body {
 }
 
 .login-nav__cta {
-  font-size: var(--font-size-sm);
-  padding-inline: clamp(1.15rem, 3vw, 1.75rem);
-  padding-block: 0.65rem;
+  display: none;
+}
+
+.login-nav__staff-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(2.75rem, 4vw, 3.15rem);
+  height: clamp(2.75rem, 4vw, 3.15rem);
   border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  border: 1px solid color-mix(in srgb, var(--color-surface) 24%, transparent);
+  background: color-mix(in srgb, var(--color-heading) 72%, transparent);
+  padding: clamp(0.35rem, 1vw, 0.55rem);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-nav__staff-btn:hover,
+.login-nav__staff-btn:focus-visible {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--color-surface) 35%, transparent);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-heading) 22%, transparent);
+  outline: none;
+}
+
+.login-nav__staff-btn:disabled {
+  cursor: default;
+  opacity: 0.65;
+  transform: none;
+  box-shadow: none;
+}
+
+.login-nav__staff-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .login-header__menu {
@@ -578,6 +624,36 @@ body {
   font-size: clamp(1.5rem, 5vw, 2rem);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.login-menu-overlay__staff-btn {
+  width: clamp(3rem, 12vw, 3.75rem);
+  height: clamp(3rem, 12vw, 3.75rem);
+  background: color-mix(in srgb, var(--color-surface) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-surface) 40%, transparent);
+}
+
+.login-menu-overlay__staff-btn:hover,
+.login-menu-overlay__staff-btn:focus-visible {
+  background: color-mix(in srgb, var(--color-surface) 20%, transparent);
+}
+
+@media (max-width: 640px) {
+  .login-brand {
+    gap: 0.5rem;
+  }
+
+  .login-brand__logo {
+    width: 2.25rem;
+    height: 2.25rem;
+    filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--color-heading) 20%, transparent));
+  }
+
+  .login-nav__staff-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0.3rem;
+  }
 }
 
 .login-menu-overlay__link {
