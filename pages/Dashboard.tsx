@@ -8,18 +8,20 @@ import RoleManager from '../components/role-manager';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
 const MainStatCard: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
-    <div className="ui-card p-6 flex items-center space-x-4 min-w-0">
+    <div className="ui-card p-6 flex flex-col items-center justify-center text-center gap-4 min-w-0">
         <div className="p-4 bg-brand-primary/20 text-brand-primary rounded-full">
             {icon}
         </div>
-        <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-500">{title}</p>
-            <p
-                className="font-bold text-gray-800 leading-tight whitespace-nowrap"
-                style={{ fontSize: 'clamp(1.35rem, 2.8vw, 2.75rem)', letterSpacing: '-0.01em' }}
-            >
-                {value}
-            </p>
+        <div className="w-full space-y-2">
+            <p className="text-sm font-semibold text-gray-500 text-center">{title}</p>
+            <div className="w-full flex justify-center">
+                <p
+                    className="font-bold text-gray-800 leading-none text-center break-words"
+                    style={{ fontSize: 'clamp(1.25rem, 3vw, 2rem)', letterSpacing: '-0.01em' }}
+                >
+                    {value}
+                </p>
+            </div>
         </div>
     </div>
 );
