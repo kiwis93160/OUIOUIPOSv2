@@ -5,7 +5,7 @@ import { api, getBusinessDayStart } from '../services/api';
 import { DashboardStats, SalesDataPoint, DashboardPeriod } from '../types';
 import Modal from '../components/Modal';
 import RoleManager from '../components/role-manager';
-import { formatIntegerAmount } from '../utils/formatIntegerAmount';
+import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
 const MainStatCard: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
     <div className="ui-card p-6 flex items-center space-x-4">
@@ -113,10 +113,10 @@ const Dashboard: React.FC = () => {
 
             {/* Block 1: Key Indicators */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MainStatCard title={`Ventas (${stats.periodLabel})`} value={`${formatIntegerAmount(stats.ventesPeriode)} €`} icon={<DollarSign size={28}/>} />
-                <MainStatCard title={`Beneficio (${stats.periodLabel})`} value={`${formatIntegerAmount(stats.beneficePeriode)} €`} icon={<DollarSign size={28}/>} />
+                <MainStatCard title={`Ventas (${stats.periodLabel}) · pesos colombianos`} value={formatCurrencyCOP(stats.ventesPeriode)} icon={<DollarSign size={28}/>} />
+                <MainStatCard title={`Beneficio (${stats.periodLabel}) · pesos colombianos`} value={formatCurrencyCOP(stats.beneficePeriode)} icon={<DollarSign size={28}/>} />
                 <MainStatCard title={`Clientes (${stats.periodLabel})`} value={stats.clientsPeriode.toString()} icon={<Users size={28}/>} />
-                <MainStatCard title="Ticket promedio" value={`${formatIntegerAmount(stats.panierMoyen)} €`} icon={<BarChart2 size={28}/>} />
+                <MainStatCard title="Ticket promedio (pesos colombianos)" value={formatCurrencyCOP(stats.panierMoyen)} icon={<BarChart2 size={28}/>} />
             </div>
 
             {/* Block 2: Operational Status */}
@@ -142,8 +142,8 @@ const Dashboard: React.FC = () => {
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Bar dataKey="ventes" fill="#8884d8" name={`${stats.periodLabel} (€)`} />
-                        <Bar dataKey="ventesPeriodePrecedente" fill="#d8d6f5" name="Periodo anterior (€)" />
+                        <Bar dataKey="ventes" fill="#8884d8" name={`${stats.periodLabel} (pesos colombianos)`} />
+                        <Bar dataKey="ventesPeriodePrecedente" fill="#d8d6f5" name="Periodo anterior (pesos colombianos)" />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
@@ -163,7 +163,7 @@ const Dashboard: React.FC = () => {
                             <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label>
                                 {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                             </Pie>
-                            <Tooltip formatter={(value: number) => `${formatIntegerAmount(value)} €`} />
+                            <Tooltip formatter={(value: number) => formatCurrencyCOP(value)} />
                             <Legend/>
                         </PieChart>
                     </ResponsiveContainer>

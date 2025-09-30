@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { Ingredient } from '../types';
 import Modal from '../components/Modal';
 import { PlusCircle, Edit, Trash2, PackagePlus, Search } from 'lucide-react';
-import { formatIntegerAmount } from '../utils/formatIntegerAmount';
+import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
 const Ingredients: React.FC = () => {
     const { role } = useAuth();
@@ -87,7 +87,7 @@ const Ingredients: React.FC = () => {
                                 <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Nom</th>
                                 <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Stock Actuel</th>
                                 <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Stock Minimum</th>
-                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Prix Unitaire Moyen</th>
+                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Prix unitaire moyen (pesos colombianos)</th>
                                 {canEdit && <th className="p-3 text-right text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>}
                             </tr>
                         </thead>
@@ -104,7 +104,7 @@ const Ingredients: React.FC = () => {
                                         {ing.stock_minimum} {ing.unite}
                                     </td>
                                      <td className={`p-3 ${isLowStock ? 'text-red-800' : 'text-gray-700'}`}>
-                                        {formatIntegerAmount(ing.prix_unitaire)} €
+                                        {formatCurrencyCOP(ing.prix_unitaire)}
                                     </td>
                                     {canEdit && (
                                         <td className="p-3 text-right">
@@ -238,7 +238,7 @@ const ResupplyModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess:
                     <input type="number" id="quantity" min="0.01" step="0.01" value={quantity} onChange={e => setQuantity(parseFloat(e.target.value))} required className="mt-1 ui-input"/>
                 </div>
                 <div>
-                    <label htmlFor="unitPrice" className="block text-sm font-medium text-gray-700">Prix par Unité (€/{ingredient.unite})</label>
+                    <label htmlFor="unitPrice" className="block text-sm font-medium text-gray-700">Prix par unité (pesos colombianos/{ingredient.unite})</label>
                     <input type="number" id="unitPrice" min="0" step="0.01" value={unitPrice} onChange={e => setUnitPrice(parseFloat(e.target.value))} required className="mt-1 ui-input"/>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">

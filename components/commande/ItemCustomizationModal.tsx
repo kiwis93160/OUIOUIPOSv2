@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import Modal from '../Modal';
 import type { Product } from '../../types';
-import { formatIntegerAmount } from '../../utils/formatIntegerAmount';
+import { formatCurrencyCOP } from '../../utils/formatIntegerAmount';
 
 export interface ItemCustomizationResult {
     quantity: number;
@@ -99,7 +99,7 @@ const ItemCustomizationModal: React.FC<ItemCustomizationModalProps> = ({
                         onClick={handleSave}
                         className="rounded-lg bg-brand-primary py-2 px-6 font-semibold text-brand-secondary transition hover:bg-yellow-400"
                     >
-                        Ajouter ({formatIntegerAmount(product.prix_vente * quantity)} €)
+                        Ajouter ({formatCurrencyCOP(product.prix_vente * quantity)})
                     </button>
                 </div>
             </div>

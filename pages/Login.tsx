@@ -7,7 +7,7 @@ import { Product, Order } from '../types';
 import { Mail, MapPin, Phone, Menu, X } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
-import { formatIntegerAmount } from '../utils/formatIntegerAmount';
+import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 import useSiteContent from '../hooks/useSiteContent';
 import {
   createBackgroundStyle,
@@ -373,7 +373,7 @@ const Login: React.FC = () => {
                               Commande du {new Date(order.date_creation).toLocaleDateString()}
                             </p>
                             <p className="hero-history__details" style={heroBodyTextStyle}>
-                              {order.items.length} article(s) • {formatIntegerAmount(order.total)}€
+                              {order.items.length} article(s) • {formatCurrencyCOP(order.total)}
                             </p>
                           </div>
                           <button
@@ -449,7 +449,7 @@ const Login: React.FC = () => {
                         {product.description}
                       </p>
                       <p className="menu-card__price" style={menuBodyTextStyle}>
-                        {formatIntegerAmount(product.prix_vente)} €
+                        {formatCurrencyCOP(product.prix_vente)}
                       </p>
                     </div>
                   </article>

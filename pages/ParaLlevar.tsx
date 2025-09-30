@@ -5,7 +5,7 @@ import { Eye, User, MapPin } from 'lucide-react';
 import Modal from '../components/Modal';
 import OrderTimer from '../components/OrderTimer';
 import { getOrderUrgencyStyles } from '../utils/orderUrgency';
-import { formatIntegerAmount } from '../utils/formatIntegerAmount';
+import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
 
 const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => void, onDeliver?: (orderId: string) => void, isProcessing?: boolean }> = ({ order, onValidate, onDeliver, isProcessing }) => {
@@ -75,8 +75,8 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     </div>
 
                     <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-semibold text-gray-900 shadow-sm">
-                        <span>Total</span>
-                        <span className="text-lg sm:text-xl text-gray-900">{formatIntegerAmount(order.total)} €</span>
+                        <span>Total (pesos colombianos)</span>
+                        <span className="text-lg sm:text-xl text-gray-900">{formatCurrencyCOP(order.total)}</span>
                     </div>
                 </div>
 

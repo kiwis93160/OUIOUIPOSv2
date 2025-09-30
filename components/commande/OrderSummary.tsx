@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, DollarSign, MessageSquare, MinusCircle, PlusCircle, Send } from 'lucide-react';
 import type { Order, OrderItem } from '../../types';
-import { formatIntegerAmount } from '../../utils/formatIntegerAmount';
+import { formatCurrencyCOP } from '../../utils/formatIntegerAmount';
 
 export type CategorizedOrderItems = {
     pending: { item: OrderItem; index: number }[];
@@ -66,12 +66,12 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
                                                 {item.quantite}x {item.nom_produit}
                                             </p>
                                             <p className="font-bold text-gray-900">
-                                                {formatIntegerAmount(item.quantite * item.prix_unitaire)}€
+                                                {formatCurrencyCOP(item.quantite * item.prix_unitaire)}
                                             </p>
                                         </div>
                                         <div className="flex justify-between items-center mt-2">
                                             <p className="text-sm text-gray-700">
-                                                {formatIntegerAmount(item.prix_unitaire)} € /u
+                                                {formatCurrencyCOP(item.prix_unitaire)} /u
                                             </p>
                                             <div className="flex items-center space-x-2 text-gray-800">
                                                 <button onClick={() => onQuantityChange(index, -1)} className="p-1">
@@ -119,11 +119,11 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
                                                 {item.quantite}x {item.nom_produit}
                                             </p>
                                             <p className="font-bold text-gray-900">
-                                                {formatIntegerAmount(item.quantite * item.prix_unitaire)}€
+                                                {formatCurrencyCOP(item.quantite * item.prix_unitaire)}
                                             </p>
                                         </div>
                                         <p className="text-sm text-gray-700 mt-2">
-                                            {formatIntegerAmount(item.prix_unitaire)} € /u
+                                            {formatCurrencyCOP(item.prix_unitaire)} /u
                                         </p>
                                         {item.commentaire && (
                                             <p className="mt-2 text-sm italic text-gray-600 pl-2">"{item.commentaire}"</p>
@@ -137,8 +137,8 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
             </div>
             <div className="p-4 border-t space-y-4">
                 <div className="flex justify-between text-2xl font-semibold text-brand-secondary">
-                    <span>Total</span>
-                    <span>{formatIntegerAmount(total)} €</span>
+                    <span>Total (pesos colombianos)</span>
+                    <span>{formatCurrencyCOP(total)}</span>
                 </div>
 
                 {orderStatus === 'listo' && (

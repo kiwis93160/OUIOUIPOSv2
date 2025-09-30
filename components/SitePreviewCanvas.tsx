@@ -7,6 +7,7 @@ import {
   createHeroBackgroundStyle,
   createTextStyle,
 } from '../utils/siteStyleHelpers';
+import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
 export type EditableZoneKey = 'navigation' | 'hero' | 'about' | 'menu' | 'contact' | 'footer';
 
@@ -64,19 +65,19 @@ const placeholderProducts = [
     id: '1',
     name: 'Taco al Pastor',
     description: 'Porc mariné, ananas rôti et coriandre fraîche.',
-    price: '12,90€',
+    price: formatCurrencyCOP(12900),
   },
   {
     id: '2',
     name: 'Burrito Barbacoa',
     description: 'Bœuf effiloché, haricots noirs et pico de gallo.',
-    price: '14,50€',
+    price: formatCurrencyCOP(14500),
   },
   {
     id: '3',
     name: 'Quesadilla Verde',
     description: 'Fromage fondant, courgettes grillées et salsa verde.',
-    price: '11,40€',
+    price: formatCurrencyCOP(11400),
   },
 ];
 
@@ -163,7 +164,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
                           Commande du 12/03/2024
                         </p>
                         <p className="hero-history__details" style={heroBodyTextStyle}>
-                          2 article(s) • 32€
+                          2 article(s) • {formatCurrencyCOP(32000)}
                         </p>
                       </div>
                       <button
