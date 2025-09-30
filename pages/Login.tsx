@@ -16,6 +16,9 @@ import {
   createTextStyle,
 } from '../utils/siteStyleHelpers';
 
+const brandLogo = '/logo-brand.svg';
+const staffLogo = '/logo-staff.svg';
+
 type PinInputProps = {
   pin: string;
   onPinChange: (pin: string) => void;
@@ -251,9 +254,14 @@ const Login: React.FC = () => {
     <div className="login-page">
       <header className="login-header" style={navigationBackgroundStyle}>
         <div className="layout-container login-header__inner" style={navigationTextStyle}>
-          <a href="#accueil" className="login-brand" style={navigationTextStyle}>
-            {navigation.brand}
-          </a>
+          <div className="login-brand" style={navigationTextStyle}>
+            <img
+              src={brandLogo}
+              alt={`Logo ${navigation.brand}`}
+              className="login-brand__logo"
+            />
+            <span className="login-brand__name">{navigation.brand}</span>
+          </div>
           <nav className="login-nav" aria-label="Navigation principale">
             <a href="#accueil" className="login-nav__link" style={navigationBodyStyle}>
               {navigation.links.home}
@@ -270,10 +278,11 @@ const Login: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="ui-btn ui-btn-accent login-nav__cta"
+              className="login-nav__staff-btn"
+              aria-label="Connexion staff"
               style={{ fontFamily: navigation.style.fontFamily }}
             >
-              {navigation.links.loginCta}
+              <img src={staffLogo} alt="" className="login-nav__staff-logo" aria-hidden="true" />
             </button>
           </nav>
           <button
@@ -331,10 +340,11 @@ const Login: React.FC = () => {
                 setIsModalOpen(true);
                 setMobileMenuOpen(false);
               }}
-              className="ui-btn ui-btn-accent hero-cta"
+              className="login-nav__staff-btn login-menu-overlay__staff-btn"
+              aria-label="Connexion staff"
               style={{ fontFamily: navigation.style.fontFamily }}
             >
-              {navigation.links.loginCta}
+              <img src={staffLogo} alt="" className="login-nav__staff-logo" aria-hidden="true" />
             </button>
           </nav>
         </div>

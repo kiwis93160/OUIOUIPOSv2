@@ -9,6 +9,9 @@ import {
 } from '../utils/siteStyleHelpers';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
+const brandLogo = '/logo-brand.svg';
+const staffLogo = '/logo-staff.svg';
+
 export type EditableZoneKey = 'navigation' | 'hero' | 'about' | 'menu' | 'contact' | 'footer';
 
 interface SitePreviewCanvasProps {
@@ -105,9 +108,14 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
       <EditableZoneFrame zone="navigation" label="Navigation" onEdit={onEdit} contentClassName="pt-16">
         <header className="login-header" style={navigationBackgroundStyle}>
           <div className="layout-container login-header__inner" style={navigationTextStyle}>
-            <span className="login-brand" style={navigationTextStyle}>
-              {content.navigation.brand}
-            </span>
+            <div className="login-brand" style={navigationTextStyle}>
+              <img
+                src={brandLogo}
+                alt={`Logo ${content.navigation.brand}`}
+                className="login-brand__logo"
+              />
+              <span className="login-brand__name">{content.navigation.brand}</span>
+            </div>
             <nav className="login-nav" aria-label="Navigation principale">
               <span className="login-nav__link" style={navigationBodyStyle}>
                 {content.navigation.links.home}
@@ -123,11 +131,12 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
               </span>
               <button
                 type="button"
-                className="ui-btn ui-btn-accent login-nav__cta"
+                className="login-nav__staff-btn"
                 style={{ fontFamily: content.navigation.style.fontFamily }}
+                aria-label="Connexion staff"
                 disabled
               >
-                {content.navigation.links.loginCta}
+                <img src={staffLogo} alt="" className="login-nav__staff-logo" aria-hidden="true" />
               </button>
             </nav>
           </div>
