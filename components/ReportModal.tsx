@@ -61,9 +61,9 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
         parts.push('---');
 
         parts.push(`*Estadísticas del día*`);
-        parts.push(`- Ventas (pesos colombianos): *${formatCurrencyCOP(reportData.ventesDuJour)}*`);
+        parts.push(`- Ventas: *${formatCurrencyCOP(reportData.ventesDuJour)}*`);
         parts.push(`- Clientes: *${reportData.clientsDuJour}*`);
-        parts.push(`- Ticket promedio (pesos colombianos): *${formatCurrencyCOP(reportData.panierMoyen)}*`);
+        parts.push(`- Ticket promedio: *${formatCurrencyCOP(reportData.panierMoyen)}*`);
         parts.push('---');
 
         parts.push(`*Productos vendidos*`);
@@ -73,7 +73,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
           reportData.soldProducts.forEach(category => {
             parts.push(`\n_${category.categoryName}_`);
             category.products.forEach(product => {
-              parts.push(`  - ${product.quantity}x ${product.name} (${formatCurrencyCOP(product.totalSales)} pesos colombianos)`);
+              parts.push(`  - ${product.quantity}x ${product.name} (${formatCurrencyCOP(product.totalSales)})`);
             });
           });
         }
@@ -148,9 +148,9 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                <ReportStat icon={<DollarSign/>} label="Ventas del día (pesos colombianos)" value={formatCurrencyCOP(report.ventesDuJour)} />
+                                <ReportStat icon={<DollarSign/>} label="Ventas del día" value={formatCurrencyCOP(report.ventesDuJour)} />
                                 <ReportStat icon={<Users/>} label="Clientes del día" value={report.clientsDuJour} />
-                                <ReportStat icon={<ShoppingCart/>} label="Ticket promedio (pesos colombianos)" value={formatCurrencyCOP(report.panierMoyen)} />
+                                <ReportStat icon={<ShoppingCart/>} label="Ticket promedio" value={formatCurrencyCOP(report.panierMoyen)} />
                             </div>
 
                             <div>
@@ -162,7 +162,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                                             <ul className="list-disc list-inside pl-2 text-gray-700">
                                                 {category.products.map(product => (
                                                     <li key={product.id}>
-                                                        {product.quantity}x {product.name} - <span className="font-semibold">{formatCurrencyCOP(product.totalSales)} (pesos colombianos)</span>
+                                                        {product.quantity}x {product.name} - <span className="font-semibold">{formatCurrencyCOP(product.totalSales)}</span>
                                                     </li>
                                                 ))}
                                             </ul>

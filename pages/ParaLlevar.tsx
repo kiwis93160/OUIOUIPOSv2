@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../services/api';
 import { Order, OrderItem } from '../types';
-import { Eye, User, MapPin } from 'lucide-react';
+import { Eye, User, MapPin, Phone } from 'lucide-react';
 import Modal from '../components/Modal';
 import OrderTimer from '../components/OrderTimer';
 import { getOrderUrgencyStyles } from '../utils/orderUrgency';
@@ -46,9 +46,17 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     {order.clientInfo && (
                         <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm">
                             {order.clientInfo.nom && (
-                                <div className="flex items-center gap-2 text-sm text-gray-900">
-                                    <User size={16} className={urgencyStyles.icon} />
-                                    <span className="font-medium">{order.clientInfo.nom}</span>
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2 text-sm text-gray-900">
+                                        <User size={16} className={urgencyStyles.icon} />
+                                        <span className="font-medium">{order.clientInfo.nom}</span>
+                                    </div>
+                                    {order.clientInfo.telephone && (
+                                        <div className="flex items-center gap-2 text-xs text-gray-600 ml-6">
+                                            <Phone size={14} className="text-gray-500" />
+                                            <span>{order.clientInfo.telephone}</span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             {order.clientInfo.adresse && (
@@ -75,7 +83,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     </div>
 
                     <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-semibold text-gray-900 shadow-sm">
-                        <span>Total (pesos colombianos)</span>
+                        <span>Total</span>
                         <span className="text-lg sm:text-xl text-gray-900">{formatCurrencyCOP(order.total)}</span>
                     </div>
                 </div>

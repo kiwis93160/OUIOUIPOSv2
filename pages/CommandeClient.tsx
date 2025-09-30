@@ -289,7 +289,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     const generateWhatsAppMessage = (order: Order) => {
         const header = `*Nuevo pedido OUIOUITACOS #${order.id.slice(-6)}*`;
         const itemLines = (order.items ?? []).map(item => {
-            const baseLine = `- ${item.quantite}x ${item.nom_produit} (${formatCurrencyCOP(item.prix_unitaire)} pesos colombianos) → ${formatCurrencyCOP(item.prix_unitaire * item.quantite)} pesos colombianos`;
+            const baseLine = `- ${item.quantite}x ${item.nom_produit} (${formatCurrencyCOP(item.prix_unitaire)}) → ${formatCurrencyCOP(item.prix_unitaire * item.quantite)}`;
             const details: string[] = [];
             if (item.commentaire) {
                 details.push(`Comentario: ${item.commentaire}`);
@@ -301,7 +301,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
         });
         const items = itemLines.length > 0 ? itemLines.join('\n') : 'Sin artículos';
         const totalValue = order.total ?? order.items.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0);
-        const totalMsg = `*Total (pesos colombianos): ${formatCurrencyCOP(totalValue)}*`;
+        const totalMsg = `*Total: ${formatCurrencyCOP(totalValue)}*`;
         const paymentMethod = order.payment_method ? `Pago: ${order.payment_method}` : undefined;
         const client = `Cliente: ${order.clientInfo?.nom} (${order.clientInfo?.telephone})\nDirección: ${order.clientInfo?.adresse}`;
         const footer = 'Comprobante de pago adjunto.';

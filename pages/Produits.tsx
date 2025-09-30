@@ -431,7 +431,7 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
                             <input type="text" value={formData.nom_produit} onChange={e => setFormData({...formData, nom_produit: e.target.value})} required className="mt-1 ui-input"/>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Prix de vente (pesos colombianos)</label>
+                            <label className="block text-sm font-medium text-gray-700">Prix de vente</label>
                             <input
                                 type="number"
                                 step="0.01"
@@ -509,11 +509,11 @@ const AddEditProductModal: React.FC<{ isOpen: boolean; onClose: () => void; onSu
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-700">
                         <div>
-                            <p className="text-xs uppercase tracking-wide text-gray-500">Coût de revient (pesos colombianos)</p>
+                            <p className="text-xs uppercase tracking-wide text-gray-500">Coût de revient</p>
                             <p className="text-lg font-semibold text-gray-900">{formatCurrencyCOP(recipeCost)}</p>
                         </div>
                         <div>
-                            <p className="text-xs uppercase tracking-wide text-gray-500">Marge (pesos colombianos)</p>
+                            <p className="text-xs uppercase tracking-wide text-gray-500">Marge</p>
                             <p className={`text-lg font-semibold ${marginValue >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatCurrencyCOP(marginValue)}</p>
                         </div>
                         <div>

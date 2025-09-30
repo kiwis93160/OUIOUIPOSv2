@@ -50,7 +50,7 @@ const ResumeVentes: React.FC = () => {
     };
 
     const exportToCSV = () => {
-        const headers = ['Fecha', 'Tipo', 'Mesa/Cliente', 'Comensales', 'Venta total (pesos colombianos)', 'Beneficio (pesos colombianos)', 'Método de pago'];
+        const headers = ['Fecha', 'Tipo', 'Mesa/Cliente', 'Comensales', 'Venta total', 'Beneficio', 'Método de pago'];
         const csvRows = [
             headers.join(','),
             ...filteredOrders.map(order => [
@@ -122,8 +122,8 @@ const ResumeVentes: React.FC = () => {
                                 <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                 <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                 <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Mesa/Cliente</th>
-                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider text-right">Ventas (pesos colombianos)</th>
-                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider text-right">Beneficio (pesos colombianos)</th>
+                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider text-right">Ventas</th>
+                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider text-right">Beneficio</th>
                                 <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Pago</th>
                             </tr>
                         </thead>
@@ -154,7 +154,7 @@ const ResumeVentes: React.FC = () => {
                                                     <h4 className="font-semibold mb-2 text-gray-800">Detalle de artículos:</h4>
                                                     <ul className="list-disc list-inside pl-2 text-gray-700">
                                                     {order.items.map(item => (
-                                                        <li key={item.id}>{item.quantite}x {item.nom_produit} - <span className="font-semibold">{formatCurrencyCOP(item.prix_unitaire * item.quantite)} (pesos colombianos)</span></li>
+                                                        <li key={item.id}>{item.quantite}x {item.nom_produit} - <span className="font-semibold">{formatCurrencyCOP(item.prix_unitaire * item.quantite)}</span></li>
                                                     ))}
                                                     </ul>
                                                 </div>

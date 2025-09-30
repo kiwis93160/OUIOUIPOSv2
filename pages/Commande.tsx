@@ -654,16 +654,12 @@ const Commande: React.FC = () => {
             {/* Menu Section */}
             <div className="lg:col-span-2 ui-card flex flex-col">
                 <div className="p-4">
-                    <div className="flex flex-col gap-4">
-                        <div className="flex items-center gap-4">
-                            <button onClick={handleExitAttempt} className="ui-btn-dark" title="Retour au plan de salle">
-                                <ArrowLeft size={20} />
-                                <span className="hidden sm:inline">Plan de Salle</span>
-                            </button>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            <h2 className="text-2xl font-semibold text-white">Table {order.table_nom}</h2>
-                        </div>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <button onClick={handleExitAttempt} className="ui-btn-dark" title="Retour au plan de salle">
+                            <ArrowLeft size={20} />
+                            <span>Retour plan de salle</span>
+                        </button>
+                        <h2 className="text-2xl font-semibold text-gray-900">Table {order.table_nom}</h2>
                     </div>
                 </div>
                 <ProductGrid
