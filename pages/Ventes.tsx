@@ -26,11 +26,24 @@ const STATUS_DESCRIPTORS: Record<Table['statut'], StatusDescriptor> = {
 };
 
 const formatTableName = (name: string): string => {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 3 && parts[0].toLowerCase() === 'table' && parts[1].toLowerCase() === 'table') {
-    return `${parts[0]} ${parts.slice(2).join(' ')}`;
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return name;
   }
-  return name;
+
+  const parts = trimmed.split(/\s+/);
+  if (parts.length < 2) {
+    return trimmed;
+  }
+
+  const [firstWord, ...rest] = parts;
+  let index = 0;
+
+  while (index < rest.length && rest[index].toLowerCase() === firstWord.toLowerCase()) {
+    index += 1;
+  }
+
+  return [firstWord, ...rest.slice(index)].join(' ');
 };
 
 const getTableStatus = (table: Table): StatusDescriptor => {
