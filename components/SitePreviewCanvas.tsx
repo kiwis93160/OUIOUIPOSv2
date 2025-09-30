@@ -119,11 +119,12 @@ const EditableElement: React.FC<EditableElementProps> = ({
     event.preventDefault();
     event.stopPropagation();
     const zone = resolveZoneFromElement(id);
+    const buttonRect = event.currentTarget.getBoundingClientRect();
     const anchorElement =
       (event.currentTarget.closest(`[data-zone="${zone}"]`) as HTMLElement | null) ??
       (event.currentTarget.parentElement as HTMLElement | null);
-    const rect = anchorElement?.getBoundingClientRect() ?? null;
-    onEdit(id, { zone, anchor: rect });
+    const fallbackRect = anchorElement?.getBoundingClientRect() ?? null;
+    onEdit(id, { zone, anchor: buttonRect ?? fallbackRect });
   };
 
   return (
