@@ -545,6 +545,7 @@ const Login: React.FC = () => {
           setError('');
         }}
         title="Connexion du personnel"
+        size="lg"
       >
         <form
           onSubmit={handleFormSubmit}
