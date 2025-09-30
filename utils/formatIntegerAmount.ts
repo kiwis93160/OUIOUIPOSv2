@@ -1,11 +1,21 @@
-const integerAmountFormatter = new Intl.NumberFormat('fr-FR', {
+const integerAmountFormatter = new Intl.NumberFormat('es-CO', {
   maximumFractionDigits: 0,
 });
 
-export function formatIntegerAmount(value: number): string {
-  if (!Number.isFinite(value)) {
-    return '0';
-  }
+const copCurrencyFormatter = new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  maximumFractionDigits: 0,
+});
 
-  return integerAmountFormatter.format(Math.round(value));
+function ensureFinite(value: number): number {
+  return Number.isFinite(value) ? Math.round(value) : 0;
+}
+
+export function formatIntegerAmount(value: number): string {
+  return integerAmountFormatter.format(ensureFinite(value));
+}
+
+export function formatCurrencyCOP(value: number): string {
+  return copCurrencyFormatter.format(ensureFinite(value));
 }

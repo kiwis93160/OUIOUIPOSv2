@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Product, Category } from '../../types';
-import { formatIntegerAmount } from '../../utils/formatIntegerAmount';
+import { formatCurrencyCOP } from '../../utils/formatIntegerAmount';
 
 export interface ProductGridProps {
     filteredProducts: Product[];
@@ -101,7 +101,7 @@ const ProductGridComponent: React.FC<ProductGridProps> = ({
                                 {product.description}
                             </p>
                             <p className="font-bold text-brand-primary mt-1">
-                                {formatIntegerAmount(product.prix_vente)} €
+                                {formatCurrencyCOP(product.prix_vente)}
                             </p>
                         </button>
                     );

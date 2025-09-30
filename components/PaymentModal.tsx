@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Order } from '../types';
 import Modal from './Modal';
 import { Upload } from 'lucide-react';
-import { formatIntegerAmount } from '../utils/formatIntegerAmount';
+import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -29,8 +29,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, order, onF
     <Modal isOpen={isOpen} onClose={onClose} title={`Finalizar el pedido #${order.id.slice(-4)}`}>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="text-center">
-          <p className="text-gray-600">Total a pagar</p>
-          <p className="text-4xl font-extrabold text-gray-900">{formatIntegerAmount(order.total)} €</p>
+          <p className="text-gray-600">Total a pagar (pesos colombianos)</p>
+          <p className="text-4xl font-extrabold text-gray-900">{formatCurrencyCOP(order.total)}</p>
         </div>
 
         <div>
