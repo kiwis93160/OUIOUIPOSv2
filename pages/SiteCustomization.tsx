@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import useSiteContent, { DEFAULT_SITE_CONTENT } from '../hooks/useSiteContent';
 import { SectionStyle, SiteContent } from '../types';
 import { normalizeCloudinaryImageUrl, uploadProductImage } from '../services/cloudinary';
-import { ALLOWED_FONT_FAMILIES, ALLOWED_FONT_SIZES, resolveSiteContent } from '../utils/siteContent';
+import { resolveSiteContent } from '../utils/siteContent';
 import SitePreviewCanvas, { EditableElementKey, EditableZoneKey } from '../components/SitePreviewCanvas';
 import Modal from '../components/Modal';
 
@@ -12,6 +12,39 @@ const BACKGROUND_TYPE_OPTIONS: { value: SectionStyle['background']['type']; labe
   { value: 'color', label: 'Couleur' },
   { value: 'image', label: 'Image' },
 ];
+
+const FONT_FAMILY_SUGGESTIONS = [
+  'Inter',
+  'Poppins',
+  'Playfair Display',
+  'Roboto',
+  'Montserrat',
+  'Open Sans',
+  'Georgia, serif',
+  'Arial, sans-serif',
+] as const;
+
+const FONT_SIZE_SUGGESTIONS = [
+  '14px',
+  '16px',
+  '18px',
+  '20px',
+  '24px',
+  '1rem',
+  '1.25rem',
+  'clamp(1rem, 2vw, 1.5rem)',
+] as const;
+
+const COLOR_SUGGESTIONS = [
+  '#0f172a',
+  '#111827',
+  '#f8fafc',
+  '#ffffff',
+  '#e2e8f0',
+  '#f97316',
+  'transparent',
+  'currentColor',
+] as const;
 
 type StyleImageFieldKey =
   | 'navigation.style.background'
@@ -185,8 +218,8 @@ const SiteCustomization: React.FC = () => {
   }, [content]);
 
   const previewContent = useMemo(() => resolveSiteContent(draft), [draft]);
-  const fontOptions = useMemo(() => [...ALLOWED_FONT_FAMILIES], []);
-  const fontSizeOptions = useMemo(() => [...ALLOWED_FONT_SIZES], []);
+  const fontOptions = useMemo(() => [...FONT_FAMILY_SUGGESTIONS], []);
+  const fontSizeOptions = useMemo(() => [...FONT_SIZE_SUGGESTIONS], []);
 
   const mutateDraft = (updater: (prev: SiteContent) => SiteContent) => {
     setDraft(prev => updater(prev));
@@ -662,6 +695,24 @@ const SiteCustomizationModals: React.FC<SiteCustomizationModalsProps> = ({
 }) => {
   const activeZone = activeElement ? resolveZoneFromElement(activeElement) : null;
 
+  const validateCssValue = useCallback(
+    (property: string, value: string): { valid: boolean; message: string | null } => {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return { valid: true, message: null };
+      }
+
+      if (typeof window === 'undefined' || typeof window.CSS === 'undefined' || typeof window.CSS.supports !== 'function') {
+        return { valid: true, message: null };
+      }
+
+      return window.CSS.supports(property, trimmed)
+        ? { valid: true, message: null }
+        : { valid: false, message: 'Cette valeur ne semble pas être reconnue comme une valeur CSS valide.' };
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!activeElement) {
       return;
@@ -690,6 +741,13 @@ const SiteCustomizationModals: React.FC<SiteCustomizationModalsProps> = ({
     const style = draft[zone].style;
     const backgroundField = STYLE_BACKGROUND_FIELD_KEYS[zone];
     const isBackgroundImage = style.background.type === 'image';
+    const fontFamilyValidation = validateCssValue('font-family', style.fontFamily);
+    const fontSizeValidation = validateCssValue('font-size', style.fontSize);
+    const textColorValidation = validateCssValue('color', style.textColor);
+    const backgroundColorValidation =
+      style.background.type === 'color'
+        ? validateCssValue('background-color', style.background.color)
+        : { valid: true, message: null };
 
     return (
       <div className="space-y-4 rounded-lg border border-gray-200 p-4">
@@ -699,35 +757,51 @@ const SiteCustomizationModals: React.FC<SiteCustomizationModalsProps> = ({
             <label htmlFor={`${zone}-font-family`} className="block text-sm font-medium text-gray-700">
               Police
             </label>
-            <select
+            <input
               id={`${zone}-font-family`}
-              className="ui-select mt-1"
+              className={`ui-input mt-1 ${
+                fontFamilyValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+              }`}
               value={style.fontFamily}
               onChange={event => handleStyleFontFamilyChange(zone, event.target.value)}
-            >
+              list={`${zone}-font-family-options`}
+              placeholder="Ex: 'Open Sans', sans-serif"
+            />
+            <datalist id={`${zone}-font-family-options`}>
               {fontOptions.map(font => (
-                <option key={font} value={font}>
-                  {font}
-                </option>
+                <option key={font} value={font} />
               ))}
-            </select>
+            </datalist>
+            {!fontFamilyValidation.valid && (
+              <p className="mt-1 text-xs text-red-600">{fontFamilyValidation.message}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Utilisez le nom exact de la police ou une pile de polices CSS.
+            </p>
           </div>
           <div>
             <label htmlFor={`${zone}-font-size`} className="block text-sm font-medium text-gray-700">
               Taille du texte
             </label>
-            <select
+            <input
               id={`${zone}-font-size`}
-              className="ui-select mt-1"
+              className={`ui-input mt-1 ${
+                fontSizeValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+              }`}
               value={style.fontSize}
               onChange={event => handleStyleFontSizeChange(zone, event.target.value)}
-            >
+              list={`${zone}-font-size-options`}
+              placeholder="Ex: 1rem ou clamp(1rem, 2vw, 1.5rem)"
+            />
+            <datalist id={`${zone}-font-size-options`}>
               {fontSizeOptions.map(size => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
+                <option key={size} value={size} />
               ))}
-            </select>
+            </datalist>
+            {!fontSizeValidation.valid && (
+              <p className="mt-1 text-xs text-red-600">{fontSizeValidation.message}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">Toutes les valeurs CSS valides sont acceptées.</p>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -735,14 +809,34 @@ const SiteCustomizationModals: React.FC<SiteCustomizationModalsProps> = ({
             <label htmlFor={`${zone}-text-color`} className="block text-sm font-medium text-gray-700">
               Couleur du texte
             </label>
-            <input
-              id={`${zone}-text-color`}
-              type="color"
-              className="mt-1 h-10 w-full cursor-pointer rounded-md border border-gray-200 p-1"
-              value={style.textColor}
-              onChange={event => handleStyleTextColorChange(zone, event.target.value)}
-            />
-            <p className="mt-1 text-xs text-gray-500">{style.textColor}</p>
+            <div className="mt-1 flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="h-10 w-10 rounded-md border border-gray-200"
+                style={{ backgroundColor: textColorValidation.valid ? style.textColor : 'transparent' }}
+              />
+              <input
+                id={`${zone}-text-color`}
+                className={`ui-input ${
+                  textColorValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                }`}
+                value={style.textColor}
+                onChange={event => handleStyleTextColorChange(zone, event.target.value)}
+                list={`${zone}-text-color-options`}
+                placeholder="Ex: #0f172a ou rgba(15, 23, 42, 0.8)"
+              />
+            </div>
+            <datalist id={`${zone}-text-color-options`}>
+              {COLOR_SUGGESTIONS.map(color => (
+                <option key={color} value={color} />
+              ))}
+            </datalist>
+            {!textColorValidation.valid && (
+              <p className="mt-1 text-xs text-red-600">{textColorValidation.message}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Entrez une valeur hexadécimale, rgba(), hsl() ou un nom de couleur CSS.
+            </p>
           </div>
           <div>
             <label htmlFor={`${zone}-background-type`} className="block text-sm font-medium text-gray-700">
@@ -764,19 +858,41 @@ const SiteCustomizationModals: React.FC<SiteCustomizationModalsProps> = ({
             </select>
           </div>
         </div>
-        <div>
-          <label htmlFor={`${zone}-background-color`} className="block text-sm font-medium text-gray-700">
-            Couleur de fond
-          </label>
-          <input
-            id={`${zone}-background-color`}
-            type="color"
-            className="mt-1 h-10 w-full cursor-pointer rounded-md border border-gray-200 p-1"
-            value={style.background.color}
-            onChange={event => handleStyleBackgroundColorChange(zone, event.target.value)}
-          />
-          <p className="mt-1 text-xs text-gray-500">{style.background.color}</p>
-        </div>
+        {style.background.type === 'color' && (
+          <div>
+            <label htmlFor={`${zone}-background-color`} className="block text-sm font-medium text-gray-700">
+              Couleur du fond
+            </label>
+            <div className="mt-1 flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="h-10 w-10 rounded-md border border-gray-200"
+                style={{
+                  backgroundColor: backgroundColorValidation.valid ? style.background.color : 'transparent',
+                }}
+              />
+              <input
+                id={`${zone}-background-color`}
+                className={`ui-input ${
+                  backgroundColorValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                }`}
+                value={style.background.color}
+                onChange={event => handleStyleBackgroundColorChange(zone, event.target.value)}
+                list={`${zone}-background-color-options`}
+                placeholder="Ex: #ffffff ou rgba(255, 255, 255, 0.75)"
+              />
+            </div>
+            <datalist id={`${zone}-background-color-options`}>
+              {COLOR_SUGGESTIONS.map(color => (
+                <option key={color} value={color} />
+              ))}
+            </datalist>
+            {!backgroundColorValidation.valid && (
+              <p className="mt-1 text-xs text-red-600">{backgroundColorValidation.message}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">Accepte toutes les valeurs de couleur CSS valides.</p>
+          </div>
+        )}
         {isBackgroundImage && (
           <div>
             <label htmlFor={`${zone}-background-image`} className="block text-sm font-medium text-gray-700">
