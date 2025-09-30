@@ -3,20 +3,17 @@ import { normalizeCloudinaryImageUrl } from '../services/cloudinary';
 
 const trimOrEmpty = (value: string): string => value.trim();
 
-const isValidHexColor = (value: string | null | undefined): value is string =>
-  typeof value === 'string' && /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(value.trim());
-
-export const ALLOWED_FONT_FAMILIES = ['Inter', 'Poppins', 'Playfair Display', 'Roboto', 'Montserrat'] as const;
-export const ALLOWED_FONT_SIZES = ['14px', '16px', '18px', '20px', '24px'] as const;
+const isNonEmptyString = (value: string | null | undefined): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
 
 const resolveFontFamily = (value: string | null | undefined, fallback: string): string =>
-  value && ALLOWED_FONT_FAMILIES.includes(value as (typeof ALLOWED_FONT_FAMILIES)[number]) ? value : fallback;
+  isNonEmptyString(value) ? value.trim() : fallback;
 
 const resolveFontSize = (value: string | null | undefined, fallback: string): string =>
-  value && ALLOWED_FONT_SIZES.includes(value as (typeof ALLOWED_FONT_SIZES)[number]) ? value : fallback;
+  isNonEmptyString(value) ? value.trim() : fallback;
 
 const resolveColor = (value: string | null | undefined, fallback: string): string =>
-  isValidHexColor(value) ? value.trim() : fallback;
+  isNonEmptyString(value) ? value.trim() : fallback;
 
 const resolveString = (value: string | null | undefined, fallback: string): string => {
   if (typeof value !== 'string') {
