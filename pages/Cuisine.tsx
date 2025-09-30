@@ -54,14 +54,14 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
     }, [order.items]);
 
     const sentAt = new Date(order.date_envoi_cuisine || Date.now());
-    const sentAtFormatted = sentAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const sentAtFormatted = sentAt.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
 
     return (
         <div className={`flex h-full flex-col overflow-hidden rounded-xl bg-white text-gray-900 shadow-lg transition-shadow duration-300 hover:shadow-xl ${urgencyStyles.border}`}>
             <header className="border-b border-gray-200 px-5 pt-5 pb-4">
                 <div className="flex w-full flex-col gap-4">
                     <h3 className="w-full text-center text-3xl font-semibold text-gray-900 sm:text-left sm:text-4xl">
-                        {order.table_nom || `À emporter #${order.id.slice(-4)}`}
+                        {order.table_nom || `Para llevar #${order.id.slice(-4)}`}
                     </h3>
                     <OrderTimer
                         startTime={order.date_envoi_cuisine || Date.now()}
@@ -86,7 +86,7 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
             <footer className="border-t border-gray-200 px-5 pb-5 pt-4">
                 <div className="flex w-full flex-col gap-3">
                     <p className="text-xs text-gray-500">
-                        Envoyé {sentAtFormatted}
+                        Enviado {sentAtFormatted}
                     </p>
                     {canMarkReady && (
                         <button
@@ -94,7 +94,7 @@ const KitchenTicketCard: React.FC<{ order: KitchenTicketOrder; onReady: (orderId
                             className="group inline-flex w-full items-center justify-center gap-3 rounded-lg border-2 border-transparent bg-black px-4 py-3 text-lg font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/70 focus-visible:ring-offset-2 hover:bg-neutral-900"
                         >
                             <ChefHat size={22} className="shrink-0" />
-                            <span>PRÊT</span>
+                            <span>LISTO</span>
                         </button>
                     )}
                 </div>
@@ -152,12 +152,12 @@ const Cuisine: React.FC = () => {
     };
 
     // FIX: Use the 'loading' state variable that is defined within the component.
-    if (loading) return <div className="text-gray-700">Chargement des commandes pour la cuisine...</div>;
+    if (loading) return <div className="text-gray-700">Cargando pedidos de cocina...</div>;
 
     return (
         <div className="flex h-full flex-col">
             {orders.length === 0 ? (
-                <div className="mt-6 flex flex-1 items-center justify-center text-2xl text-gray-500">Aucune commande en préparation.</div>
+                <div className="mt-6 flex flex-1 items-center justify-center text-2xl text-gray-500">No hay pedidos en preparación.</div>
             ) : (
                 <div className="mt-6 grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {orders.map(order => (

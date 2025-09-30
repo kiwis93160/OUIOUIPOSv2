@@ -68,11 +68,11 @@ const ProtectedLayout: React.FC = () => {
               type="button"
               onClick={openSidebar}
               className="app-header__menu-button md:hidden"
-              aria-label="Ouvrir le menu"
+              aria-label="Abrir el menú"
             >
               <Menu size={24} />
             </button>
-            <h1 className="app-header__title">Bienvenue, {role?.name}</h1>
+            <h1 className="app-header__title">Bienvenido, {role?.name}</h1>
             <div className="app-header__spacer md:hidden" aria-hidden="true" />
             {/* Add other header elements like user menu here */}
           </header>

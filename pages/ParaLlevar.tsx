@@ -11,13 +11,13 @@ import { formatIntegerAmount } from '../utils/formatIntegerAmount';
 const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => void, onDeliver?: (orderId: string) => void, isProcessing?: boolean }> = ({ order, onValidate, onDeliver, isProcessing }) => {
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
-    const displayName = order.table_nom || `Commande #${order.id.slice(-6)}`;
+    const displayName = order.table_nom || `Pedido #${order.id.slice(-6)}`;
     const timerStart = order.date_envoi_cuisine || order.date_creation;
     const urgencyStyles = getOrderUrgencyStyles(timerStart);
     const urgencyLabelMap: Record<typeof urgencyStyles.level, string> = {
         normal: 'Normal',
-        warning: 'À surveiller',
-        critical: 'Critique',
+        warning: 'En seguimiento',
+        critical: 'Crítico',
     };
 
     return (
@@ -30,7 +30,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                             <div className="space-y-1">
                                 <h4 className="text-lg sm:text-xl md:text-2xl font-semibold leading-tight text-gray-900">{displayName}</h4>
                                 <p className="text-xs text-gray-500">
-                                    Commande envoyée {new Date(timerStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                    Pedido enviado {new Date(timerStart).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
                                 </p>
                             </div>
                             <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${urgencyStyles.badge}`}>
@@ -61,7 +61,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                     )}
 
                     <div className="space-y-3">
-                        <h5 className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Articles</h5>
+                        <h5 className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Artículos</h5>
                         <ul className="space-y-2">
                             {order.items.map((item: OrderItem) => (
                                 <li key={item.id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 shadow-sm">
@@ -88,7 +88,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                                 className="w-full ui-btn ui-btn-secondary"
                                 type="button"
                             >
-                                <Eye size={16} className={urgencyStyles.icon} /> {order.receipt_url ? 'Voir le justificatif' : 'Justificatif indisponible'}
+                                <Eye size={16} className={urgencyStyles.icon} /> {order.receipt_url ? 'Ver comprobante' : 'Comprobante no disponible'}
                             </button>
                             <button
                                 onClick={() => onValidate(order.id)}
@@ -96,7 +96,7 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                                 className="w-full ui-btn ui-btn-info uppercase"
                                 type="button"
                             >
-                                {isProcessing ? 'Validation...' : 'Valider'}
+                                {isProcessing ? 'Validando...' : 'Validar'}
                             </button>
                         </div>
                     )}
@@ -107,16 +107,16 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
                             className="w-full ui-btn ui-btn-success uppercase"
                             type="button"
                         >
-                            {isProcessing ? '...' : 'Entregada'}
+                            {isProcessing ? 'Procesando...' : 'Entregar'}
                         </button>
                     )}
                 </footer>
             </div>
-            <Modal isOpen={isReceiptModalOpen} onClose={() => setIsReceiptModalOpen(false)} title="Justificatif de Paiement">
+            <Modal isOpen={isReceiptModalOpen} onClose={() => setIsReceiptModalOpen(false)} title="Comprobante de pago">
                 {order.receipt_url ? (
-                    <img src={order.receipt_url} alt="Justificatif" className="w-full h-auto rounded-md" />
+                    <img src={order.receipt_url} alt="Comprobante" className="w-full h-auto rounded-md" />
                 ) : (
-                    <p>Aucun justificatif fourni.</p>
+                    <p>No se proporcionó comprobante.</p>
                 )}
             </Modal>
         </>
@@ -162,7 +162,7 @@ const ParaLlevar: React.FC = () => {
             await fetchOrders(); // Refresh immediately after action
         } catch (error: any) {
             console.error("Failed to validate order:", error);
-            alert(`Échec de la validation de la commande: ${error.message}`);
+            alert(`No se pudo validar el pedido: ${error.message}`);
         } finally {
             setProcessingOrderId(null);
         }
@@ -176,34 +176,34 @@ const ParaLlevar: React.FC = () => {
             await fetchOrders(); // Refresh immediately after action
         } catch (error) {
             console.error("Failed to mark order as delivered:", error);
-            alert("Une erreur est survenue lors de la finalisation de la commande.");
+            alert('Ocurrió un error al finalizar el pedido.');
         } finally {
             setProcessingOrderId(null);
         }
     };
 
-    if (loading) return <div className="text-gray-700">Chargement des commandes à emporter...</div>;
+    if (loading) return <div className="text-gray-700">Cargando pedidos para llevar...</div>;
 
     return (
         <div className="space-y-6">
             <div className="mt-6 grid grid-cols-1 gap-8 md:grid-cols-2">
                 {/* Column for validation */}
                 <div className="bg-gray-100 p-4 rounded-xl">
-                    <h2 className="text-lg sm:text-xl font-bold mb-4 text-center text-blue-700">En Attente de Validation ({pendingOrders.length})</h2>
+                    <h2 className="text-lg sm:text-xl font-bold mb-4 text-center text-blue-700">Pendientes de validación ({pendingOrders.length})</h2>
                     <div className="space-y-4">
                         {pendingOrders.length > 0 ? pendingOrders.map(order => (
                             <TakeawayCard key={order.id} order={order} onValidate={handleValidate} isProcessing={processingOrderId === order.id} />
-                        )) : <p className="text-center text-gray-500 py-8">Aucune commande à valider.</p>}
+                        )) : <p className="text-center text-gray-500 py-8">No hay pedidos para validar.</p>}
                     </div>
                 </div>
 
                 {/* Column for ready orders */}
                 <div className="bg-gray-100 p-4 rounded-xl">
-                    <h2 className="text-lg sm:text-xl font-bold mb-4 text-center text-green-700">Commandes Prêtes ({readyOrders.length})</h2>
+                    <h2 className="text-lg sm:text-xl font-bold mb-4 text-center text-green-700">Pedidos listos ({readyOrders.length})</h2>
                     <div className="space-y-4">
                         {readyOrders.length > 0 ? readyOrders.map(order => (
                             <TakeawayCard key={order.id} order={order} onDeliver={handleDeliver} isProcessing={processingOrderId === order.id} />
-                        )) : <p className="text-center text-gray-500 py-8">Aucune commande prête.</p>}
+                        )) : <p className="text-center text-gray-500 py-8">No hay pedidos listos.</p>}
                     </div>
                 </div>
             </div>

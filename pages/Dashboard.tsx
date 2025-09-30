@@ -33,8 +33,8 @@ const OpStatCard: React.FC<{ title: string; value: string | number; icon: React.
 
 
 const PERIOD_CONFIG: Record<DashboardPeriod, { label: string; days: number }> = {
-    week: { label: '7 derniers jours', days: 7 },
-    month: { label: '30 derniers jours', days: 30 },
+    week: { label: 'Últimos 7 días', days: 7 },
+    month: { label: 'Últimos 30 días', days: 30 },
 };
 
 const resolvePeriodBounds = (period: DashboardPeriod) => {
@@ -77,8 +77,8 @@ const Dashboard: React.FC = () => {
         fetchAllStats();
     }, [period]);
 
-    if (loading) return <div className="text-gray-800">Chargement des données du dashboard...</div>;
-    if (!stats) return <div className="text-red-500">Impossible de charger les données.</div>;
+    if (loading) return <div className="text-gray-800">Cargando datos del panel...</div>;
+    if (!stats) return <div className="text-red-500">No fue posible cargar los datos.</div>;
 
     const PIE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF4560', '#775DD0'];
     const pieData = pieChartMode === 'category' ? stats.ventesParCategorie : salesByProduct;
@@ -107,26 +107,26 @@ const Dashboard: React.FC = () => {
                     className="ui-btn-primary"
                 >
                     <Shield className="mr-2 h-4 w-4" />
-                    Gestion des rôles
+                    Gestión de roles
                 </button>
             </div>
 
             {/* Block 1: Key Indicators */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MainStatCard title={`Ventes (${stats.periodLabel})`} value={`${formatIntegerAmount(stats.ventesPeriode)} €`} icon={<DollarSign size={28}/>} />
-                <MainStatCard title={`Bénéfice (${stats.periodLabel})`} value={`${formatIntegerAmount(stats.beneficePeriode)} €`} icon={<DollarSign size={28}/>} />
-                <MainStatCard title={`Clients (${stats.periodLabel})`} value={stats.clientsPeriode.toString()} icon={<Users size={28}/>} />
-                <MainStatCard title="Panier Moyen" value={`${formatIntegerAmount(stats.panierMoyen)} €`} icon={<BarChart2 size={28}/>} />
+                <MainStatCard title={`Ventas (${stats.periodLabel})`} value={`${formatIntegerAmount(stats.ventesPeriode)} €`} icon={<DollarSign size={28}/>} />
+                <MainStatCard title={`Beneficio (${stats.periodLabel})`} value={`${formatIntegerAmount(stats.beneficePeriode)} €`} icon={<DollarSign size={28}/>} />
+                <MainStatCard title={`Clientes (${stats.periodLabel})`} value={stats.clientsPeriode.toString()} icon={<Users size={28}/>} />
+                <MainStatCard title="Ticket promedio" value={`${formatIntegerAmount(stats.panierMoyen)} €`} icon={<BarChart2 size={28}/>} />
             </div>
 
             {/* Block 2: Operational Status */}
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <OpStatCard title="Tables Occupées" value={stats.tablesOccupees} icon={<Armchair size={24}/>} />
-                <OpStatCard title="Clients Actuels" value={stats.clientsActuels} icon={<Users size={24}/>} />
-                <OpStatCard title="En Cuisine" value={stats.commandesEnCuisine} icon={<Soup size={24}/>} />
+                <OpStatCard title="Mesas ocupadas" value={stats.tablesOccupees} icon={<Armchair size={24}/>} />
+                <OpStatCard title="Clientes actuales" value={stats.clientsActuels} icon={<Users size={24}/>} />
+                <OpStatCard title="En cocina" value={stats.commandesEnCuisine} icon={<Soup size={24}/>} />
                 <OpStatCard
-                    title="Ingrédients Bas" 
-                    value={stats.ingredientsStockBas.length} 
+                    title="Ingredientes bajos"
+                    value={stats.ingredientsStockBas.length}
                     icon={<AlertTriangle size={24} className={stats.ingredientsStockBas.length > 0 ? 'text-red-500' : 'text-gray-600'} />}
                     onClick={() => setLowStockModalOpen(true)}
                 />
@@ -134,7 +134,7 @@ const Dashboard: React.FC = () => {
 
             {/* Block 3: Sales Chart */}
             <div className="ui-card p-6">
-                <h3 className="text-lg font-semibold mb-4 text-gray-900">Ventes sur {stats.periodLabel}</h3>
+                <h3 className="text-lg font-semibold mb-4 text-gray-900">Ventas durante {stats.periodLabel}</h3>
                 <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={stats.ventesPeriodeSeries}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -143,18 +143,18 @@ const Dashboard: React.FC = () => {
                         <Tooltip />
                         <Legend />
                         <Bar dataKey="ventes" fill="#8884d8" name={`${stats.periodLabel} (€)`} />
-                        <Bar dataKey="ventesPeriodePrecedente" fill="#d8d6f5" name="Période précédente (€)" />
+                        <Bar dataKey="ventesPeriodePrecedente" fill="#d8d6f5" name="Periodo anterior (€)" />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
-            
+
             {/* Block 4: Sales Pie Chart */}
             <div className="ui-card p-6">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Répartition des Ventes ({stats.periodLabel})</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Distribución de ventas ({stats.periodLabel})</h3>
                     <div className="flex p-1 bg-gray-200 rounded-lg">
-                        <button onClick={() => setPieChartMode('category')} className={`px-3 py-1 text-sm font-semibold rounded-md ${pieChartMode === 'category' ? 'bg-white shadow' : ''}`}>Par Catégorie</button>
-                        <button onClick={() => setPieChartMode('product')} className={`px-3 py-1 text-sm font-semibold rounded-md ${pieChartMode === 'product' ? 'bg-white shadow' : ''}`}>Par Produit</button>
+                        <button onClick={() => setPieChartMode('category')} className={`px-3 py-1 text-sm font-semibold rounded-md ${pieChartMode === 'category' ? 'bg-white shadow' : ''}`}>Por categoría</button>
+                        <button onClick={() => setPieChartMode('product')} className={`px-3 py-1 text-sm font-semibold rounded-md ${pieChartMode === 'product' ? 'bg-white shadow' : ''}`}>Por producto</button>
                     </div>
                 </div>
                 {hasPieData ? (
@@ -169,12 +169,12 @@ const Dashboard: React.FC = () => {
                     </ResponsiveContainer>
                 ) : (
                     <div style={{ height: 300 }} className="flex items-center justify-center text-gray-500">
-                        Aucune donnée pour la période sélectionnée.
+                        No hay datos para el periodo seleccionado.
                     </div>
                 )}
             </div>
 
-            <Modal isOpen={isLowStockModalOpen} onClose={() => setLowStockModalOpen(false)} title="Ingrédients en Stock Bas">
+            <Modal isOpen={isLowStockModalOpen} onClose={() => setLowStockModalOpen(false)} title="Ingredientes con inventario bajo">
                 {stats.ingredientsStockBas.length > 0 ? (
                     <ul className="space-y-2">
                         {stats.ingredientsStockBas.map(ing => (
@@ -185,7 +185,7 @@ const Dashboard: React.FC = () => {
                         ))}
                     </ul>
                 ) : (
-                    <p className="text-gray-600 text-center">Aucun ingrédient en stock bas pour le moment.</p>
+                    <p className="text-gray-600 text-center">No hay ingredientes con inventario bajo por el momento.</p>
                 )}
             </Modal>
 
