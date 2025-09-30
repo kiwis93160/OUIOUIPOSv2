@@ -240,6 +240,8 @@ const sanitizeSectionStyle = (style: SectionStyle | undefined, fallback: Section
 export const DEFAULT_SITE_CONTENT: SiteContent = {
   navigation: {
     brand: 'OUIOUITACOS',
+    brandLogo: '/logo-brand.svg',
+    staffLogo: '/logo-staff.svg',
     links: {
       home: 'Accueil',
       about: 'À propos',
@@ -296,6 +298,8 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
   return {
     navigation: {
       brand: resolveString(content?.navigation?.brand, base.navigation.brand),
+      brandLogo: resolveImage(content?.navigation?.brandLogo, base.navigation.brandLogo),
+      staffLogo: resolveImage(content?.navigation?.staffLogo, base.navigation.staffLogo),
       links: {
         home: resolveString(content?.navigation?.links?.home, base.navigation.links.home),
         about: resolveString(content?.navigation?.links?.about, base.navigation.links.about),
@@ -349,6 +353,8 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
 export const sanitizeSiteContentInput = (content: SiteContent): SiteContent => ({
   navigation: {
     brand: trimOrEmpty(content.navigation.brand),
+    brandLogo: sanitizeImage(content.navigation.brandLogo) ?? null,
+    staffLogo: sanitizeImage(content.navigation.staffLogo) ?? null,
     links: {
       home: trimOrEmpty(content.navigation.links.home),
       about: trimOrEmpty(content.navigation.links.about),

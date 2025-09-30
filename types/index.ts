@@ -42,6 +42,8 @@ export interface SiteAssets {
 export interface SiteContent {
   navigation: {
     brand: string;
+    brandLogo: string | null;
+    staffLogo: string | null;
     links: {
       home: string;
       about: string;

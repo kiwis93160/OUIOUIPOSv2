@@ -195,6 +195,8 @@ const IMAGE_FIELD_LABELS: Record<ImageFieldKey, string> = {
   'about.image': 'Image de la section À propos',
   'menu.image': 'Image de la section Menu',
   'contact.image': 'Image de la section Contact',
+  'navigation.brandLogo': 'Logo principal (navigation)',
+  'navigation.staffLogo': "Logo d'accès équipe",
   'navigation.style.background': 'Fond personnalisé (navigation)',
   'hero.style.background': 'Fond personnalisé (hero)',
   'about.style.background': 'Fond personnalisé (À propos)',
@@ -208,6 +210,8 @@ const INITIAL_IMAGE_ERRORS: Record<ImageFieldKey, string | null> = {
   'about.image': null,
   'menu.image': null,
   'contact.image': null,
+  'navigation.brandLogo': null,
+  'navigation.staffLogo': null,
   'navigation.style.background': null,
   'hero.style.background': null,
   'about.style.background': null,
@@ -265,6 +269,8 @@ type ImageFieldKey =
   | 'about.image'
   | 'menu.image'
   | 'contact.image'
+  | 'navigation.brandLogo'
+  | 'navigation.staffLogo'
   | 'navigation.style.background'
   | 'hero.style.background'
   | 'about.style.background'
@@ -731,6 +737,22 @@ const SiteCustomization: React.FC = () => {
             contact: {
               ...prev.contact,
               image: value,
+            },
+          };
+        case 'navigation.brandLogo':
+          return {
+            ...prev,
+            navigation: {
+              ...prev.navigation,
+              brandLogo: value,
+            },
+          };
+        case 'navigation.staffLogo':
+          return {
+            ...prev,
+            navigation: {
+              ...prev.navigation,
+              staffLogo: value,
             },
           };
         case 'navigation.style.background':
@@ -1662,7 +1684,7 @@ const ZoneEditorContent: React.FC<{
   activeElement: EditableElementKey | null;
   onOpenAssets: (field: ImageFieldKey) => void;
 }> = ({ zone, context, activeElement, onOpenAssets }) => {
-  const { draft } = context;
+  const { draft, imageErrors } = context;
   const [rankDrafts, setRankDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -1712,6 +1734,28 @@ const ZoneEditorContent: React.FC<{
     case 'navigation':
       return (
         <div className="space-y-4">
+          <MediaInputField
+            field="navigation.brandLogo"
+            label="Logo principal"
+            value={draft.navigation.brandLogo}
+            imageErrors={imageErrors}
+            handleImageInputChange={context.handleImageInputChange}
+            handleImageUpload={context.handleImageUpload}
+            handleClearImage={context.handleClearImage}
+            isUploading={context.isUploading}
+            onOpenAssets={onOpenAssets}
+          />
+          <MediaInputField
+            field="navigation.staffLogo"
+            label="Logo espace équipe"
+            value={draft.navigation.staffLogo}
+            imageErrors={imageErrors}
+            handleImageInputChange={context.handleImageInputChange}
+            handleImageUpload={context.handleImageUpload}
+            handleClearImage={context.handleClearImage}
+            isUploading={context.isUploading}
+            onOpenAssets={onOpenAssets}
+          />
           <FieldCard
             label="Nom de la marque"
             htmlFor="brand-name"
