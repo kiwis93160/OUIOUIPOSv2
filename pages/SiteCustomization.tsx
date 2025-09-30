@@ -1,6 +1,7 @@
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -20,23 +21,23 @@ import SitePreviewCanvas, {
 } from '../components/SitePreviewCanvas';
 import {
   Archive,
-  Copy,
+  CheckCircle2,
+  ChevronRight,
+  Circle,
+  HelpCircle,
   Image as ImageIcon,
   Link as LinkIcon,
   Loader2,
   Music,
+  Sparkles,
   Trash2,
   Type as TypeIcon,
   Upload,
   Video,
+  X,
 } from 'lucide-react';
 
 const imageWarning = "L'URL doit provenir de Cloudinary (https://*.cloudinary.com).";
-
-const BACKGROUND_TYPE_OPTIONS: { value: SectionStyle['background']['type']; label: string }[] = [
-  { value: 'color', label: 'Couleur' },
-  { value: 'image', label: 'Image' },
-];
 
 const FONT_FAMILY_SUGGESTIONS = [
   'Inter',
@@ -71,150 +72,120 @@ const COLOR_SUGGESTIONS = [
   'currentColor',
 ] as const;
 
-type StyleImageFieldKey =
-  | 'navigation.style.background'
-  | 'hero.style.background'
-  | 'about.style.background'
-  | 'menu.style.background'
-  | 'contact.style.background'
-  | 'footer.style.background';
+const NAVIGATION_BRAND_SUGGESTIONS = [
+  'Taqueria Sol',
+  'Maison Gourmet',
+  'La Cantina Latina',
+  'Atelier des Saveurs',
+] as const;
 
-type ImageFieldKey =
-  | 'hero.backgroundImage'
-  | 'about.image'
-  | 'menu.image'
-  | 'contact.image'
-  | StyleImageFieldKey;
-
-type HeroFieldKey = Exclude<keyof SiteContent['hero'], 'backgroundImage' | 'style'>;
-type MenuFieldKey = Exclude<keyof SiteContent['menu'], 'image' | 'style'>;
-type ContactFieldKey = Exclude<keyof SiteContent['contact'], 'image' | 'style'>;
-type NavigationFieldKey = keyof SiteContent['navigation']['links'];
-
-type PanelSectionKey = EditableZoneKey | 'assets';
-
-type NavigationChangeHandler = (
-  key: NavigationFieldKey,
-) => (event: React.ChangeEvent<HTMLInputElement>) => void;
-type HeroChangeHandler = (
-  key: HeroFieldKey,
-) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-type MenuChangeHandler = (
-  key: MenuFieldKey,
-) => (event: React.ChangeEvent<HTMLInputElement>) => void;
-type ContactChangeHandler = (
-  key: ContactFieldKey,
-) => (event: React.ChangeEvent<HTMLInputElement>) => void;
-type ImageInputHandler = (
-  field: ImageFieldKey,
-) => (event: React.ChangeEvent<HTMLInputElement>) => void;
-
-type ImageUploadHandler = (field: ImageFieldKey, file: File) => Promise<void>;
-type ImageClearHandler = (field: ImageFieldKey) => void;
-
-type AssetUploadHandler = (files: FileList | null) => Promise<void>;
-type AssetRemoveHandler = (id: string) => void;
-type AssetRenameHandler = (id: string, name: string) => void;
-type AssetApplyHandler = (field: ImageFieldKey, asset: CustomizationAsset) => void;
-
-type CustomizationPanelProps = {
-  draft: SiteContent;
-  activeElement: EditableElementKey | null;
-  imageErrors: Record<ImageFieldKey, string | null>;
-  isUploading: (field: ImageFieldKey) => boolean;
-  handleBrandChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  handleNavigationChange: NavigationChangeHandler;
-  handleHeroFieldChange: HeroChangeHandler;
-  handleAboutChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  handleAboutTitleChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  handleMenuFieldChange: MenuChangeHandler;
-  handleContactFieldChange: ContactChangeHandler;
-  handleFooterTextChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  handleImageInputChange: ImageInputHandler;
-  handleImageUpload: ImageUploadHandler;
-  handleClearImage: ImageClearHandler;
-  handleStyleFontFamilyChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleFontSizeChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleTextColorChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleBackgroundColorChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleBackgroundTypeChange: (
-    zone: EditableZoneKey,
-    value: SectionStyle['background']['type'],
-  ) => void;
-  fontOptions: readonly string[];
-  fontSizeOptions: readonly string[];
-  assetState: {
-    uploading: boolean;
-    error: string | null;
-    assets: CustomizationAsset[];
-    onUpload: AssetUploadHandler;
-    onRemove: AssetRemoveHandler;
-    onRename: AssetRenameHandler;
-    onApply: AssetApplyHandler;
-  };
+const NAVIGATION_LINK_SUGGESTIONS: Record<string, readonly string[]> = {
+  home: ['Accueil', 'Bienvenue', 'Notre univers'],
+  about: ['À propos', 'Notre histoire', 'La maison'],
+  menu: ['Menu', 'Carte', 'Offres du moment'],
+  contact: ['Contact', 'Nous trouver', 'Réserver'],
+  loginCta: ['Espace équipe', 'Connexion', 'Staff'],
 };
 
-type ImageFieldEditorProps = {
-  field: ImageFieldKey;
+const HERO_TITLE_SUGGESTIONS = [
+  'Des tacos qui réchauffent le cœur',
+  'Votre nouvelle cantina préférée',
+  'Saveurs authentiques, ambiance solaire',
+] as const;
+
+const HERO_SUBTITLE_SUGGESTIONS = [
+  'Une carte courte, des produits frais et un service aux petits soins.',
+  'Chaque assiette est préparée minute avec des ingrédients sourcés localement.',
+  'Installez-vous, on s’occupe de tout. Du premier sourire au dernier café.',
+] as const;
+
+const HERO_CTA_SUGGESTIONS = ['Commander maintenant', 'Voir la carte', 'Je réserve une table'] as const;
+const HERO_REORDER_SUGGESTIONS = ['Recommander ma dernière tournée', 'Encore la même !', 'Refaire ma commande'] as const;
+const HERO_HISTORY_TITLE_SUGGESTIONS = ['Commandes récentes', 'Vos dernières envies', 'Historique gourmand'] as const;
+
+const ABOUT_TITLE_SUGGESTIONS = ['Une histoire de famille', 'Notre promesse', 'La cuisine avec le cœur'] as const;
+const ABOUT_DESCRIPTION_SUGGESTIONS = [
+  "Depuis 2014, nous célébrons la street food mexicaine dans une ambiance chaleureuse et conviviale.",
+  "Des recettes transmises par notre abuela, revisitées avec des produits locaux et de saison.",
+  "Notre équipe imagine chaque semaine des créations éphémères pour surprendre vos papilles.",
+] as const;
+
+const MENU_LOADING_SUGGESTIONS = [
+  'Chargement des saveurs…',
+  'Préparation de la carte…',
+  'On dresse les plats…',
+] as const;
+
+const MENU_CTA_SUGGESTIONS = ['Explorer la carte complète', 'Je commande', 'Voir tous les plats'] as const;
+
+const CONTACT_ADDRESS_SUGGESTIONS = [
+  '12 rue du Soleil, Bogotá',
+  '45 avenue Central, Medellín',
+  '8 Calle del Sabor, Cartagena',
+] as const;
+
+const CONTACT_PHONE_SUGGESTIONS = ['+57 320 456 98 12', '+57 311 234 56 78', '+57 315 987 65 43'] as const;
+const CONTACT_EMAIL_SUGGESTIONS = ['hola@ouiouipos.co', 'contact@maison-gourmet.co', 'bonjour@cantinalatina.co'] as const;
+
+const FOOTER_TEXT_SUGGESTIONS = [
+  '© 2024 Taqueria Sol — Toute la gourmandise du soleil en un clic.',
+  'Avec amour depuis Bogotá. Merci de soutenir les artisans locaux.',
+  'Cuisine responsable, service souriant. À très vite !',
+] as const;
+
+const ZONE_ORDER: readonly EditableZoneKey[] = ['navigation', 'hero', 'about', 'menu', 'contact', 'footer'];
+
+const ZONE_STEPS: ReadonlyArray<{
+  key: EditableZoneKey;
   label: string;
-  value: string | null;
-  imageErrors: Record<ImageFieldKey, string | null>;
-  handleImageInputChange: ImageInputHandler;
-  handleImageUpload: ImageUploadHandler;
-  handleClearImage: ImageClearHandler;
-  isUploading: (field: ImageFieldKey) => boolean;
-};
+  description: string;
+  helper: string;
+}> = [
+  {
+    key: 'navigation',
+    label: 'Identité',
+    description: 'Définissez votre nom de marque et les entrées du menu.',
+    helper: 'Vos liens doivent refléter les étapes clés du parcours visiteur. Pensez à rester concis et explicite.',
+  },
+  {
+    key: 'hero',
+    label: 'Accueil',
+    description: "Rédigez l'accroche principale et vos CTA de bienvenue.",
+    helper: 'Un bon hero raconte qui vous êtes, ce que vous proposez et comment agir immédiatement.',
+  },
+  {
+    key: 'about',
+    label: 'À propos',
+    description: 'Partagez votre histoire et votre ADN culinaire.',
+    helper: "Quelques phrases suffisent pour expliquer votre vision. Restez authentique, donnez envie de vous rencontrer.",
+  },
+  {
+    key: 'menu',
+    label: 'Menu',
+    description: 'Présentez votre offre et les messages clés de commande.',
+    helper: 'Un CTA clair et un message rassurant suffisent à guider vos clients vers la commande.',
+  },
+  {
+    key: 'contact',
+    label: 'Contact',
+    description: 'Indiquez vos points de contact essentiels.',
+    helper: 'Adresse, téléphone et email permettent à vos clients de vous joindre facilement — pensez à vérifier leur exactitude.',
+  },
+  {
+    key: 'footer',
+    label: 'Pied de page',
+    description: 'Terminez avec un message de marque et vos mentions utiles.',
+    helper: 'Le pied de page rassure et fidélise. Ajoutez une touche personnelle pour marquer les esprits.',
+  },
+];
 
-type StyleControlsProps = {
-  zone: EditableZoneKey;
-  style: SectionStyle;
-  fontOptions: readonly string[];
-  fontSizeOptions: readonly string[];
-  handleStyleFontFamilyChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleFontSizeChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleTextColorChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleBackgroundColorChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleBackgroundTypeChange: (
-    zone: EditableZoneKey,
-    value: SectionStyle['background']['type'],
-  ) => void;
-  handleImageInputChange: ImageInputHandler;
-  handleImageUpload: ImageUploadHandler;
-  handleClearImage: ImageClearHandler;
-  imageErrors: Record<ImageFieldKey, string | null>;
-  isUploading: (field: ImageFieldKey) => boolean;
-};
-
-const STYLE_BACKGROUND_FIELD_KEYS: Record<EditableZoneKey, StyleImageFieldKey> = {
+const STYLE_BACKGROUND_FIELD_KEYS: Record<EditableZoneKey, ImageFieldKey> = {
   navigation: 'navigation.style.background',
   hero: 'hero.style.background',
   about: 'about.style.background',
   menu: 'menu.style.background',
   contact: 'contact.style.background',
   footer: 'footer.style.background',
-};
-
-const resolveZoneFromElement = (element: EditableElementKey): EditableZoneKey => {
-  if (element.startsWith('navigation.')) {
-    return 'navigation';
-  }
-  if (element.startsWith('hero.')) {
-    return 'hero';
-  }
-  if (element.startsWith('about.')) {
-    return 'about';
-  }
-  if (element.startsWith('menu.')) {
-    return 'menu';
-  }
-  if (element.startsWith('contact.')) {
-    return 'contact';
-  }
-  if (element.startsWith('footer.')) {
-    return 'footer';
-  }
-
-  throw new Error(`Zone introuvable pour l'élément modifiable "${element}"`);
 };
 
 const IMAGE_FIELD_LABELS: Record<ImageFieldKey, string> = {
@@ -287,6 +258,57 @@ const ASSET_TYPE_LABELS: Record<CustomizationAssetType, string> = {
   raw: 'Fichier',
 };
 
+type ImageFieldKey =
+  | 'hero.backgroundImage'
+  | 'about.image'
+  | 'menu.image'
+  | 'contact.image'
+  | 'navigation.style.background'
+  | 'hero.style.background'
+  | 'about.style.background'
+  | 'menu.style.background'
+  | 'contact.style.background'
+  | 'footer.style.background';
+
+type NavigationFieldKey = keyof SiteContent['navigation']['links'];
+type HeroFieldKey = Exclude<keyof SiteContent['hero'], 'backgroundImage' | 'style'>;
+type MenuFieldKey = Exclude<keyof SiteContent['menu'], 'image' | 'style'>;
+type ContactFieldKey = Exclude<keyof SiteContent['contact'], 'image' | 'style'>;
+
+type NavigationChangeHandler = (
+  key: NavigationFieldKey,
+) => (event: React.ChangeEvent<HTMLInputElement>) => void;
+type HeroChangeHandler = (
+  key: HeroFieldKey,
+) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+type MenuChangeHandler = (
+  key: MenuFieldKey,
+) => (event: React.ChangeEvent<HTMLInputElement>) => void;
+type ContactChangeHandler = (
+  key: ContactFieldKey,
+) => (event: React.ChangeEvent<HTMLInputElement>) => void;
+
+type ImageInputHandler = (
+  field: ImageFieldKey,
+) => (event: React.ChangeEvent<HTMLInputElement>) => void;
+type ImageUploadHandler = (field: ImageFieldKey, file: File) => Promise<void>;
+type ImageClearHandler = (field: ImageFieldKey) => void;
+
+type AssetUploadHandler = (files: FileList | null) => Promise<void>;
+type AssetRemoveHandler = (id: string) => void;
+type AssetRenameHandler = (id: string, name: string) => void;
+type AssetApplyHandler = (field: ImageFieldKey, asset: CustomizationAsset) => void;
+
+type CompletionStatus = 'todo' | 'progress' | 'done';
+
+type ChecklistItem = {
+  label: string;
+  done: boolean;
+};
+
+type ZoneChecklistRecord = Record<EditableZoneKey, ChecklistItem[]>;
+type ZoneStatusRecord = Record<EditableZoneKey, CompletionStatus>;
+
 const guessAssetType = (file: File): CustomizationAssetType => {
   const { type, name } = file;
   if (type.startsWith('image/')) {
@@ -338,6 +360,86 @@ const AssetTypeIcon: React.FC<{ type: CustomizationAssetType }> = ({ type }) => 
   }
 };
 
+const createZoneChecklist = (draft: SiteContent): ZoneChecklistRecord => ({
+  navigation: [
+    { label: 'Nom de la marque défini', done: draft.navigation.brand.trim().length > 0 },
+    {
+      label: 'Liens principaux renseignés',
+      done: ['home', 'about', 'menu', 'contact'].every(key =>
+        draft.navigation.links[key as NavigationFieldKey].trim().length > 0,
+      ),
+    },
+  ],
+  hero: [
+    { label: 'Titre accrocheur rédigé', done: draft.hero.title.trim().length > 0 },
+    { label: 'Sous-titre descriptif rempli', done: draft.hero.subtitle.trim().length > 0 },
+    { label: 'CTA principal configuré', done: draft.hero.ctaLabel.trim().length > 0 },
+  ],
+  about: [
+    { label: 'Titre À propos complété', done: draft.about.title.trim().length > 0 },
+    { label: 'Texte de présentation rédigé', done: draft.about.description.trim().length > 0 },
+    { label: 'Visuel illustratif sélectionné', done: Boolean(draft.about.image) },
+  ],
+  menu: [
+    { label: 'Titre de section rempli', done: draft.menu.title.trim().length > 0 },
+    { label: 'CTA du menu défini', done: draft.menu.ctaLabel.trim().length > 0 },
+  ],
+  contact: [
+    { label: 'Titre de contact renseigné', done: draft.contact.title.trim().length > 0 },
+    { label: 'Adresse complète indiquée', done: draft.contact.address.trim().length > 0 },
+    { label: 'Téléphone ou email actifs', done: draft.contact.phone.trim().length > 0 && draft.contact.email.trim().length > 0 },
+  ],
+  footer: [
+    { label: 'Message de pied de page personnalisé', done: draft.footer.text.trim().length > 0 },
+  ],
+});
+
+const getZoneCompletionStatus = (items: ChecklistItem[]): CompletionStatus => {
+  if (items.every(item => item.done)) {
+    return 'done';
+  }
+  if (items.some(item => item.done)) {
+    return 'progress';
+  }
+  return 'todo';
+};
+
+
+type EditorContext = {
+  draft: SiteContent;
+  imageErrors: Record<ImageFieldKey, string | null>;
+  isUploading: (field: ImageFieldKey) => boolean;
+  handleBrandChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleNavigationChange: NavigationChangeHandler;
+  handleHeroFieldChange: HeroChangeHandler;
+  handleAboutChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  handleAboutTitleChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleMenuFieldChange: MenuChangeHandler;
+  handleContactFieldChange: ContactChangeHandler;
+  handleFooterTextChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleImageInputChange: ImageInputHandler;
+  handleImageUpload: ImageUploadHandler;
+  handleClearImage: ImageClearHandler;
+  handleStyleFontFamilyChange: (zone: EditableZoneKey, value: string) => void;
+  handleStyleFontSizeChange: (zone: EditableZoneKey, value: string) => void;
+  handleStyleTextColorChange: (zone: EditableZoneKey, value: string) => void;
+  handleStyleBackgroundColorChange: (zone: EditableZoneKey, value: string) => void;
+  handleStyleBackgroundTypeChange: (
+    zone: EditableZoneKey,
+    value: SectionStyle['background']['type'],
+  ) => void;
+  fontOptions: readonly string[];
+  fontSizeOptions: readonly string[];
+  setBrandValue: (value: string) => void;
+  setNavigationLinkValue: (key: NavigationFieldKey, value: string) => void;
+  setHeroFieldValue: (key: HeroFieldKey, value: string) => void;
+  setAboutTitleValue: (value: string) => void;
+  setAboutDescriptionValue: (value: string) => void;
+  setMenuFieldValue: (key: MenuFieldKey, value: string) => void;
+  setContactFieldValue: (key: ContactFieldKey, value: string) => void;
+  setFooterTextValue: (value: string) => void;
+};
+
 const SiteCustomization: React.FC = () => {
   const { content, loading, error, updateContent } = useSiteContent();
   const [draft, setDraft] = useState<SiteContent>(content);
@@ -350,8 +452,15 @@ const SiteCustomization: React.FC = () => {
   });
   const [uploadingField, setUploadingField] = useState<ImageFieldKey | null>(null);
   const [activeElement, setActiveElement] = useState<EditableElementKey | null>(null);
+  const [activeZone, setActiveZone] = useState<EditableZoneKey>('navigation');
+  const [guidedMode, setGuidedMode] = useState(true);
   const [assetUploading, setAssetUploading] = useState(false);
   const [assetError, setAssetError] = useState<string | null>(null);
+  const [assetLibraryOpen, setAssetLibraryOpen] = useState(false);
+  const [pendingAssetField, setPendingAssetField] = useState<ImageFieldKey | null>(null);
+  const [editorAnchor, setEditorAnchor] = useState<DOMRect | null>(null);
+
+  const previewContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setDraft(content);
@@ -415,8 +524,17 @@ const SiteCustomization: React.FC = () => {
     }));
   };
 
-  const handleNavigationChange: NavigationChangeHandler = key => event => {
-    const value = event.target.value;
+  const setBrandValue = (value: string) => {
+    mutateDraft(prev => ({
+      ...prev,
+      navigation: {
+        ...prev.navigation,
+        brand: value,
+      },
+    }));
+  };
+
+  const setNavigationLinkValue = (key: NavigationFieldKey, value: string) => {
     mutateDraft(prev => ({
       ...prev,
       navigation: {
@@ -429,19 +547,7 @@ const SiteCustomization: React.FC = () => {
     }));
   };
 
-  const handleBrandChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    mutateDraft(prev => ({
-      ...prev,
-      navigation: {
-        ...prev.navigation,
-        brand: value,
-      },
-    }));
-  };
-
-  const handleHeroFieldChange: HeroChangeHandler = key => event => {
-    const value = event.target.value;
+  const setHeroFieldValue = (key: HeroFieldKey, value: string) => {
     mutateDraft(prev => ({
       ...prev,
       hero: {
@@ -451,19 +557,7 @@ const SiteCustomization: React.FC = () => {
     }));
   };
 
-  const handleAboutChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = event.target.value;
-    mutateDraft(prev => ({
-      ...prev,
-      about: {
-        ...prev.about,
-        description: value,
-      },
-    }));
-  };
-
-  const handleAboutTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
+  const setAboutTitleValue = (value: string) => {
     mutateDraft(prev => ({
       ...prev,
       about: {
@@ -473,8 +567,17 @@ const SiteCustomization: React.FC = () => {
     }));
   };
 
-  const handleMenuFieldChange: MenuChangeHandler = key => event => {
-    const value = event.target.value;
+  const setAboutDescriptionValue = (value: string) => {
+    mutateDraft(prev => ({
+      ...prev,
+      about: {
+        ...prev.about,
+        description: value,
+      },
+    }));
+  };
+
+  const setMenuFieldValue = (key: MenuFieldKey, value: string) => {
     mutateDraft(prev => ({
       ...prev,
       menu: {
@@ -484,8 +587,7 @@ const SiteCustomization: React.FC = () => {
     }));
   };
 
-  const handleContactFieldChange: ContactChangeHandler = key => event => {
-    const value = event.target.value;
+  const setContactFieldValue = (key: ContactFieldKey, value: string) => {
     mutateDraft(prev => ({
       ...prev,
       contact: {
@@ -495,8 +597,7 @@ const SiteCustomization: React.FC = () => {
     }));
   };
 
-  const handleFooterTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
+  const setFooterTextValue = (value: string) => {
     mutateDraft(prev => ({
       ...prev,
       footer: {
@@ -506,58 +607,36 @@ const SiteCustomization: React.FC = () => {
     }));
   };
 
-  const handleStyleFontFamilyChange = (zone: EditableZoneKey, value: string) => {
-    updateZoneStyle(zone, style => ({
-      ...style,
-      fontFamily: value,
-    }));
+  const handleNavigationChange: NavigationChangeHandler = key => event => {
+    setNavigationLinkValue(key, event.target.value);
   };
 
-  const handleStyleFontSizeChange = (zone: EditableZoneKey, value: string) => {
-    updateZoneStyle(zone, style => ({
-      ...style,
-      fontSize: value,
-    }));
+  const handleBrandChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setBrandValue(event.target.value);
   };
 
-  const handleStyleTextColorChange = (zone: EditableZoneKey, value: string) => {
-    updateZoneStyle(zone, style => ({
-      ...style,
-      textColor: value,
-    }));
+  const handleHeroFieldChange: HeroChangeHandler = key => event => {
+    setHeroFieldValue(key, event.target.value);
   };
 
-  const handleStyleBackgroundColorChange = (zone: EditableZoneKey, value: string) => {
-    updateZoneStyle(zone, style => ({
-      ...style,
-      background: {
-        ...style.background,
-        color: value,
-      },
-    }));
+  const handleAboutTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setAboutTitleValue(event.target.value);
   };
 
-  const handleStyleBackgroundTypeChange = (
-    zone: EditableZoneKey,
-    type: SectionStyle['background']['type'],
-  ) => {
-    const fieldKey = STYLE_BACKGROUND_FIELD_KEYS[zone];
-    const defaultStyle = DEFAULT_SITE_CONTENT[zone].style;
-    updateZoneStyle(zone, style => ({
-      ...style,
-      background: {
-        ...style.background,
-        type,
-        color: style.background.color || defaultStyle.background.color,
-        image: type === 'image' ? style.background.image ?? defaultStyle.background.image : null,
-      },
-    }));
-    if (type === 'color') {
-      setImageErrors(prev => ({
-        ...prev,
-        [fieldKey]: null,
-      }));
-    }
+  const handleAboutChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setAboutDescriptionValue(event.target.value);
+  };
+
+  const handleMenuFieldChange: MenuChangeHandler = key => event => {
+    setMenuFieldValue(key, event.target.value);
+  };
+
+  const handleContactFieldChange: ContactChangeHandler = key => event => {
+    setContactFieldValue(key, event.target.value);
+  };
+
+  const handleFooterTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFooterTextValue(event.target.value);
   };
 
   const setImageField = (field: ImageFieldKey, value: string | null) => {
@@ -816,26 +895,23 @@ const SiteCustomization: React.FC = () => {
     }));
     setActiveElement(field as EditableElementKey);
     setStatusMessage('Ressource appliquée à la section sélectionnée.');
+    if (pendingAssetField && pendingAssetField === field) {
+      setPendingAssetField(null);
+      setAssetLibraryOpen(false);
+    }
   };
 
   const handleSave = async () => {
-    if (!isDirty) {
-      return;
-    }
-
     setSaving(true);
     setStatusMessage(null);
     setFormError(null);
-
     try {
-      const updated = await updateContent(draft);
-      setDraft(updated);
+      await updateContent(draft);
       setIsDirty(false);
-      setStatusMessage('Contenu mis à jour avec succès.');
-      setImageErrors({ ...INITIAL_IMAGE_ERRORS });
+      setStatusMessage('Modifications enregistrées avec succès.');
     } catch (saveError) {
       console.error('Failed to update site content', saveError);
-      setFormError("Impossible d'enregistrer les modifications. Veuillez réessayer.");
+      setFormError('Impossible de sauvegarder vos changements. Réessayez dans un instant.');
     } finally {
       setSaving(false);
     }
@@ -848,10 +924,129 @@ const SiteCustomization: React.FC = () => {
     setFormError(null);
     setImageErrors({ ...INITIAL_IMAGE_ERRORS });
     setActiveElement(null);
-    setAssetError(null);
+    setActiveZone('navigation');
+    setPendingAssetField(null);
+    setAssetLibraryOpen(false);
   };
 
   const isUploading = (field: ImageFieldKey) => uploadingField === field;
+
+  const openAssetLibrary = (field?: ImageFieldKey) => {
+    setPendingAssetField(field ?? null);
+    setAssetLibraryOpen(true);
+  };
+
+  const closeAssetLibrary = () => {
+    setAssetLibraryOpen(false);
+    setPendingAssetField(null);
+  };
+
+  const handleEditElement = (
+    element: EditableElementKey,
+    meta: { zone: EditableZoneKey; anchor: DOMRect | null },
+  ) => {
+    setActiveElement(element);
+    setActiveZone(meta.zone);
+    setEditorAnchor(meta.anchor);
+  };
+
+  const handleSelectZone = (zone: EditableZoneKey) => {
+    setActiveZone(zone);
+    setActiveElement(null);
+    setEditorAnchor(null);
+  };
+
+  const zoneChecklist = useMemo(() => createZoneChecklist(draft), [draft]);
+
+  const zoneStatuses = useMemo<ZoneStatusRecord>(() => {
+    return ZONE_ORDER.reduce((acc, zone) => {
+      acc[zone] = getZoneCompletionStatus(zoneChecklist[zone]);
+      return acc;
+    }, {} as ZoneStatusRecord);
+  }, [zoneChecklist]);
+
+  const context: EditorContext = {
+    draft,
+    imageErrors,
+    isUploading,
+    handleBrandChange,
+    handleNavigationChange,
+    handleHeroFieldChange,
+    handleAboutChange,
+    handleAboutTitleChange,
+    handleMenuFieldChange,
+    handleContactFieldChange,
+    handleFooterTextChange,
+    handleImageInputChange,
+    handleImageUpload,
+    handleClearImage,
+    handleStyleFontFamilyChange: (zone, value) => {
+      updateZoneStyle(zone, style => ({
+        ...style,
+        fontFamily: value,
+      }));
+    },
+    handleStyleFontSizeChange: (zone, value) => {
+      updateZoneStyle(zone, style => ({
+        ...style,
+        fontSize: value,
+      }));
+    },
+    handleStyleTextColorChange: (zone, value) => {
+      updateZoneStyle(zone, style => ({
+        ...style,
+        textColor: value,
+      }));
+    },
+    handleStyleBackgroundColorChange: (zone, value) => {
+      updateZoneStyle(zone, style => ({
+        ...style,
+        background: {
+          ...style.background,
+          color: value,
+        },
+      }));
+    },
+    handleStyleBackgroundTypeChange: (zone, type) => {
+      const fieldKey = STYLE_BACKGROUND_FIELD_KEYS[zone];
+      const defaultStyle = DEFAULT_SITE_CONTENT[zone].style;
+      updateZoneStyle(zone, style => ({
+        ...style,
+        background: {
+          ...style.background,
+          type,
+          color: style.background.color || defaultStyle.background.color,
+          image: type === 'image' ? style.background.image ?? defaultStyle.background.image : null,
+        },
+      }));
+      if (type === 'color') {
+        setImageErrors(prev => ({
+          ...prev,
+          [fieldKey]: null,
+        }));
+      }
+    },
+    fontOptions,
+    fontSizeOptions,
+    setBrandValue,
+    setNavigationLinkValue,
+    setHeroFieldValue,
+    setAboutTitleValue,
+    setAboutDescriptionValue,
+    setMenuFieldValue,
+    setContactFieldValue,
+    setFooterTextValue,
+  };
+
+  const assetState = {
+    uploading: assetUploading,
+    error: assetError,
+    assets: draft.assets.library,
+    onUpload: handleAssetUpload,
+    onRemove: handleAssetRemove,
+    onRename: handleAssetRename,
+    onApply: handleAssetApply,
+  };
 
   return (
     <div className="space-y-8">
@@ -860,8 +1055,8 @@ const SiteCustomization: React.FC = () => {
           <h1 className="text-2xl font-semibold text-gray-900">Personnalisation du site</h1>
           <p className="max-w-2xl text-sm text-gray-500">
             Composez une vitrine sur mesure : contenu, styles, ressources médias et polices sont entièrement modulables. Toutes
-            vos créations sont centralisées dans le dossier Cloudinary <code className="rounded bg-slate-100 px-1">Custom</code>
-            , prêtes à être réutilisées ou téléchargées.
+            vos créations sont centralisées dans le dossier Cloudinary <code className="rounded bg-slate-100 px-1">Custom</code>,
+            prêtes à être réutilisées ou téléchargées.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -897,635 +1092,329 @@ const SiteCustomization: React.FC = () => {
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[420px,1fr]">
-        <CustomizationPanel
-          draft={draft}
-          activeElement={activeElement}
-          imageErrors={imageErrors}
-          isUploading={isUploading}
-          handleBrandChange={handleBrandChange}
-          handleNavigationChange={handleNavigationChange}
-          handleHeroFieldChange={handleHeroFieldChange}
-          handleAboutChange={handleAboutChange}
-          handleAboutTitleChange={handleAboutTitleChange}
-          handleMenuFieldChange={handleMenuFieldChange}
-          handleContactFieldChange={handleContactFieldChange}
-          handleFooterTextChange={handleFooterTextChange}
-          handleImageInputChange={handleImageInputChange}
-          handleImageUpload={handleImageUpload}
-          handleClearImage={handleClearImage}
-          handleStyleFontFamilyChange={handleStyleFontFamilyChange}
-          handleStyleFontSizeChange={handleStyleFontSizeChange}
-          handleStyleTextColorChange={handleStyleTextColorChange}
-          handleStyleBackgroundColorChange={handleStyleBackgroundColorChange}
-          handleStyleBackgroundTypeChange={handleStyleBackgroundTypeChange}
-          fontOptions={fontOptions}
-          fontSizeOptions={fontSizeOptions}
-          assetState={{
-            uploading: assetUploading,
-            error: assetError,
-            assets: draft.assets.library,
-            onUpload: handleAssetUpload,
-            onRemove: handleAssetRemove,
-            onRename: handleAssetRename,
-            onApply: handleAssetApply,
-          }}
-        />
-        <div className="space-y-6">
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-brand-primary" />
-            </div>
-          ) : (
-            <SitePreviewCanvas content={previewContent} onEdit={element => setActiveElement(element)} />
-          )}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Astuces de personnalisation avancée
-            </h2>
-            <ul className="mt-3 space-y-2 text-sm text-slate-600">
-              <li>
-                Utilisez des valeurs CSS complètes dans les champs de styles pour bénéficier de la pleine puissance du moteur (ex :
-                <code className="mx-1 rounded bg-slate-100 px-1">clamp()</code>,<code className="mx-1 rounded bg-slate-100 px-1">rgba()</code>...).
-              </li>
-              <li>
-                Les polices téléversées dans la médiathèque peuvent être intégrées via <code className="rounded bg-slate-100 px-1">@font-face</code>
-                dans votre feuille de styles publique ou à l'aide d'un service d'injection externe.
-              </li>
-              <li>
-                Chaque ressource envoyée est stockée dans <strong>Cloudinary / Custom</strong>. Vous pouvez les retoucher, les
-                renommer ou les remplacer directement depuis votre console Cloudinary sans casser les liens.
-              </li>
-            </ul>
+      <GuidedHeader
+        activeZone={activeZone}
+        guidedMode={guidedMode}
+        onModeChange={setGuidedMode}
+        onSelect={handleSelectZone}
+        steps={ZONE_STEPS}
+        zoneStatuses={zoneStatuses}
+      />
+
+      <div ref={previewContainerRef} className="relative">
+        {loading ? (
+          <div className="flex justify-center rounded-[2.5rem] border border-slate-200 bg-slate-50 py-20">
+            <Loader2 className="h-10 w-10 animate-spin text-brand-primary" aria-hidden="true" />
           </div>
+        ) : (
+          <>
+            <SitePreviewCanvas content={previewContent} activeZone={activeZone} onEdit={handleEditElement} />
+            <FloatingZoneEditor
+              zone={activeZone}
+              guidedMode={guidedMode}
+              activeElement={activeElement}
+              anchorRect={editorAnchor}
+              containerRef={previewContainerRef}
+              checklist={zoneChecklist[activeZone]}
+              zoneStatuses={zoneStatuses}
+              onClose={() => setActiveElement(null)}
+              onNavigate={handleSelectZone}
+              onOpenAssets={openAssetLibrary}
+              context={context}
+            />
+          </>
+        )}
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Astuces de personnalisation avancée
+        </h2>
+        <ul className="mt-3 space-y-2 text-sm text-slate-600">
+          <li>
+            Utilisez des valeurs CSS complètes dans les champs de styles pour bénéficier de la pleine puissance du moteur (ex :
+            <code className="mx-1 rounded bg-slate-100 px-1">clamp()</code>,<code className="mx-1 rounded bg-slate-100 px-1">rgba()</code>...).
+          </li>
+          <li>
+            Les polices téléversées dans la médiathèque peuvent être intégrées via <code className="rounded bg-slate-100 px-1">@font-face</code>
+            dans votre feuille de styles publique ou à l'aide d'un service d'injection externe.
+          </li>
+          <li>
+            Chaque ressource envoyée est stockée dans <strong>Cloudinary / Custom</strong>. Vous pouvez les retoucher, les renommer ou les
+            remplacer directement depuis votre console Cloudinary sans casser les liens.
+          </li>
+        </ul>
+      </div>
+
+      <AssetLibraryOverlay
+        open={assetLibraryOpen}
+        onClose={closeAssetLibrary}
+        pendingField={pendingAssetField}
+        onPendingFieldUsed={() => setPendingAssetField(null)}
+        {...assetState}
+      />
+    </div>
+  );
+};
+
+const GuidedHeader: React.FC<{
+  activeZone: EditableZoneKey;
+  guidedMode: boolean;
+  onModeChange: (value: boolean) => void;
+  onSelect: (zone: EditableZoneKey) => void;
+  steps: ReadonlyArray<{ key: EditableZoneKey; label: string; description: string; helper: string }>;
+  zoneStatuses: ZoneStatusRecord;
+}> = ({ activeZone, guidedMode, onModeChange, onSelect, steps, zoneStatuses }) => {
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">
+            {guidedMode ? 'Mode guidé activé' : 'Mode expert'}
+          </p>
+          <p className="text-xs text-slate-500">
+            {guidedMode
+              ? 'Suivez chaque étape pour construire une vitrine convaincante en quelques minutes.'
+              : 'Accédez rapidement aux réglages sans étapes intermédiaires.'}
+          </p>
         </div>
+        <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 p-1 text-xs font-medium text-slate-600">
+          <button
+            type="button"
+            onClick={() => onModeChange(true)}
+            className={`rounded-full px-3 py-1 transition ${
+              guidedMode ? 'bg-white text-slate-900 shadow-sm' : 'hover:text-slate-900'
+            }`}
+          >
+            Mode guidé
+          </button>
+          <button
+            type="button"
+            onClick={() => onModeChange(false)}
+            className={`rounded-full px-3 py-1 transition ${
+              guidedMode ? 'hover:text-slate-900' : 'bg-white text-slate-900 shadow-sm'
+            }`}
+          >
+            Mode expert
+          </button>
+        </div>
+      </div>
+      <div className="mt-6 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
+        {steps.map(step => {
+          const status = zoneStatuses[step.key];
+          const isActive = step.key === activeZone;
+          const statusClasses =
+            status === 'done'
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : status === 'progress'
+              ? 'bg-brand-primary/5 text-brand-primary border-brand-primary/20'
+              : 'bg-slate-50 text-slate-500 border-transparent';
+          const icon = status === 'done' ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-hidden="true" />
+          ) : status === 'progress' ? (
+            <Sparkles className="h-5 w-5 text-brand-primary" aria-hidden="true" />
+          ) : (
+            <Circle className="h-5 w-5 text-slate-300" aria-hidden="true" />
+          );
+
+          return (
+            <button
+              key={step.key}
+              type="button"
+              onClick={() => onSelect(step.key)}
+              className={`flex flex-col rounded-2xl border px-4 py-3 text-left transition ${
+                isActive ? 'ring-2 ring-brand-primary/20 shadow-brand-primary/10 border-brand-primary/40 bg-white' : statusClasses
+              }`}
+            >
+              <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                {icon}
+                {step.label}
+              </span>
+              <span className="mt-1 text-xs text-slate-500">{step.description}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 };
 
-const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
-  draft,
-  activeElement,
+const Checklist: React.FC<{ items: ChecklistItem[] }> = ({ items }) => (
+  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Essentiels</p>
+    <ul className="mt-3 space-y-2">
+      {items.map((item, index) => (
+        <li key={index} className="flex items-center gap-2 text-sm text-slate-600">
+          {item.done ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-hidden="true" />
+          ) : (
+            <Circle className="h-4 w-4 text-slate-300" aria-hidden="true" />
+          )}
+          <span className={item.done ? 'text-slate-400 line-through' : ''}>{item.label}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+const FieldCard: React.FC<{
+  label: string;
+  htmlFor?: string;
+  description?: string;
+  active?: boolean;
+  children: React.ReactNode;
+}> = ({ label, htmlFor, description, active = false, children }) => (
+  <div
+    className={`rounded-2xl border p-4 shadow-sm transition ${
+      active
+        ? 'border-brand-primary/60 bg-brand-primary/5 ring-1 ring-brand-primary/20'
+        : 'border-slate-200 bg-white'
+    }`}
+  >
+    <label
+      htmlFor={htmlFor}
+      className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+    >
+      {label}
+    </label>
+    <div className="mt-2 space-y-2 text-sm text-slate-700">{children}</div>
+    {description && <p className="mt-2 text-xs text-slate-500">{description}</p>}
+  </div>
+);
+
+const SuggestionChips: React.FC<{
+  options: readonly string[];
+  onSelect: (value: string) => void;
+  label?: string;
+}> = ({ options, onSelect, label }) => {
+  if (options.length === 0) {
+    return null;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {label && <span className="text-xs font-medium text-slate-400">{label}</span>}
+      {options.map(option => (
+        <button
+          key={option}
+          type="button"
+          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-brand-primary/40 hover:bg-brand-primary/10 hover:text-brand-primary"
+          onClick={() => onSelect(option)}
+        >
+          <Sparkles className="h-3 w-3" aria-hidden="true" />
+          {option}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+const ColorChip: React.FC<{ value: string; onSelect: (value: string) => void }> = ({ value, onSelect }) => (
+  <button
+    type="button"
+    onClick={() => onSelect(value)}
+    className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 shadow-sm transition hover:border-brand-primary/40 hover:text-brand-primary"
+  >
+    <span
+      aria-hidden="true"
+      className="h-4 w-4 rounded-full border border-slate-200"
+      style={{ backgroundColor: value === 'transparent' ? 'white' : value }}
+    />
+    {value}
+  </button>
+);
+
+const MediaInputField: React.FC<{
+  field: ImageFieldKey;
+  label: string;
+  value: string | null;
+  imageErrors: Record<ImageFieldKey, string | null>;
+  handleImageInputChange: ImageInputHandler;
+  handleImageUpload: ImageUploadHandler;
+  handleClearImage: ImageClearHandler;
+  isUploading: (field: ImageFieldKey) => boolean;
+  onOpenAssets: (field: ImageFieldKey) => void;
+}> = ({
+  field,
+  label,
+  value,
   imageErrors,
-  isUploading,
-  handleBrandChange,
-  handleNavigationChange,
-  handleHeroFieldChange,
-  handleAboutChange,
-  handleAboutTitleChange,
-  handleMenuFieldChange,
-  handleContactFieldChange,
-  handleFooterTextChange,
   handleImageInputChange,
   handleImageUpload,
   handleClearImage,
-  handleStyleFontFamilyChange,
-  handleStyleFontSizeChange,
-  handleStyleTextColorChange,
-  handleStyleBackgroundColorChange,
-  handleStyleBackgroundTypeChange,
-  fontOptions,
-  fontSizeOptions,
-  assetState,
-}) => {
-  const sectionRefs = useRef<Record<PanelSectionKey, HTMLDivElement | null>>({
-    navigation: null,
-    hero: null,
-    about: null,
-    menu: null,
-    contact: null,
-    footer: null,
-    assets: null,
-  });
-
-  const [openSections, setOpenSections] = useState<Record<PanelSectionKey, boolean>>({
-    navigation: true,
-    hero: true,
-    about: false,
-    menu: false,
-    contact: false,
-    footer: false,
-    assets: true,
-  });
-
-  const [highlightedZone, setHighlightedZone] = useState<EditableZoneKey | null>(null);
-
-  useEffect(() => {
-    if (!activeElement) {
-      return;
-    }
-    const zone = resolveZoneFromElement(activeElement);
-    setOpenSections(prev => ({
-      ...prev,
-      [zone]: true,
-    }));
-    setHighlightedZone(zone);
-
-    const node = sectionRefs.current[zone];
-    if (node) {
-      node.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    const timeout = window.setTimeout(() => setHighlightedZone(null), 2400);
-    return () => window.clearTimeout(timeout);
-  }, [activeElement]);
-
-  const toggleSection = (key: PanelSectionKey) => {
-    setOpenSections(prev => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
-  const renderStyleControls = (zone: EditableZoneKey) => (
-    <StyleControls
-      zone={zone}
-      style={draft[zone].style}
-      fontOptions={fontOptions}
-      fontSizeOptions={fontSizeOptions}
-      handleStyleFontFamilyChange={handleStyleFontFamilyChange}
-      handleStyleFontSizeChange={handleStyleFontSizeChange}
-      handleStyleTextColorChange={handleStyleTextColorChange}
-      handleStyleBackgroundColorChange={handleStyleBackgroundColorChange}
-      handleStyleBackgroundTypeChange={handleStyleBackgroundTypeChange}
-      handleImageInputChange={handleImageInputChange}
-      handleImageUpload={handleImageUpload}
-      handleClearImage={handleClearImage}
-      imageErrors={imageErrors}
-      isUploading={isUploading}
+  isUploading,
+  onOpenAssets,
+}) => (
+  <FieldCard label={label} htmlFor={`${field}-input`}>
+    <input
+      id={`${field}-input`}
+      className="ui-input w-full"
+      value={value ?? ''}
+      onChange={handleImageInputChange(field)}
+      placeholder="https://res.cloudinary.com/..."
     />
-  );
-
-  return (
-    <div className="flex flex-col gap-4">
-      <SectionCard
-        ref={element => {
-          sectionRefs.current.navigation = element;
-        }}
-        title="Navigation & identité"
-        description="Lien direct entre votre marque et le parcours utilisateur."
-        open={openSections.navigation}
-        onToggle={() => toggleSection('navigation')}
-        highlighted={highlightedZone === 'navigation'}
-      >
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="brand-name" className="block text-sm font-medium text-gray-700">
-              Nom de la marque
-            </label>
-            <input
-              id="brand-name"
-              className="ui-input mt-1"
-              value={draft.navigation.brand}
-              onChange={handleBrandChange}
-            />
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label htmlFor="nav-home" className="block text-sm font-medium text-gray-700">
-                Lien Accueil
-              </label>
-              <input
-                id="nav-home"
-                className="ui-input mt-1"
-                value={draft.navigation.links.home}
-                onChange={handleNavigationChange('home')}
-              />
-            </div>
-            <div>
-              <label htmlFor="nav-about" className="block text-sm font-medium text-gray-700">
-                Lien À propos
-              </label>
-              <input
-                id="nav-about"
-                className="ui-input mt-1"
-                value={draft.navigation.links.about}
-                onChange={handleNavigationChange('about')}
-              />
-            </div>
-            <div>
-              <label htmlFor="nav-menu" className="block text-sm font-medium text-gray-700">
-                Lien Menu
-              </label>
-              <input
-                id="nav-menu"
-                className="ui-input mt-1"
-                value={draft.navigation.links.menu}
-                onChange={handleNavigationChange('menu')}
-              />
-            </div>
-            <div>
-              <label htmlFor="nav-contact" className="block text-sm font-medium text-gray-700">
-                Lien Contact
-              </label>
-              <input
-                id="nav-contact"
-                className="ui-input mt-1"
-                value={draft.navigation.links.contact}
-                onChange={handleNavigationChange('contact')}
-              />
-            </div>
-            <div>
-              <label htmlFor="nav-login" className="block text-sm font-medium text-gray-700">
-                Lien Staff / CTA
-              </label>
-              <input
-                id="nav-login"
-                className="ui-input mt-1"
-                value={draft.navigation.links.loginCta}
-                onChange={handleNavigationChange('loginCta')}
-              />
-            </div>
-          </div>
-          {renderStyleControls('navigation')}
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        ref={element => {
-          sectionRefs.current.hero = element;
-        }}
-        title="Hero & Accroche"
-        description="Structurez votre message principal, son visuel et ses appels à l'action."
-        open={openSections.hero}
-        onToggle={() => toggleSection('hero')}
-        highlighted={highlightedZone === 'hero'}
-      >
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="hero-title" className="block text-sm font-medium text-gray-700">
-              Titre principal
-            </label>
-            <input
-              id="hero-title"
-              className="ui-input mt-1"
-              value={draft.hero.title}
-              onChange={handleHeroFieldChange('title')}
-            />
-          </div>
-          <div>
-            <label htmlFor="hero-subtitle" className="block text-sm font-medium text-gray-700">
-              Sous-titre
-            </label>
-            <textarea
-              id="hero-subtitle"
-              className="ui-textarea mt-1"
-              value={draft.hero.subtitle}
-              rows={3}
-              onChange={handleHeroFieldChange('subtitle')}
-            />
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label htmlFor="hero-cta" className="block text-sm font-medium text-gray-700">
-                Label CTA principal
-              </label>
-              <input
-                id="hero-cta"
-                className="ui-input mt-1"
-                value={draft.hero.ctaLabel}
-                onChange={handleHeroFieldChange('ctaLabel')}
-              />
-            </div>
-            <div>
-              <label htmlFor="hero-reorder" className="block text-sm font-medium text-gray-700">
-                Label CTA historique
-              </label>
-              <input
-                id="hero-reorder"
-                className="ui-input mt-1"
-                value={draft.hero.reorderCtaLabel}
-                onChange={handleHeroFieldChange('reorderCtaLabel')}
-              />
-            </div>
-            <div>
-              <label htmlFor="hero-history" className="block text-sm font-medium text-gray-700">
-                Titre historique
-              </label>
-              <input
-                id="hero-history"
-                className="ui-input mt-1"
-                value={draft.hero.historyTitle}
-                onChange={handleHeroFieldChange('historyTitle')}
-              />
-            </div>
-          </div>
-          <ImageFieldEditor
-            field="hero.backgroundImage"
-            label={IMAGE_FIELD_LABELS['hero.backgroundImage']}
-            value={draft.hero.backgroundImage}
-            imageErrors={imageErrors}
-            handleImageInputChange={handleImageInputChange}
-            handleImageUpload={handleImageUpload}
-            handleClearImage={handleClearImage}
-            isUploading={isUploading}
-          />
-          {renderStyleControls('hero')}
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        ref={element => {
-          sectionRefs.current.about = element;
-        }}
-        title="Section À propos"
-        description="Racontez votre histoire et accompagnez-la de visuels immersifs."
-        open={openSections.about}
-        onToggle={() => toggleSection('about')}
-        highlighted={highlightedZone === 'about'}
-      >
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="about-title" className="block text-sm font-medium text-gray-700">
-              Titre
-            </label>
-            <input
-              id="about-title"
-              className="ui-input mt-1"
-              value={draft.about.title}
-              onChange={handleAboutTitleChange}
-            />
-          </div>
-          <div>
-            <label htmlFor="about-description" className="block text-sm font-medium text-gray-700">
-              Description
-            </label>
-            <textarea
-              id="about-description"
-              className="ui-textarea mt-1"
-              value={draft.about.description}
-              rows={4}
-              onChange={handleAboutChange}
-            />
-          </div>
-          <ImageFieldEditor
-            field="about.image"
-            label={IMAGE_FIELD_LABELS['about.image']}
-            value={draft.about.image}
-            imageErrors={imageErrors}
-            handleImageInputChange={handleImageInputChange}
-            handleImageUpload={handleImageUpload}
-            handleClearImage={handleClearImage}
-            isUploading={isUploading}
-          />
-          {renderStyleControls('about')}
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        ref={element => {
-          sectionRefs.current.menu = element;
-        }}
-        title="Section Menu"
-        description="Exposez vos produits phares et adaptez leur mise en avant."
-        open={openSections.menu}
-        onToggle={() => toggleSection('menu')}
-        highlighted={highlightedZone === 'menu'}
-      >
-        <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label htmlFor="menu-title" className="block text-sm font-medium text-gray-700">
-                Titre
-              </label>
-              <input
-                id="menu-title"
-                className="ui-input mt-1"
-                value={draft.menu.title}
-                onChange={handleMenuFieldChange('title')}
-              />
-            </div>
-            <div>
-              <label htmlFor="menu-cta" className="block text-sm font-medium text-gray-700">
-                Label CTA
-              </label>
-              <input
-                id="menu-cta"
-                className="ui-input mt-1"
-                value={draft.menu.ctaLabel}
-                onChange={handleMenuFieldChange('ctaLabel')}
-              />
-            </div>
-            <div>
-              <label htmlFor="menu-loading" className="block text-sm font-medium text-gray-700">
-                Label de chargement
-              </label>
-              <input
-                id="menu-loading"
-                className="ui-input mt-1"
-                value={draft.menu.loadingLabel}
-                onChange={handleMenuFieldChange('loadingLabel')}
-              />
-            </div>
-          </div>
-          <ImageFieldEditor
-            field="menu.image"
-            label={IMAGE_FIELD_LABELS['menu.image']}
-            value={draft.menu.image}
-            imageErrors={imageErrors}
-            handleImageInputChange={handleImageInputChange}
-            handleImageUpload={handleImageUpload}
-            handleClearImage={handleClearImage}
-            isUploading={isUploading}
-          />
-          {renderStyleControls('menu')}
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        ref={element => {
-          sectionRefs.current.contact = element;
-        }}
-        title="Section Contact"
-        description="Ouvrez tous vos canaux de communication avec un design à votre image."
-        open={openSections.contact}
-        onToggle={() => toggleSection('contact')}
-        highlighted={highlightedZone === 'contact'}
-      >
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="contact-title" className="block text-sm font-medium text-gray-700">
-              Titre
-            </label>
-            <input
-              id="contact-title"
-              className="ui-input mt-1"
-              value={draft.contact.title}
-              onChange={handleContactFieldChange('title')}
-            />
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label htmlFor="contact-address-label" className="block text-sm font-medium text-gray-700">
-                Label adresse
-              </label>
-              <input
-                id="contact-address-label"
-                className="ui-input mt-1"
-                value={draft.contact.addressLabel}
-                onChange={handleContactFieldChange('addressLabel')}
-              />
-            </div>
-            <div>
-              <label htmlFor="contact-address" className="block text-sm font-medium text-gray-700">
-                Adresse
-              </label>
-              <input
-                id="contact-address"
-                className="ui-input mt-1"
-                value={draft.contact.address}
-                onChange={handleContactFieldChange('address')}
-              />
-            </div>
-            <div>
-              <label htmlFor="contact-phone-label" className="block text-sm font-medium text-gray-700">
-                Label téléphone
-              </label>
-              <input
-                id="contact-phone-label"
-                className="ui-input mt-1"
-                value={draft.contact.phoneLabel}
-                onChange={handleContactFieldChange('phoneLabel')}
-              />
-            </div>
-            <div>
-              <label htmlFor="contact-phone" className="block text-sm font-medium text-gray-700">
-                Téléphone
-              </label>
-              <input
-                id="contact-phone"
-                className="ui-input mt-1"
-                value={draft.contact.phone}
-                onChange={handleContactFieldChange('phone')}
-              />
-            </div>
-            <div>
-              <label htmlFor="contact-email-label" className="block text-sm font-medium text-gray-700">
-                Label e-mail
-              </label>
-              <input
-                id="contact-email-label"
-                className="ui-input mt-1"
-                value={draft.contact.emailLabel}
-                onChange={handleContactFieldChange('emailLabel')}
-              />
-            </div>
-            <div>
-              <label htmlFor="contact-email" className="block text-sm font-medium text-gray-700">
-                E-mail
-              </label>
-              <input
-                id="contact-email"
-                className="ui-input mt-1"
-                value={draft.contact.email}
-                onChange={handleContactFieldChange('email')}
-              />
-            </div>
-          </div>
-          <ImageFieldEditor
-            field="contact.image"
-            label={IMAGE_FIELD_LABELS['contact.image']}
-            value={draft.contact.image}
-            imageErrors={imageErrors}
-            handleImageInputChange={handleImageInputChange}
-            handleImageUpload={handleImageUpload}
-            handleClearImage={handleClearImage}
-            isUploading={isUploading}
-          />
-          {renderStyleControls('contact')}
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        ref={element => {
-          sectionRefs.current.footer = element;
-        }}
-        title="Pied de page & mentions"
-        description="Finalisez votre identité avec un message de bas de page sur-mesure."
-        open={openSections.footer}
-        onToggle={() => toggleSection('footer')}
-        highlighted={highlightedZone === 'footer'}
-      >
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="footer-text" className="block text-sm font-medium text-gray-700">
-              Texte du pied de page
-            </label>
-            <input
-              id="footer-text"
-              className="ui-input mt-1"
-              value={draft.footer.text}
-              onChange={handleFooterTextChange}
-            />
-          </div>
-          {renderStyleControls('footer')}
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        ref={element => {
-          sectionRefs.current.assets = element;
-        }}
-        title="Médiathèque Cloudinary"
-        description="Centralisez vos images, polices, vidéos ou assets bruts pour les appliquer instantanément."
-        open={openSections.assets}
-        onToggle={() => toggleSection('assets')}
-        highlighted={false}
-      >
-        <AssetLibrary
-          assets={assetState.assets}
-          uploading={assetState.uploading}
-          error={assetState.error}
-          onUpload={assetState.onUpload}
-          onRemove={assetState.onRemove}
-          onRename={assetState.onRename}
-          onApply={assetState.onApply}
+    <p className="text-xs text-slate-500">{imageWarning}</p>
+    {imageErrors[field] && <p className="text-xs text-red-600">{imageErrors[field]}</p>}
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      <label className="ui-btn ui-btn-secondary cursor-pointer">
+        Importer
+        <input
+          type="file"
+          accept="image/*,video/*,audio/*,.ttf,.otf,.woff,.woff2,.svg"
+          className="hidden"
+          onChange={event => {
+            const file = event.target.files?.[0];
+            if (file) {
+              void handleImageUpload(field, file);
+              event.target.value = '';
+            }
+          }}
         />
-      </SectionCard>
-    </div>
-  );
-};
-
-const SectionCard = React.forwardRef<HTMLDivElement, {
-  title: string;
-  description?: string;
-  open: boolean;
-  onToggle: () => void;
-  highlighted?: boolean;
-  children: React.ReactNode;
-}>(({ title, description, open, onToggle, highlighted = false, children }, ref) => (
-  <div
-    ref={ref}
-    className={`rounded-3xl border bg-white shadow-sm transition-shadow ${
-      highlighted ? 'border-brand-primary shadow-brand-primary/20 ring-2 ring-brand-primary/10' : 'border-slate-200'
-    }`}
-  >
-    <button
-      type="button"
-      onClick={onToggle}
-      className="flex w-full items-start justify-between gap-4 rounded-3xl px-5 py-4 text-left"
-      aria-expanded={open}
-    >
-      <div>
-        <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-        {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
-      </div>
-      <span
-        aria-hidden="true"
-        className={`mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs font-medium ${
-          open ? 'border-brand-primary text-brand-primary' : 'border-slate-300 text-slate-400'
-        }`}
+      </label>
+      <button type="button" className="ui-btn ui-btn-ghost" onClick={() => onOpenAssets(field)}>
+        Médiathèque
+      </button>
+      <button
+        type="button"
+        className="ui-btn ui-btn-ghost"
+        onClick={() => handleClearImage(field)}
+        disabled={!value || isUploading(field)}
       >
-        {open ? '–' : '+'}
-      </span>
-    </button>
-    {open && <div className="border-t border-slate-100 px-5 py-5 text-sm text-slate-700">{children}</div>}
-  </div>
-));
-SectionCard.displayName = 'SectionCard';
+        Retirer
+      </button>
+      {isUploading(field) && (
+        <span className="inline-flex items-center gap-2 text-xs text-slate-500">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Téléversement…
+        </span>
+      )}
+    </div>
+    {value && (
+      <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
+        <img src={value} alt="Prévisualisation" className="h-32 w-full object-cover" />
+      </div>
+    )}
+  </FieldCard>
+);
 
-const StyleControls: React.FC<StyleControlsProps> = ({
+const ZoneStyleEditor: React.FC<{
+  zone: EditableZoneKey;
+  style: SectionStyle;
+  fontOptions: readonly string[];
+  fontSizeOptions: readonly string[];
+  handleStyleFontFamilyChange: (zone: EditableZoneKey, value: string) => void;
+  handleStyleFontSizeChange: (zone: EditableZoneKey, value: string) => void;
+  handleStyleTextColorChange: (zone: EditableZoneKey, value: string) => void;
+  handleStyleBackgroundColorChange: (zone: EditableZoneKey, value: string) => void;
+  handleStyleBackgroundTypeChange: (
+    zone: EditableZoneKey,
+    value: SectionStyle['background']['type'],
+  ) => void;
+  handleImageInputChange: ImageInputHandler;
+  handleImageUpload: ImageUploadHandler;
+  handleClearImage: ImageClearHandler;
+  imageErrors: Record<ImageFieldKey, string | null>;
+  isUploading: (field: ImageFieldKey) => boolean;
+  onOpenAssets: (field: ImageFieldKey) => void;
+}> = ({
   zone,
   style,
   fontOptions,
@@ -1540,6 +1429,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({
   handleClearImage,
   imageErrors,
   isUploading,
+  onOpenAssets,
 }) => {
   const backgroundField = STYLE_BACKGROUND_FIELD_KEYS[zone];
   const isBackgroundImage = style.background.type === 'image';
@@ -1549,17 +1439,12 @@ const StyleControls: React.FC<StyleControlsProps> = ({
     if (!trimmed) {
       return { valid: true, message: null } as const;
     }
-
     if (typeof window === 'undefined' || typeof window.CSS === 'undefined') {
       return { valid: true, message: null } as const;
     }
-
     return window.CSS.supports(property, trimmed)
       ? { valid: true, message: null }
-      : {
-          valid: false,
-          message: 'Cette valeur ne semble pas être reconnue comme une valeur CSS valide.',
-        };
+      : { valid: false, message: 'Cette valeur ne semble pas être reconnue comme une valeur CSS valide.' };
   }, []);
 
   const fontFamilyValidation = validateCssValue('font-family', style.fontFamily);
@@ -1571,214 +1456,710 @@ const StyleControls: React.FC<StyleControlsProps> = ({
       : { valid: true, message: null };
 
   return (
-    <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Styles</h3>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor={`${zone}-font-family`} className="block text-sm font-medium text-gray-700">
-            Police
-          </label>
-          <input
-            id={`${zone}-font-family`}
-            className={`ui-input mt-1 ${
-              fontFamilyValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-            }`}
-            value={style.fontFamily}
-            onChange={event => handleStyleFontFamilyChange(zone, event.target.value)}
-            list={`${zone}-font-family-options`}
-            placeholder="Ex: 'Open Sans', sans-serif"
-          />
-          <datalist id={`${zone}-font-family-options`}>
-            {fontOptions.map(font => (
-              <option key={font} value={font} />
-            ))}
-          </datalist>
-          {!fontFamilyValidation.valid && (
-            <p className="mt-1 text-xs text-red-600">{fontFamilyValidation.message}</p>
-          )}
-          <p className="mt-1 text-xs text-gray-500">Utilisez le nom exact de la police ou une pile CSS.</p>
+    <div className="space-y-4">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Styles</h3>
+      <FieldCard label="Police" htmlFor={`${zone}-font-family`} active={!fontFamilyValidation.valid}>
+        <input
+          id={`${zone}-font-family`}
+          className={`ui-input w-full ${
+            fontFamilyValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+          }`}
+          value={style.fontFamily}
+          onChange={event => handleStyleFontFamilyChange(zone, event.target.value)}
+          list={`${zone}-font-family-options`}
+          placeholder="Ex: 'Open Sans', sans-serif"
+        />
+        <datalist id={`${zone}-font-family-options`}>
+          {fontOptions.map(font => (
+            <option key={font} value={font} />
+          ))}
+        </datalist>
+        {!fontFamilyValidation.valid && (
+          <p className="text-xs text-red-600">{fontFamilyValidation.message}</p>
+        )}
+        <SuggestionChips options={FONT_FAMILY_SUGGESTIONS} onSelect={value => handleStyleFontFamilyChange(zone, value)} />
+      </FieldCard>
+
+      <FieldCard label="Taille du texte" htmlFor={`${zone}-font-size`} active={!fontSizeValidation.valid}>
+        <input
+          id={`${zone}-font-size`}
+          className={`ui-input w-full ${
+            fontSizeValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+          }`}
+          value={style.fontSize}
+          onChange={event => handleStyleFontSizeChange(zone, event.target.value)}
+          list={`${zone}-font-size-options`}
+          placeholder="Ex: 1.125rem"
+        />
+        <datalist id={`${zone}-font-size-options`}>
+          {fontSizeOptions.map(size => (
+            <option key={size} value={size} />
+          ))}
+        </datalist>
+        {!fontSizeValidation.valid && (
+          <p className="text-xs text-red-600">{fontSizeValidation.message}</p>
+        )}
+        <SuggestionChips options={FONT_SIZE_SUGGESTIONS} onSelect={value => handleStyleFontSizeChange(zone, value)} />
+      </FieldCard>
+
+      <FieldCard label="Couleur du texte" htmlFor={`${zone}-text-color`} active={!textColorValidation.valid}>
+        <input
+          id={`${zone}-text-color`}
+          className={`ui-input w-full ${
+            textColorValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+          }`}
+          value={style.textColor}
+          onChange={event => handleStyleTextColorChange(zone, event.target.value)}
+          placeholder="Ex: #0f172a"
+        />
+        {!textColorValidation.valid && (
+          <p className="text-xs text-red-600">{textColorValidation.message}</p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {COLOR_SUGGESTIONS.map(color => (
+            <ColorChip key={color} value={color} onSelect={value => handleStyleTextColorChange(zone, value)} />
+          ))}
         </div>
-        <div>
-          <label htmlFor={`${zone}-font-size`} className="block text-sm font-medium text-gray-700">
-            Taille du texte
-          </label>
-          <input
-            id={`${zone}-font-size`}
-            className={`ui-input mt-1 ${
-              fontSizeValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-            }`}
-            value={style.fontSize}
-            onChange={event => handleStyleFontSizeChange(zone, event.target.value)}
-            list={`${zone}-font-size-options`}
-            placeholder="Ex: clamp(1rem, 2vw, 1.5rem)"
-          />
-          <datalist id={`${zone}-font-size-options`}>
-            {fontSizeOptions.map(size => (
-              <option key={size} value={size} />
-            ))}
-          </datalist>
-          {!fontSizeValidation.valid && (
-            <p className="mt-1 text-xs text-red-600">{fontSizeValidation.message}</p>
-          )}
-          <p className="mt-1 text-xs text-gray-500">Toutes les valeurs CSS valides sont acceptées.</p>
-        </div>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor={`${zone}-text-color`} className="block text-sm font-medium text-gray-700">
-            Couleur du texte
-          </label>
-          <div className="mt-1 flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="h-10 w-10 rounded-md border border-gray-200"
-              style={{ backgroundColor: textColorValidation.valid ? style.textColor : 'transparent' }}
-            />
-            <input
-              id={`${zone}-text-color`}
-              className={`ui-input ${
-                textColorValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-              }`}
-              value={style.textColor}
-              onChange={event => handleStyleTextColorChange(zone, event.target.value)}
-              list={`${zone}-text-color-options`}
-              placeholder="Ex: #0f172a ou rgba(15, 23, 42, 0.8)"
-            />
-          </div>
-          <datalist id={`${zone}-text-color-options`}>
-            {COLOR_SUGGESTIONS.map(color => (
-              <option key={color} value={color} />
-            ))}
-          </datalist>
-          {!textColorValidation.valid && (
-            <p className="mt-1 text-xs text-red-600">{textColorValidation.message}</p>
-          )}
-          <p className="mt-1 text-xs text-gray-500">Entrez une valeur hexadécimale, rgba(), hsl() ou un nom CSS.</p>
-        </div>
-        <div>
-          <label htmlFor={`${zone}-background-type`} className="block text-sm font-medium text-gray-700">
-            Type de fond
-          </label>
-          <select
+      </FieldCard>
+
+      <FieldCard label="Fond" htmlFor={`${zone}-background-type`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
             id={`${zone}-background-type`}
-            className="ui-select mt-1"
-            value={style.background.type}
-            onChange={event =>
-              handleStyleBackgroundTypeChange(zone, event.target.value as SectionStyle['background']['type'])
-            }
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+              style.background.type === 'color'
+                ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
+                : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
+            }`}
+            onClick={() => handleStyleBackgroundTypeChange(zone, 'color')}
           >
-            {BACKGROUND_TYPE_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            Couleur
+          </button>
+          <button
+            type="button"
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+              style.background.type === 'image'
+                ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
+                : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
+            }`}
+            onClick={() => handleStyleBackgroundTypeChange(zone, 'image')}
+          >
+            Image
+          </button>
         </div>
-      </div>
-      {style.background.type === 'color' && (
-        <div>
-          <label htmlFor={`${zone}-background-color`} className="block text-sm font-medium text-gray-700">
-            Couleur du fond
-          </label>
-          <div className="mt-1 flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="h-10 w-10 rounded-md border border-gray-200"
-              style={{ backgroundColor: backgroundColorValidation.valid ? style.background.color : 'transparent' }}
-            />
+        {style.background.type === 'color' ? (
+          <div className="mt-3 space-y-2">
             <input
               id={`${zone}-background-color`}
-              className={`ui-input ${
-                backgroundColorValidation.valid
-                  ? ''
-                  : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+              className={`ui-input w-full ${
+                backgroundColorValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
               }`}
               value={style.background.color}
               onChange={event => handleStyleBackgroundColorChange(zone, event.target.value)}
-              list={`${zone}-background-color-options`}
-              placeholder="Ex: rgba(255, 255, 255, 0.75)"
+              placeholder="Ex: rgba(255, 255, 255, 0.85)"
             />
+            {!backgroundColorValidation.valid && (
+              <p className="text-xs text-red-600">{backgroundColorValidation.message}</p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {COLOR_SUGGESTIONS.map(color => (
+                <ColorChip key={color} value={color} onSelect={value => handleStyleBackgroundColorChange(zone, value)} />
+              ))}
+            </div>
           </div>
-          <datalist id={`${zone}-background-color-options`}>
-            {COLOR_SUGGESTIONS.map(color => (
-              <option key={color} value={color} />
-            ))}
-          </datalist>
-          {!backgroundColorValidation.valid && (
-            <p className="mt-1 text-xs text-red-600">{backgroundColorValidation.message}</p>
-          )}
-          <p className="mt-1 text-xs text-gray-500">Accepte toutes les valeurs de couleur CSS valides.</p>
-        </div>
-      )}
-      {isBackgroundImage && (
-        <ImageFieldEditor
-          field={backgroundField}
-          label={IMAGE_FIELD_LABELS[backgroundField]}
-          value={style.background.image}
-          imageErrors={imageErrors}
-          handleImageInputChange={handleImageInputChange}
-          handleImageUpload={handleImageUpload}
-          handleClearImage={handleClearImage}
-          isUploading={isUploading}
-        />
-      )}
+        ) : (
+          <MediaInputField
+            field={backgroundField}
+            label={IMAGE_FIELD_LABELS[backgroundField]}
+            value={style.background.image}
+            imageErrors={imageErrors}
+            handleImageInputChange={handleImageInputChange}
+            handleImageUpload={handleImageUpload}
+            handleClearImage={handleClearImage}
+            isUploading={isUploading}
+            onOpenAssets={onOpenAssets}
+          />
+        )}
+      </FieldCard>
     </div>
   );
 };
 
-const ImageFieldEditor: React.FC<ImageFieldEditorProps> = ({
-  field,
-  label,
-  value,
-  imageErrors,
-  handleImageInputChange,
-  handleImageUpload,
-  handleClearImage,
-  isUploading,
-}) => (
-  <div>
-    <label htmlFor={`${field}-input`} className="block text-sm font-medium text-gray-700">
-      {label}
-    </label>
-    <input
-      id={`${field}-input`}
-      className="ui-input mt-1"
-      value={value ?? ''}
-      onChange={handleImageInputChange(field)}
-      placeholder="https://res.cloudinary.com/..."
-    />
-    <p className="mt-1 text-xs text-gray-500">{imageWarning}</p>
-    {imageErrors[field] && <p className="mt-1 text-xs text-red-600">{imageErrors[field]}</p>}
-    <div className="mt-3 flex flex-wrap gap-2">
-      <label className="ui-btn ui-btn-secondary cursor-pointer">
-        Importer une ressource
-        <input
-          type="file"
-          accept="image/*,video/*,audio/*,.ttf,.otf,.woff,.woff2,.svg"
-          className="hidden"
-          onChange={event => {
-            const file = event.target.files?.[0];
-            if (file) {
-              void handleImageUpload(field, file);
-              event.target.value = '';
-            }
-          }}
-        />
-      </label>
-      <button
-        type="button"
-        className="ui-btn ui-btn-ghost"
-        onClick={() => handleClearImage(field)}
-        disabled={!value || isUploading(field)}
-      >
-        Retirer
-      </button>
-      {isUploading(field) && <span className="text-sm text-gray-500">Téléversement en cours…</span>}
-    </div>
-  </div>
-);
+const ZoneEditorContent: React.FC<{
+  zone: EditableZoneKey;
+  context: EditorContext;
+  activeElement: EditableElementKey | null;
+  onOpenAssets: (field: ImageFieldKey) => void;
+}> = ({ zone, context, activeElement, onOpenAssets }) => {
+  const { draft } = context;
 
-const AssetLibrary: React.FC<{
+  switch (zone) {
+    case 'navigation':
+      return (
+        <div className="space-y-4">
+          <FieldCard
+            label="Nom de la marque"
+            htmlFor="brand-name"
+            active={activeElement === 'navigation.brand'}
+          >
+            <input
+              id="brand-name"
+              className="ui-input w-full"
+              value={draft.navigation.brand}
+              onChange={context.handleBrandChange}
+            />
+            <SuggestionChips options={NAVIGATION_BRAND_SUGGESTIONS} onSelect={context.setBrandValue} />
+          </FieldCard>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {(['home', 'about', 'menu', 'contact'] as NavigationFieldKey[]).map(key => (
+              <FieldCard
+                key={key}
+                label={`Lien ${NAVIGATION_LINK_SUGGESTIONS[key][0] ?? key}`}
+                htmlFor={`nav-${key}`}
+                active={activeElement === (`navigation.links.${key}` as EditableElementKey)}
+              >
+                <input
+                  id={`nav-${key}`}
+                  className="ui-input w-full"
+                  value={draft.navigation.links[key]}
+                  onChange={context.handleNavigationChange(key)}
+                />
+                <SuggestionChips
+                  options={NAVIGATION_LINK_SUGGESTIONS[key]}
+                  onSelect={value => context.setNavigationLinkValue(key, value)}
+                />
+              </FieldCard>
+            ))}
+          </div>
+
+          <FieldCard
+            label="Bouton d'accès équipe"
+            htmlFor="nav-login"
+            active={activeElement === 'navigation.links.loginCta'}
+          >
+            <input
+              id="nav-login"
+              className="ui-input w-full"
+              value={draft.navigation.links.loginCta}
+              onChange={context.handleNavigationChange('loginCta')}
+            />
+            <SuggestionChips
+              options={NAVIGATION_LINK_SUGGESTIONS.loginCta}
+              onSelect={value => context.setNavigationLinkValue('loginCta', value)}
+            />
+          </FieldCard>
+        </div>
+      );
+
+    case 'hero':
+      return (
+        <div className="space-y-4">
+          <FieldCard label="Titre principal" htmlFor="hero-title" active={activeElement === 'hero.title'}>
+            <input
+              id="hero-title"
+              className="ui-input w-full"
+              value={draft.hero.title}
+              onChange={context.handleHeroFieldChange('title')}
+            />
+            <SuggestionChips
+              options={HERO_TITLE_SUGGESTIONS}
+              onSelect={value => context.setHeroFieldValue('title', value)}
+            />
+          </FieldCard>
+
+          <FieldCard label="Sous-titre" htmlFor="hero-subtitle" active={activeElement === 'hero.subtitle'}>
+            <textarea
+              id="hero-subtitle"
+              className="ui-textarea w-full"
+              rows={3}
+              value={draft.hero.subtitle}
+              onChange={context.handleHeroFieldChange('subtitle')}
+            />
+            <SuggestionChips
+              options={HERO_SUBTITLE_SUGGESTIONS}
+              onSelect={value => context.setHeroFieldValue('subtitle', value)}
+            />
+          </FieldCard>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FieldCard label="CTA principal" htmlFor="hero-cta" active={activeElement === 'hero.ctaLabel'}>
+              <input
+                id="hero-cta"
+                className="ui-input w-full"
+                value={draft.hero.ctaLabel}
+                onChange={context.handleHeroFieldChange('ctaLabel')}
+              />
+              <SuggestionChips
+                options={HERO_CTA_SUGGESTIONS}
+                onSelect={value => context.setHeroFieldValue('ctaLabel', value)}
+              />
+            </FieldCard>
+            <FieldCard
+              label="CTA historique"
+              htmlFor="hero-reorder"
+              active={activeElement === 'hero.reorderCtaLabel'}
+            >
+              <input
+                id="hero-reorder"
+                className="ui-input w-full"
+                value={draft.hero.reorderCtaLabel}
+                onChange={context.handleHeroFieldChange('reorderCtaLabel')}
+              />
+              <SuggestionChips
+                options={HERO_REORDER_SUGGESTIONS}
+                onSelect={value => context.setHeroFieldValue('reorderCtaLabel', value)}
+              />
+            </FieldCard>
+          </div>
+
+          <FieldCard
+            label="Titre du bloc historique"
+            htmlFor="hero-history"
+            active={activeElement === 'hero.historyTitle'}
+          >
+            <input
+              id="hero-history"
+              className="ui-input w-full"
+              value={draft.hero.historyTitle}
+              onChange={context.handleHeroFieldChange('historyTitle')}
+            />
+            <SuggestionChips
+              options={HERO_HISTORY_TITLE_SUGGESTIONS}
+              onSelect={value => context.setHeroFieldValue('historyTitle', value)}
+            />
+          </FieldCard>
+
+          <MediaInputField
+            field="hero.backgroundImage"
+            label={IMAGE_FIELD_LABELS['hero.backgroundImage']}
+            value={draft.hero.backgroundImage}
+            imageErrors={context.imageErrors}
+            handleImageInputChange={context.handleImageInputChange}
+            handleImageUpload={context.handleImageUpload}
+            handleClearImage={context.handleClearImage}
+            isUploading={context.isUploading}
+            onOpenAssets={onOpenAssets}
+          />
+        </div>
+      );
+
+    case 'about':
+      return (
+        <div className="space-y-4">
+          <FieldCard label="Titre" htmlFor="about-title" active={activeElement === 'about.title'}>
+            <input
+              id="about-title"
+              className="ui-input w-full"
+              value={draft.about.title}
+              onChange={context.handleAboutTitleChange}
+            />
+            <SuggestionChips
+              options={ABOUT_TITLE_SUGGESTIONS}
+              onSelect={context.setAboutTitleValue}
+            />
+          </FieldCard>
+
+          <FieldCard label="Description" htmlFor="about-description" active={activeElement === 'about.description'}>
+            <textarea
+              id="about-description"
+              className="ui-textarea w-full"
+              rows={4}
+              value={draft.about.description}
+              onChange={context.handleAboutChange}
+            />
+            <SuggestionChips
+              options={ABOUT_DESCRIPTION_SUGGESTIONS}
+              onSelect={context.setAboutDescriptionValue}
+            />
+          </FieldCard>
+
+          <MediaInputField
+            field="about.image"
+            label={IMAGE_FIELD_LABELS['about.image']}
+            value={draft.about.image}
+            imageErrors={context.imageErrors}
+            handleImageInputChange={context.handleImageInputChange}
+            handleImageUpload={context.handleImageUpload}
+            handleClearImage={context.handleClearImage}
+            isUploading={context.isUploading}
+            onOpenAssets={onOpenAssets}
+          />
+        </div>
+      );
+
+    case 'menu':
+      return (
+        <div className="space-y-4">
+          <FieldCard label="Titre" htmlFor="menu-title" active={activeElement === 'menu.title'}>
+            <input
+              id="menu-title"
+              className="ui-input w-full"
+              value={draft.menu.title}
+              onChange={context.handleMenuFieldChange('title')}
+            />
+          </FieldCard>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FieldCard label="CTA" htmlFor="menu-cta" active={activeElement === 'menu.ctaLabel'}>
+              <input
+                id="menu-cta"
+                className="ui-input w-full"
+                value={draft.menu.ctaLabel}
+                onChange={context.handleMenuFieldChange('ctaLabel')}
+              />
+              <SuggestionChips
+                options={MENU_CTA_SUGGESTIONS}
+                onSelect={value => context.setMenuFieldValue('ctaLabel', value)}
+              />
+            </FieldCard>
+            <FieldCard
+              label="Message de chargement"
+              htmlFor="menu-loading"
+              active={activeElement === 'menu.loadingLabel'}
+            >
+              <input
+                id="menu-loading"
+                className="ui-input w-full"
+                value={draft.menu.loadingLabel}
+                onChange={context.handleMenuFieldChange('loadingLabel')}
+              />
+              <SuggestionChips
+                options={MENU_LOADING_SUGGESTIONS}
+                onSelect={value => context.setMenuFieldValue('loadingLabel', value)}
+              />
+            </FieldCard>
+          </div>
+
+          <MediaInputField
+            field="menu.image"
+            label={IMAGE_FIELD_LABELS['menu.image']}
+            value={draft.menu.image}
+            imageErrors={context.imageErrors}
+            handleImageInputChange={context.handleImageInputChange}
+            handleImageUpload={context.handleImageUpload}
+            handleClearImage={context.handleClearImage}
+            isUploading={context.isUploading}
+            onOpenAssets={onOpenAssets}
+          />
+        </div>
+      );
+
+    case 'contact':
+      return (
+        <div className="space-y-4">
+          <FieldCard label="Titre" htmlFor="contact-title" active={activeElement === 'contact.title'}>
+            <input
+              id="contact-title"
+              className="ui-input w-full"
+              value={draft.contact.title}
+              onChange={context.handleContactFieldChange('title')}
+            />
+          </FieldCard>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FieldCard
+              label="Label adresse"
+              htmlFor="contact-address-label"
+              active={activeElement === 'contact.addressLabel'}
+            >
+              <input
+                id="contact-address-label"
+                className="ui-input w-full"
+                value={draft.contact.addressLabel}
+                onChange={context.handleContactFieldChange('addressLabel')}
+              />
+            </FieldCard>
+            <FieldCard label="Adresse" htmlFor="contact-address" active={activeElement === 'contact.address'}>
+              <input
+                id="contact-address"
+                className="ui-input w-full"
+                value={draft.contact.address}
+                onChange={context.handleContactFieldChange('address')}
+              />
+              <SuggestionChips
+                options={CONTACT_ADDRESS_SUGGESTIONS}
+                onSelect={value => context.setContactFieldValue('address', value)}
+              />
+            </FieldCard>
+            <FieldCard
+              label="Label téléphone"
+              htmlFor="contact-phone-label"
+              active={activeElement === 'contact.phoneLabel'}
+            >
+              <input
+                id="contact-phone-label"
+                className="ui-input w-full"
+                value={draft.contact.phoneLabel}
+                onChange={context.handleContactFieldChange('phoneLabel')}
+              />
+            </FieldCard>
+            <FieldCard label="Téléphone" htmlFor="contact-phone" active={activeElement === 'contact.phone'}>
+              <input
+                id="contact-phone"
+                className="ui-input w-full"
+                value={draft.contact.phone}
+                onChange={context.handleContactFieldChange('phone')}
+              />
+              <SuggestionChips
+                options={CONTACT_PHONE_SUGGESTIONS}
+                onSelect={value => context.setContactFieldValue('phone', value)}
+              />
+            </FieldCard>
+            <FieldCard
+              label="Label email"
+              htmlFor="contact-email-label"
+              active={activeElement === 'contact.emailLabel'}
+            >
+              <input
+                id="contact-email-label"
+                className="ui-input w-full"
+                value={draft.contact.emailLabel}
+                onChange={context.handleContactFieldChange('emailLabel')}
+              />
+            </FieldCard>
+            <FieldCard label="Email" htmlFor="contact-email" active={activeElement === 'contact.email'}>
+              <input
+                id="contact-email"
+                className="ui-input w-full"
+                value={draft.contact.email}
+                onChange={context.handleContactFieldChange('email')}
+              />
+              <SuggestionChips
+                options={CONTACT_EMAIL_SUGGESTIONS}
+                onSelect={value => context.setContactFieldValue('email', value)}
+              />
+            </FieldCard>
+          </div>
+
+          <MediaInputField
+            field="contact.image"
+            label={IMAGE_FIELD_LABELS['contact.image']}
+            value={draft.contact.image}
+            imageErrors={context.imageErrors}
+            handleImageInputChange={context.handleImageInputChange}
+            handleImageUpload={context.handleImageUpload}
+            handleClearImage={context.handleClearImage}
+            isUploading={context.isUploading}
+            onOpenAssets={onOpenAssets}
+          />
+        </div>
+      );
+
+    case 'footer':
+      return (
+        <div className="space-y-4">
+          <FieldCard label="Texte" htmlFor="footer-text" active={activeElement === 'footer.text'}>
+            <input
+              id="footer-text"
+              className="ui-input w-full"
+              value={draft.footer.text}
+              onChange={context.handleFooterTextChange}
+            />
+            <SuggestionChips
+              options={FOOTER_TEXT_SUGGESTIONS}
+              onSelect={context.setFooterTextValue}
+            />
+          </FieldCard>
+        </div>
+      );
+
+    default:
+      return null;
+  }
+};
+
+const FloatingZoneEditor: React.FC<{
+  zone: EditableZoneKey;
+  guidedMode: boolean;
+  activeElement: EditableElementKey | null;
+  anchorRect: DOMRect | null;
+  containerRef: React.RefObject<HTMLDivElement>;
+  checklist: ChecklistItem[];
+  zoneStatuses: ZoneStatusRecord;
+  onClose: () => void;
+  onNavigate: (zone: EditableZoneKey) => void;
+  onOpenAssets: (field?: ImageFieldKey) => void;
+  context: EditorContext;
+}> = ({
+  zone,
+  guidedMode,
+  activeElement,
+  anchorRect,
+  containerRef,
+  checklist,
+  zoneStatuses,
+  onClose,
+  onNavigate,
+  onOpenAssets,
+  context,
+}) => {
+  const metadata = ZONE_STEPS.find(step => step.key === zone)!;
+  const currentIndex = ZONE_ORDER.indexOf(zone);
+  const previousZone = currentIndex > 0 ? ZONE_ORDER[currentIndex - 1] : null;
+  const nextZone = currentIndex < ZONE_ORDER.length - 1 ? ZONE_ORDER[currentIndex + 1] : null;
+  const status = zoneStatuses[zone];
+  const statusLabel =
+    status === 'done' ? 'Complet' : status === 'progress' ? 'En cours' : 'À compléter';
+  const statusClasses =
+    status === 'done'
+      ? 'bg-emerald-50 text-emerald-600'
+      : status === 'progress'
+      ? 'bg-brand-primary/10 text-brand-primary'
+      : 'bg-slate-100 text-slate-500';
+
+  const [cardStyle, setCardStyle] = useState<{ top: number; left: number; width: number }>({
+    top: 24,
+    left: 24,
+    width: 420,
+  });
+  const [showHelper, setShowHelper] = useState(false);
+
+  useEffect(() => setShowHelper(false), [zone]);
+
+  useLayoutEffect(() => {
+    const updatePosition = () => {
+      const container = containerRef.current;
+      if (!container) {
+        return;
+      }
+      const containerRect = container.getBoundingClientRect();
+      const width = Math.min(420, containerRect.width - 32);
+      let left = containerRect.width / 2 - width / 2;
+      let top = 24;
+      if (anchorRect) {
+        top = anchorRect.bottom - containerRect.top + 16;
+        left = anchorRect.left - containerRect.left;
+      }
+      left = Math.min(Math.max(16, left), Math.max(16, containerRect.width - width - 16));
+      top = Math.max(16, top);
+      setCardStyle({ top, left, width });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    return () => window.removeEventListener('resize', updatePosition);
+  }, [anchorRect, containerRef, zone]);
+
+  if (!containerRef.current) {
+    return null;
+  }
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-40">
+      <div
+        className="pointer-events-auto"
+        style={{
+          position: 'absolute',
+          top: cardStyle.top,
+          left: cardStyle.left,
+          width: cardStyle.width,
+          maxWidth: 'calc(100% - 32px)',
+        }}
+      >
+        <div className="rounded-[28px] border border-slate-200 bg-white/95 p-6 shadow-xl backdrop-blur">
+          <header className="flex items-start justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brand-primary">
+                <span>
+                  Étape {currentIndex + 1}/{ZONE_ORDER.length}
+                </span>
+                <span className={`rounded-full px-3 py-1 text-[10px] font-medium ${statusClasses}`}>{statusLabel}</span>
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900">{metadata.label}</h2>
+              <p className="text-sm text-slate-500">{metadata.description}</p>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 text-xs font-medium text-brand-primary hover:text-brand-primary/80"
+                onClick={() => setShowHelper(prev => !prev)}
+              >
+                <HelpCircle className="h-4 w-4" aria-hidden="true" /> Aide rapide
+              </button>
+              {showHelper && (
+                <div className="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-3 text-xs text-brand-primary">
+                  {metadata.helper}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+              aria-label="Fermer l’éditeur"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </header>
+
+          <div className="mt-5 space-y-6">
+            {guidedMode && <Checklist items={checklist} />}
+            <ZoneEditorContent
+              zone={zone}
+              context={context}
+              activeElement={activeElement}
+              onOpenAssets={onOpenAssets}
+            />
+            <ZoneStyleEditor
+              zone={zone}
+              style={context.draft[zone].style}
+              fontOptions={context.fontOptions}
+              fontSizeOptions={context.fontSizeOptions}
+              handleStyleFontFamilyChange={context.handleStyleFontFamilyChange}
+              handleStyleFontSizeChange={context.handleStyleFontSizeChange}
+              handleStyleTextColorChange={context.handleStyleTextColorChange}
+              handleStyleBackgroundColorChange={context.handleStyleBackgroundColorChange}
+              handleStyleBackgroundTypeChange={context.handleStyleBackgroundTypeChange}
+              handleImageInputChange={context.handleImageInputChange}
+              handleImageUpload={context.handleImageUpload}
+              handleClearImage={context.handleClearImage}
+              imageErrors={context.imageErrors}
+              isUploading={context.isUploading}
+              onOpenAssets={field => onOpenAssets(field)}
+            />
+          </div>
+
+          <footer className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {previousZone ? (
+              <button
+                type="button"
+                className="ui-btn ui-btn-ghost"
+                onClick={() => onNavigate(previousZone)}
+              >
+                Retour
+              </button>
+            ) : (
+              <span className="text-xs text-slate-400">Vous êtes au début du parcours guidé</span>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className="ui-btn ui-btn-secondary" onClick={() => onOpenAssets()}>
+                Médiathèque
+              </button>
+              <button
+                type="button"
+                className="ui-btn ui-btn-primary inline-flex items-center gap-1"
+                onClick={() => {
+                  if (nextZone) {
+                    onNavigate(nextZone);
+                  } else {
+                    onClose();
+                  }
+                }}
+              >
+                {nextZone ? 'Étape suivante' : 'Terminer'}
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AssetLibraryOverlay: React.FC<{
+  open: boolean;
+  onClose: () => void;
   assets: CustomizationAsset[];
   uploading: boolean;
   error: string | null;
@@ -1786,25 +2167,56 @@ const AssetLibrary: React.FC<{
   onRemove: AssetRemoveHandler;
   onRename: AssetRenameHandler;
   onApply: AssetApplyHandler;
-}> = ({ assets, uploading, error, onUpload, onRemove, onRename, onApply }) => {
+  pendingField: ImageFieldKey | null;
+  onPendingFieldUsed: () => void;
+}> = ({
+  open,
+  onClose,
+  assets,
+  uploading,
+  error,
+  onUpload,
+  onRemove,
+  onRename,
+  onApply,
+  pendingField,
+  onPendingFieldUsed,
+}) => {
+  const [filter, setFilter] = useState<'all' | CustomizationAssetType>('all');
+  const [selectedField, setSelectedField] = useState<Record<string, ImageFieldKey | ''>>({});
+  const [multiTargets, setMultiTargets] = useState<Record<string, ImageFieldKey[]>>({});
   const [copiedAssetId, setCopiedAssetId] = useState<string | null>(null);
-  const [selectedField, setSelectedField] = useState<Record<string, ImageFieldKey>>({});
 
   useEffect(() => {
-    if (!copiedAssetId) {
+    if (!open) {
       return;
     }
-    const timeout = window.setTimeout(() => setCopiedAssetId(null), 1800);
-    return () => window.clearTimeout(timeout);
-  }, [copiedAssetId]);
+    setCopiedAssetId(null);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !pendingField) {
+      return;
+    }
+    setSelectedField(prev => {
+      const next = { ...prev };
+      assets.forEach(asset => {
+        if (!next[asset.id]) {
+          next[asset.id] = pendingField;
+        }
+      });
+      return next;
+    });
+  }, [open, pendingField, assets]);
 
   const imageFieldEntries = useMemo(
-    () =>
-      (Object.entries(IMAGE_FIELD_LABELS) as [ImageFieldKey, string][]).map(([key, label]) => ({
-        key,
-        label,
-      })),
+    () => (Object.entries(IMAGE_FIELD_LABELS) as [ImageFieldKey, string][]),
     [],
+  );
+
+  const filteredAssets = useMemo(
+    () => (filter === 'all' ? assets : assets.filter(asset => asset.type === filter)),
+    [assets, filter],
   );
 
   const handleCopy = async (asset: CustomizationAsset) => {
@@ -1818,137 +2230,242 @@ const AssetLibrary: React.FC<{
     }
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
-        <p className="text-sm text-slate-600">
-          Téléversez vos fichiers directement dans le dossier <strong>Custom</strong> de Cloudinary. Images HD, textures, polices,
-          vidéos d'ambiance… utilisez la ressource de votre choix.
-        </p>
-        <label className="mt-3 inline-flex items-center gap-2 rounded-full bg-brand-primary/10 px-4 py-2 text-sm font-medium text-brand-primary">
-          <Upload className="h-4 w-4" aria-hidden="true" />
-          Importer depuis mon ordinateur
-          <input
-            type="file"
-            accept="image/*,video/*,audio/*,.ttf,.otf,.woff,.woff2,.zip,.svg,.json,.pdf"
-            multiple
-            className="hidden"
-            onChange={event => {
-              void onUpload(event.target.files);
-              event.target.value = '';
-            }}
-          />
-        </label>
-        {uploading && (
-          <div className="mt-2 flex items-center gap-2 text-sm text-slate-500">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            Téléversement en cours…
-          </div>
-        )}
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-      </div>
+  const applyAsset = (field: ImageFieldKey, asset: CustomizationAsset) => {
+    onApply(field, asset);
+    if (pendingField && pendingField === field) {
+      onPendingFieldUsed();
+    }
+  };
 
-      {assets.length === 0 ? (
-        <p className="text-sm text-slate-500">
-          Aucun asset personnalisé pour le moment. Téléversez vos premiers fichiers pour les réutiliser partout dans la vitrine.
-        </p>
-      ) : (
-        <div className="space-y-4">
-          {assets.map(asset => (
-            <div
-              key={asset.id}
-              className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 md:flex-row md:items-start md:justify-between"
-            >
-              <div className="flex flex-1 flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-                    <AssetTypeIcon type={asset.type} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <input
-                      className="w-full truncate rounded-md border border-transparent px-0 text-base font-semibold text-slate-900 focus:border-slate-300 focus:px-2 focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                      value={asset.name}
-                      onChange={event => onRename(asset.id, event.target.value)}
-                    />
-                    <p className="text-xs text-slate-500">
-                      {ASSET_TYPE_LABELS[asset.type]} · {formatBytes(asset.bytes)} ·{' '}
-                      {new Date(asset.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span className="truncate" title={asset.url}>
-                    {asset.url}
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 md:w-60">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-secondary flex-1"
-                    onClick={() => void handleCopy(asset)}
-                  >
-                    <Copy className="h-4 w-4" aria-hidden="true" />
-                    {copiedAssetId === asset.id ? 'Lien copié !' : 'Copier le lien'}
-                  </button>
-                  <button
-                    type="button"
-                    className="ui-btn ui-btn-ghost"
-                    onClick={() => onRemove(asset.id)}
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-medium text-slate-500" htmlFor={`asset-field-${asset.id}`}>
-                    Appliquer à une section
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <select
-                      id={`asset-field-${asset.id}`}
-                      className="ui-select flex-1"
-                      value={selectedField[asset.id] ?? ''}
-                      onChange={event =>
-                        setSelectedField(prev => ({
-                          ...prev,
-                          [asset.id]: event.target.value as ImageFieldKey,
-                        }))
-                      }
-                    >
-                      <option value="" disabled>
-                        Choisir…
-                      </option>
-                      {imageFieldEntries.map(({ key, label: optionLabel }) => (
-                        <option key={key} value={key}>
-                          {optionLabel}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      className="ui-btn ui-btn-primary"
-                      disabled={!selectedField[asset.id]}
-                      onClick={() => {
-                        const field = selectedField[asset.id];
-                        if (field) {
-                          onApply(field, asset);
-                        }
-                      }}
-                    >
-                      Appliquer
-                    </button>
-                  </div>
-                </div>
-              </div>
+  const applyMultiple = (asset: CustomizationAsset) => {
+    const targets = multiTargets[asset.id] ?? [];
+    targets.forEach(field => applyAsset(field, asset));
+    setMultiTargets(prev => ({ ...prev, [asset.id]: [] }));
+  };
+
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+      <div className="relative w-full max-w-5xl rounded-[32px] bg-white p-6 shadow-2xl">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900">Médiathèque personnalisée</h2>
+            <p className="text-sm text-slate-500">
+              Glissez vos visuels, vidéos, polices ou sons pour les réutiliser instantanément dans toutes les sections du site.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+            aria-label="Fermer la médiathèque"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </header>
+
+        <div className="mt-6 rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 p-4">
+          <label className="flex cursor-pointer flex-col items-start gap-2 text-sm text-slate-600">
+            <span className="inline-flex items-center gap-2 rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-medium text-brand-primary">
+              <Upload className="h-3.5 w-3.5" aria-hidden="true" /> Importer depuis mon ordinateur
+            </span>
+            <span className="text-xs text-slate-400">
+              Formats acceptés : images, vidéos, audio, polices, fichiers compressés…
+            </span>
+            <input
+              type="file"
+              className="hidden"
+              multiple
+              accept="image/*,video/*,audio/*,.ttf,.otf,.woff,.woff2,.zip,.svg,.json,.pdf"
+              onChange={event => {
+                void onUpload(event.target.files);
+                event.target.value = '';
+              }}
+            />
+          </label>
+          {uploading && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Téléversement en cours…
             </div>
+          )}
+          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600">
+          {(['all', 'image', 'video', 'audio', 'font', 'raw'] as const).map(key => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFilter(key)}
+              className={`rounded-full border px-3 py-1 transition ${
+                filter === key
+                  ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
+                  : 'border-slate-200 text-slate-500 hover:border-brand-primary/40 hover:text-brand-primary'
+              }`}
+            >
+              {key === 'all' ? 'Tous' : ASSET_TYPE_LABELS[key]}
+            </button>
           ))}
         </div>
-      )}
+
+        {filteredAssets.length === 0 ? (
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-6 text-center text-sm text-slate-500">
+            {assets.length === 0
+              ? 'Aucune ressource personnalisée pour le moment. Importez vos premiers fichiers pour les retrouver ici.'
+              : 'Aucune ressource ne correspond à ce filtre.'}
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredAssets.map(asset => {
+              const isNew = Date.now() - new Date(asset.createdAt).getTime() < 1000 * 60 * 10;
+              const field = selectedField[asset.id] ?? '';
+              const multi = multiTargets[asset.id] ?? [];
+              return (
+                <div key={asset.id} className="flex h-full flex-col rounded-3xl border border-slate-200 p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                        <AssetTypeIcon type={asset.type} />
+                      </span>
+                      <div className="min-w-0">
+                        <input
+                          className="w-full truncate rounded-md border border-transparent px-0 text-base font-semibold text-slate-900 focus:border-slate-300 focus:px-2 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                          value={asset.name}
+                          onChange={event => onRename(asset.id, event.target.value)}
+                        />
+                        <p className="text-xs text-slate-500">
+                          {ASSET_TYPE_LABELS[asset.type]} · {formatBytes(asset.bytes)} ·{' '}
+                          {new Date(asset.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    {isNew && (
+                      <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-[10px] font-medium text-brand-primary">
+                        Nouveau
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                    {asset.type === 'image' ? (
+                      <img src={asset.url} alt={asset.name} className="h-40 w-full object-cover" />
+                    ) : (
+                      <div className="flex h-40 items-center justify-center text-slate-400">
+                        <AssetTypeIcon type={asset.type} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span className="truncate" title={asset.url}>
+                        {asset.url}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="ui-select flex-1"
+                        value={field}
+                        onChange={event =>
+                          setSelectedField(prev => ({
+                            ...prev,
+                            [asset.id]: event.target.value as ImageFieldKey,
+                          }))
+                        }
+                      >
+                        <option value="">Choisir une section…</option>
+                        {imageFieldEntries.map(([key, label]) => (
+                          <option key={key} value={key}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="ui-btn ui-btn-primary"
+                        disabled={!field}
+                        onClick={() => {
+                          if (field) {
+                            applyAsset(field as ImageFieldKey, asset);
+                          }
+                        }}
+                      >
+                        Utiliser
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <button
+                        type="button"
+                        className="ui-btn ui-btn-ghost"
+                        onClick={() => handleCopy(asset)}
+                      >
+                        {copiedAssetId === asset.id ? 'Lien copié !' : 'Copier le lien'}
+                      </button>
+                      <button
+                        type="button"
+                        className="ui-btn ui-btn-ghost"
+                        onClick={() => onRemove(asset.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Supprimer
+                      </button>
+                    </div>
+                    <details className="group rounded-2xl border border-slate-200 p-3 text-xs text-slate-600">
+                      <summary className="flex cursor-pointer items-center justify-between font-medium text-slate-700">
+                        Dupliquer dans…
+                      </summary>
+                      <div className="mt-3 space-y-2">
+                        {imageFieldEntries.map(([key, label]) => {
+                          const selected = multi.includes(key);
+                          return (
+                            <label key={key} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                                checked={selected}
+                                onChange={() =>
+                                  setMultiTargets(prev => {
+                                    const current = new Set(prev[asset.id] ?? []);
+                                    if (current.has(key)) {
+                                      current.delete(key);
+                                    } else {
+                                      current.add(key);
+                                    }
+                                    return {
+                                      ...prev,
+                                      [asset.id]: Array.from(current),
+                                    };
+                                  })
+                                }
+                              />
+                              <span>{label}</span>
+                            </label>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          className="ui-btn ui-btn-secondary w-full"
+                          disabled={(multiTargets[asset.id] ?? []).length === 0}
+                          onClick={() => applyMultiple(asset)}
+                        >
+                          Appliquer aux sections sélectionnées
+                        </button>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
+
 
 export default SiteCustomization;
 

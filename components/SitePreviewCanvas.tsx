@@ -49,14 +49,38 @@ export type EditableElementKey =
   | 'footer.text'
   | 'footer.style.background';
 
+export const resolveZoneFromElement = (element: EditableElementKey): EditableZoneKey => {
+  if (element.startsWith('navigation.')) {
+    return 'navigation';
+  }
+  if (element.startsWith('hero.')) {
+    return 'hero';
+  }
+  if (element.startsWith('about.')) {
+    return 'about';
+  }
+  if (element.startsWith('menu.')) {
+    return 'menu';
+  }
+  if (element.startsWith('contact.')) {
+    return 'contact';
+  }
+  if (element.startsWith('footer.')) {
+    return 'footer';
+  }
+
+  throw new Error(`Zone introuvable pour l'élément modifiable "${element}"`);
+};
+
 interface SitePreviewCanvasProps {
   content: SiteContent;
-  onEdit: (element: EditableElementKey) => void;
+  onEdit: (element: EditableElementKey, meta: { zone: EditableZoneKey; anchor: DOMRect | null }) => void;
+  activeZone?: EditableZoneKey | null;
 }
 
 interface EditableElementProps {
   id: EditableElementKey;
-  onEdit: (element: EditableElementKey) => void;
+  onEdit: SitePreviewCanvasProps['onEdit'];
   children: React.ReactNode;
   label: string;
   className?: string;
@@ -67,6 +91,8 @@ interface EditableElementProps {
 interface SectionCardProps {
   children: React.ReactNode;
   className?: string;
+  zone: EditableZoneKey;
+  activeZone?: EditableZoneKey | null;
 }
 
 const EditableElement: React.FC<EditableElementProps> = ({
@@ -88,11 +114,22 @@ const EditableElement: React.FC<EditableElementProps> = ({
     .filter(Boolean)
     .join(' ');
 
+  const handleEdit = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const zone = resolveZoneFromElement(id);
+    const anchorElement =
+      (event.currentTarget.closest(`[data-zone="${zone}"]`) as HTMLElement | null) ??
+      (event.currentTarget.parentElement as HTMLElement | null);
+    const rect = anchorElement?.getBoundingClientRect() ?? null;
+    onEdit(id, { zone, anchor: rect });
+  };
+
   return (
     <Component className={containerClasses}>
       <button
         type="button"
-        onClick={() => onEdit(id)}
+        onClick={handleEdit}
         className={buttonClasses}
         aria-label={label}
       >
@@ -103,15 +140,21 @@ const EditableElement: React.FC<EditableElementProps> = ({
   );
 };
 
-const SectionCard: React.FC<SectionCardProps> = ({ children, className }) => {
+const SectionCard: React.FC<SectionCardProps> = ({ children, className, zone, activeZone }) => {
+  const isActive = activeZone === zone;
   const classes = [
-    'relative overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm',
+    'relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-all',
+    isActive ? 'border-brand-primary/70 shadow-brand-primary/20 ring-2 ring-brand-primary/10' : 'border-gray-200',
     className,
   ]
     .filter(Boolean)
     .join(' ');
 
-  return <div className={classes}>{children}</div>;
+  return (
+    <div className={classes} data-zone={zone}>
+      {children}
+    </div>
+  );
 };
 
 const placeholderProducts = [
@@ -135,7 +178,7 @@ const placeholderProducts = [
   },
 ];
 
-const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }) => {
+const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit, activeZone }) => {
   const navigationBackgroundStyle = createBackgroundStyle(content.navigation.style);
   const navigationTextStyle = createTextStyle(content.navigation.style);
   const navigationBodyStyle = createBodyTextStyle(content.navigation.style);
@@ -156,7 +199,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
 
   return (
     <div className="space-y-6 rounded-[2.5rem] border border-gray-200 bg-slate-50 p-6 shadow-inner">
-      <SectionCard>
+      <SectionCard zone="navigation" activeZone={activeZone}>
         <EditableElement
           id="navigation.style.background"
           label="Modifier le fond de la navigation"
@@ -256,7 +299,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
         </EditableElement>
       </SectionCard>
 
-      <SectionCard>
+      <SectionCard zone="hero" activeZone={activeZone}>
         <EditableElement
           id="hero.backgroundImage"
           label="Modifier le visuel de fond du hero"
@@ -354,7 +397,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
         </EditableElement>
       </SectionCard>
 
-      <SectionCard>
+      <SectionCard zone="about" activeZone={activeZone}>
         <EditableElement
           id="about.style.background"
           label="Modifier le fond de la section À propos"
@@ -406,7 +449,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
         </EditableElement>
       </SectionCard>
 
-      <SectionCard>
+      <SectionCard zone="menu" activeZone={activeZone}>
         <EditableElement
           id="menu.style.background"
           label="Modifier le fond de la section Menu"
@@ -495,7 +538,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
         </EditableElement>
       </SectionCard>
 
-      <SectionCard>
+      <SectionCard zone="contact" activeZone={activeZone}>
         <EditableElement
           id="contact.style.background"
           label="Modifier le fond de la section Contact"
@@ -613,7 +656,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({ content, onEdit }
         </EditableElement>
       </SectionCard>
 
-      <SectionCard>
+      <SectionCard zone="footer" activeZone={activeZone}>
         <EditableElement
           id="footer.style.background"
           label="Modifier le fond du pied de page"
