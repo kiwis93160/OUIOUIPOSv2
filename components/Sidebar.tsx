@@ -112,11 +112,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
         className={`app-sidebar fixed inset-y-0 left-0 z-50 flex w-72 flex-col transition-transform duration-300 ease-in-out md:static md:z-auto md:w-64 md:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
-        aria-label="Navigation principale"
+        aria-label="Navegación principal"
       >
         <div className="app-sidebar__header">
           <span className="app-sidebar__brand">OUIOUI</span>
-          <button onClick={onClose} className="app-sidebar__close md:hidden" aria-label="Fermer le menu">
+          <button onClick={onClose} className="app-sidebar__close md:hidden" aria-label="Cerrar el menú">
             <X size={20} />
           </button>
         </div>
@@ -134,7 +134,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
                         {notifications.pendingTakeaway > 0 && (
                           <span
                             className="app-sidebar__badge app-sidebar__badge--danger"
-                            title={`${notifications.pendingTakeaway} à valider`}
+                            title={`${notifications.pendingTakeaway} por validar`}
                           >
                             {notifications.pendingTakeaway}
                           </span>
@@ -142,7 +142,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
                         {notifications.readyTakeaway > 0 && (
                           <span
                             className="app-sidebar__badge app-sidebar__badge--success"
-                            title={`${notifications.readyTakeaway} prête(s)`}
+                            title={`${notifications.readyTakeaway} listo(s)`}
                           >
                             {notifications.readyTakeaway}
                           </span>
@@ -154,7 +154,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
                       <span className="app-sidebar__badge-group">
                         <span
                           className="app-sidebar__badge app-sidebar__badge--danger"
-                          title={`${notifications.readyForService} commande(s) prête(s)`}
+                          title={`${notifications.readyForService} pedido(s) listo(s)`}
                         >
                           {notifications.readyForService}
                         </span>
@@ -216,11 +216,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, notifications, onRep
               className="app-sidebar__action"
             >
               <FileText size={22} />
-              <span className="font-semibold">Rapport</span>
+              <span className="font-semibold">Reporte</span>
             </button>
             <button onClick={handleLogout} className="app-sidebar__action app-sidebar__action--logout">
               <LogOut size={22} />
-              <span className="font-semibold">Déconnexion</span>
+              <span className="font-semibold">Cerrar sesión</span>
             </button>
           </div>
         </div>

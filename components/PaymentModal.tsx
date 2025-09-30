@@ -26,32 +26,32 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, order, onF
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Finaliser la commande #${order.id.slice(-4)}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={`Finalizar el pedido #${order.id.slice(-4)}`}>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="text-center">
-          <p className="text-gray-600">Total à payer</p>
+          <p className="text-gray-600">Total a pagar</p>
           <p className="text-4xl font-extrabold text-gray-900">{formatIntegerAmount(order.total)} €</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Méthode de paiement</label>
+          <label className="block text-sm font-medium text-gray-700">Método de pago</label>
           <select
             value={paymentMethod}
             onChange={e => setPaymentMethod(e.target.value as Order['payment_method'])}
             className="mt-1 ui-select"
           >
-            <option value="efectivo">Efectivo (Espèces)</option>
-            <option value="transferencia">Transferencia (Virement)</option>
-            <option value="tarjeta">Tarjeta (Carte)</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia</option>
+            <option value="tarjeta">Tarjeta</option>
           </select>
         </div>
 
         {paymentMethod === 'transferencia' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700">Justificatif (optionnel)</label>
+            <label className="block text-sm font-medium text-gray-700">Comprobante (opcional)</label>
             <label htmlFor="payment-receipt" className="mt-1 flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white p-2 text-gray-500 shadow-sm hover:bg-gray-50">
               <Upload size={18} />
-              <span>{receiptFile ? receiptFile.name : 'Choisir un fichier...'}</span>
+              <span>{receiptFile ? receiptFile.name : 'Selecciona un archivo...'}</span>
             </label>
             <input id="payment-receipt" type="file" accept="image/*,.pdf" onChange={e => setReceiptFile(e.target.files ? e.target.files[0] : null)} className="hidden" />
           </div>
@@ -59,10 +59,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, order, onF
 
         <div className="pt-4 flex flex-col sm:flex-row gap-3">
           <button type="button" onClick={onClose} className="w-full ui-btn-secondary py-3">
-            Annuler
+            Cancelar
           </button>
           <button type="submit" disabled={isSubmitting} className="w-full ui-btn-success py-3 disabled:opacity-60">
-            {isSubmitting ? 'Finalisation...' : 'Confirmer Paiement'}
+            {isSubmitting ? 'Finalizando...' : 'Confirmar pago'}
           </button>
         </div>
       </form>

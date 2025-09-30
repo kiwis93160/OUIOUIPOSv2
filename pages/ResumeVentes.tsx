@@ -50,12 +50,12 @@ const ResumeVentes: React.FC = () => {
     };
 
     const exportToCSV = () => {
-        const headers = ['Date', 'Type', 'Table/Client', 'Couverts', 'Total Vente (€)', 'Bénéfice (€)', 'Méthode Paiement'];
+        const headers = ['Fecha', 'Tipo', 'Mesa/Cliente', 'Comensales', 'Venta total (€)', 'Beneficio (€)', 'Método de pago'];
         const csvRows = [
             headers.join(','),
             ...filteredOrders.map(order => [
-                new Date(order.date_creation).toLocaleString('fr-FR'),
-                order.type === 'sur_place' ? 'Sur Place' : 'À Emporter',
+                new Date(order.date_creation).toLocaleString('es-CO'),
+                order.type === 'sur_place' ? 'En el local' : 'Para llevar',
                 `"${order.type === 'sur_place' ? (order.table_nom || 'N/A') : (order.clientInfo?.nom || 'N/A')}"`,
                 order.couverts,
                 formatIntegerAmount(order.total),
@@ -69,7 +69,7 @@ const ResumeVentes: React.FC = () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `resume_commandes_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `resumen_pedidos_${new Date().toISOString().slice(0, 10)}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -84,24 +84,24 @@ const ResumeVentes: React.FC = () => {
         }, { totalSales: 0, totalProfit: 0 });
     }, [filteredOrders]);
 
-    if (loading) return <div className="text-gray-800">Chargement du résumé des ventes...</div>;
+    if (loading) return <div className="text-gray-800">Cargando el resumen de ventas...</div>;
 
     return (
         <div className="space-y-6">
             <div className="mt-6 space-y-4 rounded-xl bg-white p-4 shadow-md">
                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                      <div className="flex flex-col">
-                        <label className="text-sm font-medium text-gray-700">Date de début</label>
+                        <label className="text-sm font-medium text-gray-700">Fecha de inicio</label>
                         <input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900"/>
                     </div>
                     <div className="flex flex-col">
-                        <label className="text-sm font-medium text-gray-700">Date de fin</label>
+                        <label className="text-sm font-medium text-gray-700">Fecha de fin</label>
                         <input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900"/>
                     </div>
                     <div className="flex flex-col">
-                        <label className="text-sm font-medium text-gray-700">Méthode de paiement</label>
+                        <label className="text-sm font-medium text-gray-700">Método de pago</label>
                         <select name="paymentMethod" value={filters.paymentMethod} onChange={handleFilterChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-900">
-                            <option value="all">Toutes</option>
+                            <option value="all">Todas</option>
                             <option value="efectivo">Efectivo</option>
                             <option value="transferencia">Transferencia</option>
                             <option value="tarjeta">Tarjeta</option>
@@ -119,12 +119,12 @@ const ResumeVentes: React.FC = () => {
                         <thead className="border-b">
                             <tr>
                                 <th className="p-3"></th>
-                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Table/Client</th>
-                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider text-right">Ventes</th>
-                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider text-right">Bénéfice</th>
-                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Paiement</th>
+                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Mesa/Cliente</th>
+                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider text-right">Ventas</th>
+                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider text-right">Beneficio</th>
+                                <th className="p-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Pago</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -134,12 +134,12 @@ const ResumeVentes: React.FC = () => {
                                         <td className="p-3">
                                             {expandedOrderId === order.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                                         </td>
-                                        <td className="p-3 text-sm text-gray-700 whitespace-nowrap">{new Date(order.date_creation).toLocaleString('fr-FR')}</td>
+                                        <td className="p-3 text-sm text-gray-700 whitespace-nowrap">{new Date(order.date_creation).toLocaleString('es-CO')}</td>
                                         <td className="p-3 text-sm">
                                             {order.type === 'sur_place' ? (
-                                                <span className="inline-flex items-center gap-1.5 py-1 px-2 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><User size={12}/> Sur Place</span>
+                                                <span className="inline-flex items-center gap-1.5 py-1 px-2 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><User size={12}/> En el local</span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1.5 py-1 px-2 rounded-full text-xs font-medium bg-purple-100 text-purple-800"><ShoppingBag size={12}/> À Emporter</span>
+                                                <span className="inline-flex items-center gap-1.5 py-1 px-2 rounded-full text-xs font-medium bg-purple-100 text-purple-800"><ShoppingBag size={12}/> Para llevar</span>
                                             )}
                                         </td>
                                         <td className="p-3 font-semibold text-gray-900">{order.type === 'sur_place' ? (order.table_nom || 'N/A') : (order.clientInfo?.nom || 'N/A')}</td>
@@ -151,7 +151,7 @@ const ResumeVentes: React.FC = () => {
                                         <tr className="bg-gray-50">
                                             <td colSpan={7} className="p-4">
                                                 <div className="p-2 bg-white rounded-md border">
-                                                    <h4 className="font-semibold mb-2 text-gray-800">Détail des articles :</h4>
+                                                    <h4 className="font-semibold mb-2 text-gray-800">Detalle de artículos:</h4>
                                                     <ul className="list-disc list-inside pl-2 text-gray-700">
                                                     {order.items.map(item => (
                                                         <li key={item.id}>{item.quantite}x {item.nom_produit} - <span className="font-semibold">{formatIntegerAmount(item.prix_unitaire * item.quantite)}€</span></li>
@@ -166,7 +166,7 @@ const ResumeVentes: React.FC = () => {
                         </tbody>
                          <tfoot className="border-t-2 border-gray-300">
                             <tr className="font-bold text-gray-900">
-                                <td colSpan={4} className="p-3 text-right">TOTAUX</td>
+                                <td colSpan={4} className="p-3 text-right">TOTALES</td>
                                 <td className="p-3 text-right">{formatIntegerAmount(totals.totalSales)} €</td>
                                 <td className="p-3 text-right text-green-700">{formatIntegerAmount(totals.totalProfit)} €</td>
                                 <td></td>
@@ -174,7 +174,7 @@ const ResumeVentes: React.FC = () => {
                         </tfoot>
                     </table>
                 </div>
-                 {filteredOrders.length === 0 && <p className="text-center p-8 text-gray-500">Aucune commande finalisée ne correspond à vos filtres.</p>}
+                 {filteredOrders.length === 0 && <p className="text-center p-8 text-gray-500">Ningún pedido finalizado coincide con tus filtros.</p>}
             </div>
         </div>
     );

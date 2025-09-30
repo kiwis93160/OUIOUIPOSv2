@@ -31,9 +31,9 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                     const data = await api.generateDailyReport();
                     setReport(data);
                 } catch (error) {
-                    console.error('Échec de la génération du rapport quotidien', error);
+                    console.error('Error al generar el informe diario', error);
                     setReport(null);
-                    setReportError("Impossible de générer le rapport quotidien. Veuillez réessayer plus tard.");
+                    setReportError('No fue posible generar el informe diario. Intenta nuevamente más tarde.');
                 } finally {
                     setLoading(false);
                 }
@@ -45,7 +45,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
     const formatLoginsByRole = (logins: RoleLogin[]) => {
         const grouped = new Map<string, string[]>();
         logins.forEach(login => {
-            const time = new Date(login.loginAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            const time = new Date(login.loginAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
             const existing = grouped.get(login.roleName) ?? [];
             existing.push(time);
             grouped.set(login.roleName, existing);
@@ -55,20 +55,20 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
 
     const formatReportForWhatsApp = (reportData: DailyReport): string => {
         const parts: string[] = [];
-        parts.push(`*RAPPORT OUIOUITACOS*`);
-        parts.push(`Généré le: ${new Date(reportData.generatedAt).toLocaleString('fr-FR')}`);
-        parts.push(`Période: depuis le ${new Date(reportData.startDate).toLocaleString('fr-FR')}`);
+        parts.push(`*REPORTE OUIOUITACOS*`);
+        parts.push(`Generado el: ${new Date(reportData.generatedAt).toLocaleString('es-CO')}`);
+        parts.push(`Periodo: desde ${new Date(reportData.startDate).toLocaleString('es-CO')}`);
         parts.push('---');
-    
-        parts.push(`*Statistiques du Jour*`);
-        parts.push(`- Ventes: *${formatIntegerAmount(reportData.ventesDuJour)} €*`);
-        parts.push(`- Clients: *${reportData.clientsDuJour}*`);
-        parts.push(`- Panier Moyen: *${formatIntegerAmount(reportData.panierMoyen)} €*`);
+
+        parts.push(`*Estadísticas del día*`);
+        parts.push(`- Ventas: *${formatIntegerAmount(reportData.ventesDuJour)} €*`);
+        parts.push(`- Clientes: *${reportData.clientsDuJour}*`);
+        parts.push(`- Ticket promedio: *${formatIntegerAmount(reportData.panierMoyen)} €*`);
         parts.push('---');
-    
-        parts.push(`*Produits Vendus*`);
+
+        parts.push(`*Productos vendidos*`);
         if (reportData.soldProducts.length === 0) {
-          parts.push('Aucun produit vendu.');
+          parts.push('Ningún producto vendido.');
         } else {
           reportData.soldProducts.forEach(category => {
             parts.push(`\n_${category.categoryName}_`);
@@ -79,13 +79,13 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
         }
         parts.push('---');
 
-        parts.push(`*Connexions depuis 05h00*`);
+        parts.push(`*Inicios de sesión desde las 05:00*`);
         if (reportData.roleLoginsUnavailable) {
-          parts.push('Connexions indisponibles sur cet appareil.');
+          parts.push('Inicios de sesión no disponibles en este dispositivo.');
         } else {
           const groupedLogins = formatLoginsByRole(reportData.roleLogins);
           if (groupedLogins.size === 0) {
-            parts.push('Aucune connexion enregistrée.');
+            parts.push('No hay inicios de sesión registrados.');
           } else {
             groupedLogins.forEach((times, roleName) => {
               parts.push(`- ${roleName}: ${times.join(', ')}`);
@@ -94,9 +94,9 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
         }
         parts.push('---');
 
-        parts.push(`*Stocks Bas*`);
+        parts.push(`*Inventario bajo*`);
         if (reportData.lowStockIngredients.length === 0) {
-          parts.push('Aucun ingrédient en stock bas.');
+          parts.push('No hay ingredientes con inventario bajo.');
         } else {
           reportData.lowStockIngredients.forEach(ing => {
             parts.push(`- ${ing.nom} (${ing.stock_actuel} / ${ing.stock_minimum} ${ing.unite})`);
@@ -115,17 +115,17 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Rapport Quotidien" size="xl">
+        <Modal isOpen={isOpen} onClose={onClose} title="Reporte diario" size="xl">
             <>
                 <div className="p-6 max-h-[70vh] overflow-y-auto">
-                     {loading && <p>Génération du rapport...</p>}
+                     {loading && <p>Generando el reporte...</p>}
                      {!loading && reportError && (
                         <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                             {reportError}
                         </div>
                      )}
                      {!loading && !report && !reportError && (
-                        <p className="text-red-500">Impossible de générer le rapport.</p>
+                        <p className="text-red-500">No fue posible generar el reporte.</p>
                      )}
                      {!loading && report && (
                          <div className="space-y-6">
@@ -133,28 +133,28 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                                 <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800 flex items-start gap-2">
                                     <AlertTriangle className="mt-0.5 h-4 w-4" />
                                     <span>
-                                        Les connexions des rôles sont indisponibles sur cet appareil (stockage local inaccessible).
+                                        Los inicios de sesión de los roles no están disponibles en este dispositivo (almacenamiento local inaccesible).
                                     </span>
                                 </div>
                             )}
                             <div className="text-center border-b pb-4">
-                                 <h2 className="font-bold text-brand-secondary text-[clamp(1.75rem,4vw,2.75rem)]">Rapport OUIOUITACOS</h2>
+                                 <h2 className="font-bold text-brand-secondary text-[clamp(1.75rem,4vw,2.75rem)]">Reporte OUIOUITACOS</h2>
                                  <p className="text-gray-500">
-                                     Généré le {new Date(report.generatedAt).toLocaleString('fr-FR')}
+                                     Generado el {new Date(report.generatedAt).toLocaleString('es-CO')}
                                  </p>
                                  <p className="text-sm text-gray-500">
-                                     Données depuis le {new Date(report.startDate).toLocaleString('fr-FR')}
+                                     Datos desde {new Date(report.startDate).toLocaleString('es-CO')}
                                  </p>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                <ReportStat icon={<DollarSign/>} label="Ventes du Jour" value={`${formatIntegerAmount(report.ventesDuJour)} €`} />
-                                <ReportStat icon={<Users/>} label="Clients du Jour" value={report.clientsDuJour} />
-                                <ReportStat icon={<ShoppingCart/>} label="Panier Moyen" value={`${formatIntegerAmount(report.panierMoyen)} €`} />
+                                <ReportStat icon={<DollarSign/>} label="Ventas del día" value={`${formatIntegerAmount(report.ventesDuJour)} €`} />
+                                <ReportStat icon={<Users/>} label="Clientes del día" value={report.clientsDuJour} />
+                                <ReportStat icon={<ShoppingCart/>} label="Ticket promedio" value={`${formatIntegerAmount(report.panierMoyen)} €`} />
                             </div>
 
                             <div>
-                                <h3 className="text-xl font-semibold mb-3 flex items-center gap-2 text-gray-800"><Package/> Produits Vendus</h3>
+                                <h3 className="text-xl font-semibold mb-3 flex items-center gap-2 text-gray-800"><Package/> Productos vendidos</h3>
                                 <div className="space-y-4">
                                     {report.soldProducts.map(category => (
                                         <div key={category.categoryName}>
@@ -172,14 +172,14 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                             </div>
 
                             <div>
-                                <h3 className="text-xl font-semibold mb-3 flex items-center gap-2 text-gray-800"><LogIn/> Connexions depuis 05h00</h3>
+                                <h3 className="text-xl font-semibold mb-3 flex items-center gap-2 text-gray-800"><LogIn/> Inicios de sesión desde las 05:00</h3>
                                 {report.roleLoginsUnavailable ? (
-                                    <p className="text-gray-500">Connexions indisponibles : impossible d'accéder au stockage local.</p>
+                                    <p className="text-gray-500">Inicios de sesión no disponibles: no es posible acceder al almacenamiento local.</p>
                                 ) : (
                                     (() => {
                                         const grouped = formatLoginsByRole(report.roleLogins);
                                         if (grouped.size === 0) {
-                                            return <p className="text-gray-500">Aucune connexion enregistrée depuis 05h00.</p>;
+                                            return <p className="text-gray-500">No hay inicios de sesión registrados desde las 05:00.</p>;
                                         }
                                         return (
                                             <ul className="space-y-2">
@@ -196,7 +196,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                             </div>
 
                             <div>
-                                 <h3 className="text-xl font-semibold mb-3 flex items-center gap-2 text-gray-800"><AlertTriangle className="text-orange-500"/> Ingrédients en Stock Bas</h3>
+                                 <h3 className="text-xl font-semibold mb-3 flex items-center gap-2 text-gray-800"><AlertTriangle className="text-orange-500"/> Ingredientes con inventario bajo</h3>
                                  {report.lowStockIngredients.length > 0 ? (
                                     <ul className="space-y-1">
                                         {report.lowStockIngredients.map(ing => (
@@ -207,7 +207,7 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                                         ))}
                                     </ul>
                                  ) : (
-                                    <p className="text-gray-500">Aucun ingrédient en stock bas.</p>
+                                    <p className="text-gray-500">No hay ingredientes con inventario bajo.</p>
                                  )}
                             </div>
                          </div>
@@ -216,14 +216,14 @@ const ReportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
 
                 <div className="flex flex-col sm:flex-row justify-end gap-3 p-4 border-t">
                     <button onClick={onClose} className="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition">
-                        Fermer
+                        Cerrar
                     </button>
-                    <button 
-                        onClick={handleSendToWhatsApp} 
-                        disabled={loading || !report} 
+                    <button
+                        onClick={handleSendToWhatsApp}
+                        disabled={loading || !report}
                         className="w-full sm:w-auto bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-2 disabled:bg-gray-400"
                     >
-                        <MessageSquare size={20}/> Envoyer sur WhatsApp
+                        <MessageSquare size={20}/> Enviar por WhatsApp
                     </button>
                 </div>
             </>

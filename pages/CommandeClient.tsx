@@ -51,7 +51,7 @@ const ItemCustomizationModal: React.FC<ItemCustomizationModalProps> = ({ isOpen,
                 <img src={product.image} alt={product.nom_produit} className="w-full h-48 object-cover rounded-lg" />
                 <p className="text-gray-600">{product.description}</p>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Commentaire (allergies, etc.)</label>
+                    <label className="block text-sm font-medium text-gray-700">Comentario (alergias, etc.)</label>
                     <textarea value={comment} onChange={e => setComment(e.target.value)} rows={2} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-700 bg-white" />
                 </div>
                 <div className="flex justify-between items-center">
@@ -61,7 +61,7 @@ const ItemCustomizationModal: React.FC<ItemCustomizationModalProps> = ({ isOpen,
                         <button onClick={() => setQuantity(q => q + 1)} className="p-2 rounded-full bg-gray-200 text-gray-800"><Plus size={18}/></button>
                     </div>
                     <button onClick={handleSave} className="bg-brand-primary text-brand-secondary font-bold py-2 px-6 rounded-lg hover:bg-yellow-400 transition">
-                        Ajouter ({formatIntegerAmount(product.prix_vente * quantity)} €)
+                        Añadir ({formatIntegerAmount(product.prix_vente * quantity)} €)
                     </button>
                 </div>
             </div>
@@ -81,25 +81,25 @@ interface ConfirmationModalProps {
 }
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, order, whatsAppMessage }) => {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Commande envoyée !">
+        <Modal isOpen={isOpen} onClose={onClose} title="¡Pedido enviado!">
             <div className="text-center space-y-4">
                 <CheckCircle className="mx-auto text-green-500" size={64}/>
-                <h3 className="text-xl font-bold text-gray-800">Merci pour votre commande !</h3>
+                <h3 className="text-xl font-bold text-gray-800">¡Gracias por tu pedido!</h3>
                 <p className="text-gray-600">
-                    Votre commande #{order.id.slice(-6)} a bien été reçue. 
-                    Elle est en attente de validation. Vous pouvez suivre son statut sur cette page.
+                    Tu pedido #{order.id.slice(-6)} se ha recibido correctamente.
+                    Está en espera de validación. Puedes seguir su estado en esta página.
                 </p>
                 <p className="text-gray-600">
-                    Pour finaliser, veuillez nous envoyer ce récapitulatif sur WhatsApp avec votre justificatif.
+                    Para finalizar, envíanos este resumen por WhatsApp junto con tu comprobante.
                 </p>
-                <a 
+                <a
                     href={`https://wa.me/?text=${whatsAppMessage}`}
-                    target="_blank" 
+                    target="_blank"
                     rel="noopener noreferrer"
                     onClick={onClose}
                     className="inline-flex items-center justify-center gap-2 w-full bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600 transition"
                 >
-                    <MessageCircle /> Envoyer sur WhatsApp
+                    <MessageCircle /> Enviar por WhatsApp
                 </a>
             </div>
         </Modal>
@@ -151,7 +151,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
             setProducts(productsData);
             setCategories(categoriesData);
         } catch (err) {
-            setError('Impossible de charger le menu. Veuillez réessayer plus tard.');
+            setError('No fue posible cargar el menú. Intenta nuevamente más tarde.');
             console.error(err);
         } finally {
             setLoading(false);
@@ -244,7 +244,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
             setPaymentProof(null);
             storeActiveCustomerOrder(newOrder.id);
         } catch (err) {
-            alert("Une erreur est survenue lors de la soumission ou du téléversement du justificatif.");
+            alert('Ocurrió un error al enviar el pedido o subir el comprobante.');
             console.error(err);
         } finally {
             setSubmitting(false);
@@ -277,7 +277,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
         setCart(updatedItems);
 
         if (missingProducts.length > 0) {
-            alert(`Certains articles ne sont plus disponibles et n'ont pas été ajoutés :\n- ${missingProducts.join('\n- ')}`);
+            alert(`Algunos artículos ya no están disponibles y no se agregaron:\n- ${missingProducts.join('\n- ')}`);
         }
 
         const cartElement = document.getElementById('cart-section');
@@ -287,29 +287,29 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     };
     
     const generateWhatsAppMessage = (order: Order) => {
-        const header = `*Nouvelle Commande OUIOUITACOS #${order.id.slice(-6)}*`;
+        const header = `*Nuevo pedido OUIOUITACOS #${order.id.slice(-6)}*`;
         const itemLines = (order.items ?? []).map(item => {
             const baseLine = `- ${item.quantite}x ${item.nom_produit} (${formatIntegerAmount(item.prix_unitaire)}€) → ${formatIntegerAmount(item.prix_unitaire * item.quantite)}€`;
             const details: string[] = [];
             if (item.commentaire) {
-                details.push(`Commentaire: ${item.commentaire}`);
+                details.push(`Comentario: ${item.commentaire}`);
             }
             if (item.excluded_ingredients && item.excluded_ingredients.length > 0) {
-                details.push(`Sans: ${item.excluded_ingredients.join(', ')}`);
+                details.push(`Sin: ${item.excluded_ingredients.join(', ')}`);
             }
             return details.length > 0 ? `${baseLine}\n  ${details.join('\n  ')}` : baseLine;
         });
-        const items = itemLines.length > 0 ? itemLines.join('\n') : 'Aucun article';
+        const items = itemLines.length > 0 ? itemLines.join('\n') : 'Sin artículos';
         const totalValue = order.total ?? order.items.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0);
         const totalMsg = `*Total: ${formatIntegerAmount(totalValue)}€*`;
-        const paymentMethod = order.payment_method ? `Paiement: ${order.payment_method}` : undefined;
-        const client = `Client: ${order.clientInfo?.nom} (${order.clientInfo?.telephone})\nAdresse: ${order.clientInfo?.adresse}`;
-        const footer = "Justificatif de paiement ci-joint.";
+        const paymentMethod = order.payment_method ? `Pago: ${order.payment_method}` : undefined;
+        const client = `Cliente: ${order.clientInfo?.nom} (${order.clientInfo?.telephone})\nDirección: ${order.clientInfo?.adresse}`;
+        const footer = 'Comprobante de pago adjunto.';
         const messageParts = [header, items, totalMsg, paymentMethod, client, footer].filter(Boolean);
         return encodeURIComponent(messageParts.join('\n\n'));
     };
-    
-    if (loading) return <div className="h-screen flex items-center justify-center">Chargement du menu...</div>;
+
+    if (loading) return <div className="h-screen flex items-center justify-center">Cargando el menú...</div>;
     if (error) return <div className="h-screen flex items-center justify-center text-red-500">{error}</div>;
 
     return (
@@ -319,16 +319,16 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                 <div className="lg:col-span-2">
                     {orderHistory.length > 0 && cart.length === 0 && (
                         <div className="bg-white p-4 rounded-xl shadow-md mb-8">
-                            <h2 className="text-xl font-bold flex items-center gap-2 mb-3 text-gray-700"><History /> Repasser une commande ?</h2>
+                            <h2 className="text-xl font-bold flex items-center gap-2 mb-3 text-gray-700"><History /> ¿Repetir un pedido?</h2>
                             <div className="space-y-2">
                                 {orderHistory.slice(0, 3).map(order => (
                                     <div key={order.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                                         <div>
-                                            <p className="font-semibold text-gray-700">Commande du {new Date(order.date_creation).toLocaleDateString()}</p>
-                                            <p className="text-sm text-gray-500">{order.items.length} article(s) - {formatIntegerAmount(order.total)}€</p>
+                                            <p className="font-semibold text-gray-700">Pedido del {new Date(order.date_creation).toLocaleDateString('es-CO')}</p>
+                                            <p className="text-sm text-gray-500">{order.items.length} artículo(s) - {formatIntegerAmount(order.total)}€</p>
                                         </div>
                                         <button onClick={() => handleReorder(order)} className="bg-brand-primary text-brand-secondary font-bold py-1 px-3 rounded-lg text-sm hover:bg-yellow-400">
-                                            Commander à nouveau
+                                            Volver a pedir
                                         </button>
                                     </div>
                                 ))}
@@ -339,7 +339,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                         <div className="flex space-x-2 overflow-x-auto pb-2 mb-4">
                              <button onClick={() => setActiveCategoryId('all')}
                                 className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap transition ${activeCategoryId === 'all' ? 'bg-brand-primary text-brand-secondary' : 'bg-gray-200 text-gray-700'}`}>
-                                Tous
+                                Todos
                             </button>
                             {categories.map(cat => (
                                 <button key={cat.id} onClick={() => setActiveCategoryId(cat.id)}
@@ -356,7 +356,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                     <p className="font-semibold text-sm flex-grow text-gray-700">{product.nom_produit}</p>
                                     <p className="text-xs text-gray-500 mt-1 px-1 h-10 overflow-hidden">{product.description}</p>
                                     <p className="font-bold text-gray-700 mt-1">{formatIntegerAmount(product.prix_vente)} €</p>
-                                    {product.estado !== 'disponible' && <span className="text-xs text-red-500 font-bold mt-1">Épuisé</span>}
+                                    {product.estado !== 'disponible' && <span className="text-xs text-red-500 font-bold mt-1">Agotado</span>}
                                 </div>
                             ))}
                         </div>
@@ -366,8 +366,8 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                 {/* Cart Section */}
                 <div id="cart-section" className="lg:col-span-1 mt-8 lg:mt-0 lg:sticky top-24 self-start">
                     <div className="bg-white p-4 rounded-xl shadow-md">
-                        <h2 className="text-2xl font-bold flex items-center gap-2 mb-4 text-gray-700"><ShoppingCart/> Mon Panier</h2>
-                        {cart.length === 0 ? <p className="text-gray-500">Votre panier est vide.</p> :
+                        <h2 className="text-2xl font-bold flex items-center gap-2 mb-4 text-gray-700"><ShoppingCart/> Mi carrito</h2>
+                        {cart.length === 0 ? <p className="text-gray-500">Tu carrito está vacío.</p> :
                             <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
                                 {cart.map(item => (
                                     <div key={item.id} className="flex justify-between items-start">
@@ -394,34 +394,34 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                         {cart.length > 0 && (
                             <form onSubmit={handleSubmitOrder} className="mt-6 space-y-4">
                                 <div>
-                                    <label className="text-sm font-medium text-gray-700">Nom Complet</label>
+                                    <label className="text-sm font-medium text-gray-700">Nombre completo</label>
                                     <input type="text" required value={clientInfo.nom} onChange={e => setClientInfo({...clientInfo, nom: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-700 bg-white"/>
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium text-gray-700">Adresse de livraison</label>
+                                    <label className="text-sm font-medium text-gray-700">Dirección de entrega</label>
                                     <input type="text" required value={clientInfo.adresse} onChange={e => setClientInfo({...clientInfo, adresse: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-700 bg-white"/>
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium text-gray-700">Numéro de Téléphone</label>
+                                    <label className="text-sm font-medium text-gray-700">Número de teléfono</label>
                                     <input type="tel" required value={clientInfo.telephone} onChange={e => setClientInfo({...clientInfo, telephone: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-gray-700 bg-white"/>
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium text-gray-700">Méthode de Paiement</label>
+                                    <label className="text-sm font-medium text-gray-700">Método de pago</label>
                                     <select required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary bg-white text-gray-700">
                                         <option value="transferencia">Transferencia</option>
-                                        <option value="efectivo" disabled>Efectivo - non disponible</option>
+                                        <option value="efectivo" disabled>Efectivo - no disponible</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Justificatif de virement</label>
+                                    <label className="block text-sm font-medium text-gray-700">Comprobante de transferencia</label>
                                     <label htmlFor="payment-proof-upload" className="mt-1 w-full border border-gray-300 p-2 rounded-md shadow-sm flex items-center gap-2 cursor-pointer bg-white text-gray-500">
                                         <Upload size={18} />
-                                        <span>{paymentProof ? paymentProof.name : 'Choisir un fichier...'}</span>
+                                        <span>{paymentProof ? paymentProof.name : 'Selecciona un archivo...'}</span>
                                     </label>
                                     <input id="payment-proof-upload" type="file" required accept="image/*,.pdf" onChange={e => setPaymentProof(e.target.files ? e.target.files[0] : null)} className="hidden" />
                                 </div>
                                 <button type="submit" disabled={!clientInfo.nom || !clientInfo.telephone || !clientInfo.adresse || !paymentProof || submitting} className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg text-lg hover:bg-red-700 transition disabled:bg-gray-400">
-                                    {submitting ? 'Envoi...' : `Soumettre la Commande (${formatIntegerAmount(total)} €)`}
+                                    {submitting ? 'Enviando...' : `Enviar el pedido (${formatIntegerAmount(total)} €)`}
                                 </button>
                             </form>
                         )}
@@ -480,7 +480,7 @@ const CommandeClient: React.FC = () => {
                 <div className="container mx-auto flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-brand-primary">OUIOUITACOS</h1>
                     <button onClick={() => navigate('/login')} className="flex items-center gap-2 text-sm text-gray-600 hover:text-brand-primary transition">
-                        <ArrowLeft size={16}/> Retour à l'accueil
+                        <ArrowLeft size={16}/> Volver al inicio
                     </button>
                 </div>
             </header>
