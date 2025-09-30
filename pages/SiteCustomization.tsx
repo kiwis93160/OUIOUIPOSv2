@@ -3,7 +3,7 @@ import useSiteContent, { DEFAULT_SITE_CONTENT } from '../hooks/useSiteContent';
 import { SectionStyle, SiteContent } from '../types';
 import { normalizeCloudinaryImageUrl, uploadProductImage } from '../services/cloudinary';
 import { ALLOWED_FONT_FAMILIES, ALLOWED_FONT_SIZES, resolveSiteContent } from '../utils/siteContent';
-import SitePreviewCanvas, { EditableZoneKey } from '../components/SitePreviewCanvas';
+import SitePreviewCanvas, { EditableElementKey, EditableZoneKey } from '../components/SitePreviewCanvas';
 import Modal from '../components/Modal';
 
 const imageWarning = "L'URL doit provenir de Cloudinary (https://*.cloudinary.com).";
@@ -41,6 +41,29 @@ const STYLE_BACKGROUND_FIELD_KEYS: Record<EditableZoneKey, StyleImageFieldKey> =
   footer: 'footer.style.background',
 };
 
+const resolveZoneFromElement = (element: EditableElementKey): EditableZoneKey => {
+  if (element.startsWith('navigation.')) {
+    return 'navigation';
+  }
+  if (element.startsWith('hero.')) {
+    return 'hero';
+  }
+  if (element.startsWith('about.')) {
+    return 'about';
+  }
+  if (element.startsWith('menu.')) {
+    return 'menu';
+  }
+  if (element.startsWith('contact.')) {
+    return 'contact';
+  }
+  if (element.startsWith('footer.')) {
+    return 'footer';
+  }
+
+  throw new Error(`Zone introuvable pour l'élément modifiable "${element}"`);
+};
+
 type NavigationChangeHandler = (key: NavigationFieldKey) => (event: React.ChangeEvent<HTMLInputElement>) => void;
 type HeroChangeHandler = (
   key: HeroFieldKey,
@@ -53,7 +76,7 @@ type ImageUploadHandler = (field: ImageFieldKey, file: File) => Promise<void>;
 type ImageClearHandler = (field: ImageFieldKey) => void;
 
 type SiteCustomizationModalsProps = {
-  activeZone: EditableZoneKey | null;
+  activeElement: EditableElementKey | null;
   onClose: () => void;
   draft: SiteContent;
   handleBrandChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -104,6 +127,42 @@ const INITIAL_IMAGE_ERRORS: Record<ImageFieldKey, string | null> = {
   'footer.style.background': null,
 };
 
+const EDITABLE_ELEMENT_INPUT_IDS: Partial<Record<EditableElementKey, string>> = {
+  'navigation.brand': 'brand-name',
+  'navigation.links.home': 'nav-home',
+  'navigation.links.about': 'nav-about',
+  'navigation.links.menu': 'nav-menu',
+  'navigation.links.contact': 'nav-contact',
+  'navigation.links.loginCta': 'nav-login',
+  'navigation.style.background': 'navigation-background-type',
+  'hero.title': 'hero-title',
+  'hero.subtitle': 'hero-subtitle',
+  'hero.ctaLabel': 'hero-cta',
+  'hero.historyTitle': 'hero-history',
+  'hero.reorderCtaLabel': 'hero-reorder',
+  'hero.backgroundImage': 'hero-image',
+  'about.title': 'about-title',
+  'about.description': 'about-description',
+  'about.image': 'about-image',
+  'about.style.background': 'about-background-type',
+  'menu.title': 'menu-title',
+  'menu.ctaLabel': 'menu-cta',
+  'menu.loadingLabel': 'menu-loading',
+  'menu.image': 'menu-image',
+  'menu.style.background': 'menu-background-type',
+  'contact.title': 'contact-title',
+  'contact.addressLabel': 'contact-address-label',
+  'contact.address': 'contact-address',
+  'contact.phoneLabel': 'contact-phone-label',
+  'contact.phone': 'contact-phone',
+  'contact.emailLabel': 'contact-email-label',
+  'contact.email': 'contact-email',
+  'contact.image': 'contact-image',
+  'contact.style.background': 'contact-background-type',
+  'footer.text': 'footer-text',
+  'footer.style.background': 'footer-background-type',
+};
+
 const SiteCustomization: React.FC = () => {
   const { content, loading, error, updateContent } = useSiteContent();
   const [draft, setDraft] = useState<SiteContent>(content);
@@ -115,7 +174,7 @@ const SiteCustomization: React.FC = () => {
     ...INITIAL_IMAGE_ERRORS,
   });
   const [uploadingField, setUploadingField] = useState<ImageFieldKey | null>(null);
-  const [activeZone, setActiveZone] = useState<EditableZoneKey | null>(null);
+  const [activeElement, setActiveElement] = useState<EditableElementKey | null>(null);
 
   useEffect(() => {
     setDraft(content);
@@ -486,14 +545,14 @@ const SiteCustomization: React.FC = () => {
     }
   };
 
-  const handleReset = () => {
-    setDraft(content);
-    setIsDirty(false);
-    setStatusMessage(null);
-    setFormError(null);
-    setImageErrors({ ...INITIAL_IMAGE_ERRORS });
-    setActiveZone(null);
-  };
+    const handleReset = () => {
+      setDraft(content);
+      setIsDirty(false);
+      setStatusMessage(null);
+      setFormError(null);
+      setImageErrors({ ...INITIAL_IMAGE_ERRORS });
+      setActiveElement(null);
+    };
 
   const isUploading = (field: ImageFieldKey) => uploadingField === field;
 
@@ -544,12 +603,12 @@ const SiteCustomization: React.FC = () => {
           <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-brand-primary" />
         </div>
       ) : (
-        <SitePreviewCanvas content={previewContent} onEdit={zone => setActiveZone(zone)} />
+        <SitePreviewCanvas content={previewContent} onEdit={element => setActiveElement(element)} />
       )}
 
       <SiteCustomizationModals
-        activeZone={activeZone}
-        onClose={() => setActiveZone(null)}
+        activeElement={activeElement}
+        onClose={() => setActiveElement(null)}
         draft={draft}
         handleBrandChange={handleBrandChange}
         handleNavigationChange={handleNavigationChange}
@@ -577,7 +636,7 @@ const SiteCustomization: React.FC = () => {
 };
 
 const SiteCustomizationModals: React.FC<SiteCustomizationModalsProps> = ({
-  activeZone,
+  activeElement,
   onClose,
   draft,
   handleBrandChange,
@@ -601,6 +660,32 @@ const SiteCustomizationModals: React.FC<SiteCustomizationModalsProps> = ({
   imageErrors,
   isUploading,
 }) => {
+  const activeZone = activeElement ? resolveZoneFromElement(activeElement) : null;
+
+  useEffect(() => {
+    if (!activeElement) {
+      return;
+    }
+
+    const targetId = EDITABLE_ELEMENT_INPUT_IDS[activeElement];
+    if (!targetId) {
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const input = document.getElementById(targetId);
+      if (input instanceof HTMLElement) {
+        input.focus();
+      }
+    }, 120);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeElement]);
+
   const renderStyleControls = (zone: EditableZoneKey) => {
     const style = draft[zone].style;
     const backgroundField = STYLE_BACKGROUND_FIELD_KEYS[zone];
