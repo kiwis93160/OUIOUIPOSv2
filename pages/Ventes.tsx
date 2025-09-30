@@ -25,6 +25,14 @@ const STATUS_DESCRIPTORS: Record<Table['statut'], StatusDescriptor> = {
   para_pagar: { text: 'Para pagar', statusClass: 'status--payment', Icon: DollarSign },
 };
 
+const formatTableName = (name: string): string => {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 3 && parts[0].toLowerCase() === 'table' && parts[1].toLowerCase() === 'table') {
+    return `${parts[0]} ${parts.slice(2).join(' ')}`;
+  }
+  return name;
+};
+
 const getTableStatus = (table: Table): StatusDescriptor => {
   switch (table.statut) {
     case 'libre':
@@ -125,6 +133,8 @@ const TableCard: React.FC<{
     }
   };
 
+  const displayName = formatTableName(table.nom);
+
   return (
     <div
       onClick={handleCardClick}
@@ -171,7 +181,7 @@ const TableCard: React.FC<{
       )}
 
       <div className="status-card__header">
-        <h3 className="status-card__title">{table.nom}</h3>
+        <h3 className="status-card__title">{displayName}</h3>
         {table.date_envoi_cuisine && table.statut !== 'libre' && (
           <div className="status-card__timer">
             <OrderTimer startTime={table.date_envoi_cuisine} className="w-full justify-center" />

@@ -14,7 +14,12 @@ const MainStatCard: React.FC<{ title: string; value: string; icon: React.ReactNo
         </div>
         <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-500">{title}</p>
-            <p className="text-2xl md:text-3xl xl:text-4xl font-bold text-gray-800 break-words leading-tight">{value}</p>
+            <p
+                className="font-bold text-gray-800 leading-tight whitespace-nowrap"
+                style={{ fontSize: 'clamp(1.35rem, 2.8vw, 2.75rem)', letterSpacing: '-0.01em' }}
+            >
+                {value}
+            </p>
         </div>
     </div>
 );

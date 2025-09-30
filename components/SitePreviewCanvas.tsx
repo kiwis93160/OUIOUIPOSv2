@@ -9,8 +9,8 @@ import {
 } from '../utils/siteStyleHelpers';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
-const brandLogo = '/logo-brand.svg';
-const staffLogo = '/logo-staff.svg';
+const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
+const DEFAULT_STAFF_LOGO = '/logo-staff.svg';
 
 export type EditableZoneKey = 'navigation' | 'hero' | 'about' | 'menu' | 'contact' | 'footer';
 
@@ -167,6 +167,8 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
   const navigationBackgroundStyle = createBackgroundStyle(content.navigation.style);
   const navigationTextStyle = createTextStyle(content.navigation.style);
   const navigationBodyStyle = createBodyTextStyle(content.navigation.style);
+  const brandLogo = content.navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
+  const staffLogo = content.navigation.staffLogo ?? DEFAULT_STAFF_LOGO;
   const heroBackgroundStyle = createHeroBackgroundStyle(content.hero.style, content.hero.backgroundImage);
   const heroTextStyle = createTextStyle(content.hero.style);
   const heroBodyTextStyle = createBodyTextStyle(content.hero.style);
@@ -357,7 +359,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                         <div key={index} className="hero-history__item">
                           <div className="hero-history__meta">
                             <p className="hero-history__date" style={heroBodyTextStyle}>
-                              Commande du 12/03/2024
+                              Pedido del 12/03/2024
                             </p>
                             <p className="hero-history__details" style={heroBodyTextStyle}>
                               2 article(s) • {formatCurrencyCOP(32000)}

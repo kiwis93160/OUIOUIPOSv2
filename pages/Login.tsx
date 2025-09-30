@@ -16,8 +16,8 @@ import {
   createTextStyle,
 } from '../utils/siteStyleHelpers';
 
-const brandLogo = '/logo-brand.svg';
-const staffLogo = '/logo-staff.svg';
+const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
+const DEFAULT_STAFF_LOGO = '/logo-staff.svg';
 
 type PinInputProps = {
   pin: string;
@@ -147,6 +147,8 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { content: siteContent } = useSiteContent();
   const { navigation, hero, about, menu: menuContent, contact, footer } = siteContent;
+  const brandLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
+  const staffLogo = navigation.staffLogo ?? DEFAULT_STAFF_LOGO;
   const navigationBackgroundStyle = createBackgroundStyle(navigation.style);
   const navigationTextStyle = createTextStyle(navigation.style);
   const navigationBodyStyle = createBodyTextStyle(navigation.style);
@@ -380,7 +382,7 @@ const Login: React.FC = () => {
                         <div key={order.id} className="hero-history__item">
                           <div className="hero-history__meta">
                             <p className="hero-history__date" style={heroBodyTextStyle}>
-                              Commande du {new Date(order.date_creation).toLocaleDateString()}
+                              Pedido del {new Date(order.date_creation).toLocaleDateString()}
                             </p>
                             <p className="hero-history__details" style={heroBodyTextStyle}>
                               {order.items.length} article(s) • {formatCurrencyCOP(order.total)}
