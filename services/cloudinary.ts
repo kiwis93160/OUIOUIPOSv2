@@ -167,6 +167,33 @@ export const uploadProductImage = async (
   });
 };
 
+const resolveCustomizationFolder = (): string =>
+  sanitizeSegment(getEnv('VITE_CLOUDINARY_CUSTOM_FOLDER') ?? 'Custom', 'Custom');
+
+type CustomizationAssetOptions = {
+  tags?: string[];
+  publicId?: string;
+};
+
+export const uploadCustomizationAsset = async (
+  file: File | Blob,
+  options?: CustomizationAssetOptions,
+): Promise<string> => {
+  const folder = resolveCustomizationFolder();
+  const preset = getEnv('VITE_CLOUDINARY_UPLOAD_PRESET_CUSTOM') ?? getEnv('VITE_CLOUDINARY_UPLOAD_PRESET');
+  const baseName =
+    options?.publicId ?? (file instanceof File && file.name ? slugify(file.name.replace(/\.[^/.]+$/, '')) : undefined);
+  const publicId = baseName ? `${baseName}-${generateSuffix()}` : undefined;
+  const tags = Array.from(new Set(['customization', 'custom-folder', ...(options?.tags ?? [])]));
+
+  return uploadToCloudinary(file, {
+    folder,
+    uploadPreset: preset,
+    publicId,
+    tags,
+  });
+};
+
 export type ReceiptUploadOptions = {
   orderId?: string;
   customerReference?: string;

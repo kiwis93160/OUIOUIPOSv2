@@ -23,6 +23,22 @@ export interface SectionStyle {
   textColor: string;
 }
 
+export type CustomizationAssetType = 'image' | 'video' | 'audio' | 'font' | 'raw';
+
+export interface CustomizationAsset {
+  id: string;
+  name: string;
+  url: string;
+  format: string;
+  bytes: number;
+  type: CustomizationAssetType;
+  createdAt: string;
+}
+
+export interface SiteAssets {
+  library: CustomizationAsset[];
+}
+
 export interface SiteContent {
   navigation: {
     brand: string;
@@ -72,6 +88,7 @@ export interface SiteContent {
     text: string;
     style: SectionStyle;
   };
+  assets: SiteAssets;
 }
 
 export interface Ingredient {
