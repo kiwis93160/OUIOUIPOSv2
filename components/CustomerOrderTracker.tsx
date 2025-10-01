@@ -130,7 +130,7 @@ const CustomerOrderTracker: React.FC<CustomerOrderTrackerProps> = ({ orderId, on
       : "flex-1 flex flex-col justify-center items-center text-center text-white p-4 bg-black bg-opacity-60 w-full";
       
     const contentClasses = variant === 'page'
-      ? "bg-white p-6 rounded-xl shadow-lg max-w-2xl mx-auto"
+      ? "bg-white/95 p-6 rounded-xl shadow-2xl max-w-2xl mx-auto"
       : "max-w-4xl mx-auto";
 
     if (loading) {

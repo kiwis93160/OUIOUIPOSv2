@@ -318,7 +318,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                 {/* Menu Section */}
                 <div className="lg:col-span-2">
                     {orderHistory.length > 0 && cart.length === 0 && (
-                        <div className="bg-white p-4 rounded-xl shadow-md mb-8">
+                        <div className="bg-white/95 p-4 rounded-xl shadow-xl mb-8">
                             <h2 className="text-xl font-bold flex items-center gap-2 mb-3 text-gray-700"><History /> ¿Repetir un pedido?</h2>
                             <div className="space-y-2">
                                 {orderHistory.slice(0, 3).map(order => (
@@ -335,7 +335,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                             </div>
                         </div>
                     )}
-                    <div className="bg-white p-4 rounded-xl shadow-md">
+                    <div className="bg-white/95 p-4 rounded-xl shadow-xl">
                         <div className="flex space-x-2 overflow-x-auto pb-2 mb-4">
                              <button onClick={() => setActiveCategoryId('all')}
                                 className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap transition ${activeCategoryId === 'all' ? 'bg-brand-primary text-brand-secondary' : 'bg-gray-200 text-gray-700'}`}>
@@ -365,7 +365,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
 
                 {/* Cart Section */}
                 <div id="cart-section" className="lg:col-span-1 mt-8 lg:mt-0 lg:sticky top-24 self-start">
-                    <div className="bg-white p-4 rounded-xl shadow-md">
+                    <div className="bg-white/95 p-4 rounded-xl shadow-xl">
                         <h2 className="text-2xl font-bold flex items-center gap-2 mb-4 text-gray-700"><ShoppingCart/> Mi carrito</h2>
                         {cart.length === 0 ? <p className="text-gray-500">Tu carrito está vacío.</p> :
                             <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
@@ -475,8 +475,8 @@ const CommandeClient: React.FC = () => {
     };
 
     return (
-        <div className="bg-gray-100 min-h-screen">
-            <header className="bg-white shadow-sm p-4 sticky top-0 z-40">
+        <div className="bg-slate-950 text-slate-100 min-h-screen">
+            <header className="bg-white/95 shadow-md backdrop-blur p-4 sticky top-0 z-40 border-b border-white/40">
                 <div className="container mx-auto flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-brand-primary">OUIOUITACOS</h1>
                     <button onClick={() => navigate('/login')} className="flex items-center gap-2 text-sm text-gray-600 hover:text-brand-primary transition">
@@ -484,7 +484,7 @@ const CommandeClient: React.FC = () => {
                     </button>
                 </div>
             </header>
-            
+
             {activeOrderId ? (
                 <CustomerOrderTracker orderId={activeOrderId} onNewOrderClick={handleNewOrder} variant="page" />
             ) : (
