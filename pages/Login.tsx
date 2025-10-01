@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
 import { EditableElementKey, Product, Order } from '../types';
-import { Clock, Mail, MapPin, Phone, Menu, X, ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react';
+import { Clock, Mail, MapPin, Phone, Menu, X, ChevronLeft, ChevronRight, Star, Quote, ShieldCheck } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
@@ -260,6 +260,9 @@ const Login: React.FC = () => {
   const instagramReviews = INSTAGRAM_REVIEWS;
   const reviewCount = instagramReviews.length;
   const isSingleReview = reviewCount <= 1;
+  const hasSupportContact = Boolean(contact.phone || contact.email);
+  const contactPhoneHref = contact.phone ? `tel:${contact.phone.replace(/[^+\d]/g, '')}` : null;
+  const contactEmailHref = contact.email ? `mailto:${contact.email}` : null;
 
   const handleNextReview = useCallback(() => {
     setActiveReviewIndex(index => (index + 1) % reviewCount);
@@ -1048,29 +1051,42 @@ const Login: React.FC = () => {
         title="Connexion du personnel"
         size="lg"
       >
-        <form
-          onSubmit={handleFormSubmit}
-          className="modal-form"
-          aria-describedby="staff-pin-help"
-        >
-          <div className="modal-form__intro">
-            <p id="staff-pin-help" className="modal-form__help">
-              Entrez votre code PIN à 6 chiffres pour accéder au tableau de bord du personnel.
-            </p>
-          </div>
-          <div className="modal-form__controls">
-            <PinInput
-              ref={pinInputRef}
-              pin={pin}
-              onPinChange={setPin}
-              pinLength={6}
-              describedBy="staff-pin-help"
-            />
-            <div className="modal-form__side">
-              <p className="modal-form__error" role="alert" aria-live="assertive">
+        <div className="login-modal">
+          <header className="login-modal__header">
+            <div className="login-modal__badge" aria-hidden="true">
+              <img
+                src={staffLogo}
+                alt={navigation.brand ? `Logo ${navigation.brand}` : 'Logo du personnel'}
+                loading="lazy"
+              />
+            </div>
+            <div className="login-modal__intro">
+              <span className="login-modal__eyebrow">
+                <ShieldCheck size={16} aria-hidden="true" />
+                Espace sécurisé
+              </span>
+              <p id="staff-pin-help" className="login-modal__subtitle">
+                Entrez votre code PIN à 6 chiffres pour accéder au tableau de bord du personnel.
+              </p>
+            </div>
+          </header>
+          <form
+            onSubmit={handleFormSubmit}
+            className="login-modal__form"
+            aria-describedby={`staff-pin-help${hasSupportContact ? ' login-support-hint' : ''}`}
+          >
+            <div className="login-modal__panel">
+              <PinInput
+                ref={pinInputRef}
+                pin={pin}
+                onPinChange={setPin}
+                pinLength={6}
+                describedBy="staff-pin-help"
+              />
+              <p className="login-modal__error" role="alert" aria-live="assertive">
                 {error}
               </p>
-              <div className="modal-form__actions">
+              <div className="login-modal__actions">
                 <button
                   type="submit"
                   disabled={loading || pin.length !== 6}
@@ -1092,8 +1108,42 @@ const Login: React.FC = () => {
                 </button>
               </div>
             </div>
-          </div>
-        </form>
+            {hasSupportContact && (
+              <div className="login-modal__support" id="login-support-hint">
+                <h4>Besoin d'aide ?</h4>
+                <p>Contactez un manager pour récupérer ou réinitialiser votre code.</p>
+                <ul className="login-modal__support-list">
+                  {contact.phone && (
+                    <li className="login-modal__support-item">
+                      <span className="login-modal__support-icon" aria-hidden="true">
+                        <Phone size={18} />
+                      </span>
+                      <div>
+                        <p className="login-modal__support-label">{contact.phoneLabel}</p>
+                        <a href={contactPhoneHref ?? undefined} className="login-modal__support-link">
+                          {contact.phone}
+                        </a>
+                      </div>
+                    </li>
+                  )}
+                  {contact.email && (
+                    <li className="login-modal__support-item">
+                      <span className="login-modal__support-icon" aria-hidden="true">
+                        <Mail size={18} />
+                      </span>
+                      <div>
+                        <p className="login-modal__support-label">{contact.emailLabel}</p>
+                        <a href={contactEmailHref ?? undefined} className="login-modal__support-link">
+                          {contact.email}
+                        </a>
+                      </div>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </form>
+        </div>
       </Modal>
     </div>
   );
