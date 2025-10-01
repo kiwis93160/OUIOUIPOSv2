@@ -46,6 +46,7 @@ interface SitePreviewCanvasProps {
   bestSellerProducts: Product[];
   onEdit: (element: EditableElementKey, meta: { zone: EditableZoneKey; anchor: DOMRect | null }) => void;
   activeZone?: EditableZoneKey | null;
+  showEditButtons?: boolean;
 }
 
 interface EditableElementProps {
@@ -57,6 +58,8 @@ interface EditableElementProps {
   buttonClassName?: string;
   as?: keyof JSX.IntrinsicElements;
 }
+
+const EditButtonVisibilityContext = React.createContext(true);
 
 interface SectionCardProps {
   children: React.ReactNode;
@@ -75,6 +78,11 @@ const EditableElement: React.FC<EditableElementProps> = ({
   as: Component = 'div',
 }) => {
   const containerClasses = ['group relative', className].filter(Boolean).join(' ');
+  const showButtons = React.useContext(EditButtonVisibilityContext);
+
+  if (!showButtons) {
+    return <Component className={containerClasses}>{children}</Component>;
+  }
   const buttonClasses = [
     'absolute z-30 flex h-7 w-7 items-center justify-center rounded-full bg-brand-primary text-white shadow-sm transition-opacity duration-200',
     'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100',
@@ -133,12 +141,14 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
   bestSellerProducts,
   onEdit,
   activeZone,
+  showEditButtons = true,
 }) => {
   const navigationBackgroundStyle = createBackgroundStyle(content.navigation.style);
   const navigationTextStyle = createTextStyle(content.navigation.style);
   const navigationBodyStyle = createBodyTextStyle(content.navigation.style);
   const brandLogo = content.navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
-  const staffTriggerLogo = content.navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
+  const staffTriggerLogo =
+    content.navigation.staffLogo ?? content.navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const heroBackgroundStyle = createHeroBackgroundStyle(content.hero.style, content.hero.backgroundImage);
   const heroTextStyle = createTextStyle(content.hero.style);
   const heroBodyTextStyle = createBodyTextStyle(content.hero.style);
@@ -220,7 +230,8 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
     : 'about:blank';
 
   return (
-    <div className="space-y-6 rounded-[2.5rem] border border-gray-200 bg-slate-50 p-6 shadow-inner">
+    <EditButtonVisibilityContext.Provider value={showEditButtons}>
+      <div className="space-y-6 rounded-[2.5rem] border border-gray-200 bg-slate-50 p-6 shadow-inner">
       <SectionCard zone="navigation" activeZone={activeZone}>
         <EditableElement
           id="navigation.style.background"
@@ -232,11 +243,19 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
           <header className="login-header" style={navigationBackgroundStyle}>
             <div className="layout-container login-header__inner" style={navigationTextStyle}>
               <div className="login-brand" style={navigationTextStyle}>
-                <img
-                  src={brandLogo}
-                  alt={`Logo ${content.navigation.brand}`}
-                  className="login-brand__logo"
-                />
+                <EditableElement
+                  id="navigation.brandLogo"
+                  label="Modifier le logo principal"
+                  onEdit={onEdit}
+                  as="span"
+                  className="inline-flex items-center"
+                >
+                  <img
+                    src={brandLogo}
+                    alt={`Logo ${content.navigation.brand}`}
+                    className="login-brand__logo"
+                  />
+                </EditableElement>
                 <EditableElement
                   id="navigation.brand"
                   label="Modifier le nom de la marque"
@@ -319,14 +338,22 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="inline-flex"
                   buttonClassName="-right-2 -top-2"
                 >
-                  <button
-                    type="button"
+                  <div
                     className="login-nav__staff-btn"
                     aria-label={content.navigation.links.loginCta}
-                    disabled
+                    role="img"
                   >
-                    <img src={staffTriggerLogo} alt="" className="login-brand__logo" aria-hidden="true" />
-                  </button>
+                    <EditableElement
+                      id="navigation.staffLogo"
+                      label="Modifier le logo d'accès staff"
+                      onEdit={onEdit}
+                      as="span"
+                      className="inline-flex"
+                      buttonClassName="-right-2 -top-2"
+                    >
+                      <img src={staffTriggerLogo} alt="" className="login-brand__logo" aria-hidden="true" />
+                    </EditableElement>
+                  </div>
                 </EditableElement>
               </nav>
             </div>
@@ -1074,7 +1101,8 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
           </footer>
         </EditableElement>
       </SectionCard>
-    </div>
+      </div>
+    </EditButtonVisibilityContext.Provider>
   );
 };
 

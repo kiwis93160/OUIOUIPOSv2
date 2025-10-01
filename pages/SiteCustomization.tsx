@@ -1,12 +1,7 @@
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import useSiteContent, { DEFAULT_SITE_CONTENT } from '../hooks/useSiteContent';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Loader2, Upload, X } from 'lucide-react';
+import SitePreviewCanvas, { resolveZoneFromElement } from '../components/SitePreviewCanvas';
+import useSiteContent from '../hooks/useSiteContent';
 import RichTextEditor from '../components/RichTextEditor';
 import {
   CustomizationAsset,
@@ -20,38 +15,17 @@ import {
   SiteContent,
   STYLE_EDITABLE_ELEMENT_KEYS,
 } from '../types';
-import { normalizeCloudinaryImageUrl, uploadCustomizationAsset } from '../services/cloudinary';
-import { resolveSiteContent } from '../utils/siteContent';
-import SitePreviewCanvas, { resolveZoneFromElement } from '../components/SitePreviewCanvas';
 import { api } from '../services/api';
-import {
-  Archive,
-  CheckCircle2,
-  ChevronRight,
-  Circle,
-  HelpCircle,
-  Image as ImageIcon,
-  Link as LinkIcon,
-  Loader2,
-  Music,
-  Sparkles,
-  Trash2,
-  Type as TypeIcon,
-  Upload,
-  Video,
-  X,
-} from 'lucide-react';
+import { normalizeCloudinaryImageUrl, uploadCustomizationAsset } from '../services/cloudinary';
 import { sanitizeFontFamilyName } from '../utils/fonts';
-import { updateElementRichTextMap } from '../utils/richText';
-
-const imageWarning = "L'URL doit provenir de Cloudinary (https://*.cloudinary.com).";
 
 const FONT_FAMILY_SUGGESTIONS = [
   'Inter',
   'Poppins',
-  'Playfair Display',
   'Roboto',
   'Montserrat',
+  'Playfair Display',
+  'Lora',
   'Open Sans',
   'Georgia, serif',
   'Arial, sans-serif',
@@ -63,8 +37,6 @@ const FONT_SIZE_SUGGESTIONS = [
   '18px',
   '20px',
   '24px',
-  '1rem',
-  '1.25rem',
   'clamp(1rem, 2vw, 1.5rem)',
 ] as const;
 
@@ -79,176 +51,53 @@ const COLOR_SUGGESTIONS = [
   'currentColor',
 ] as const;
 
-const NAVIGATION_BRAND_SUGGESTIONS = [
-  'Taqueria Sol',
-  'Maison Gourmet',
-  'La Cantina Latina',
-  'Atelier des Saveurs',
-] as const;
+const TEXT_ELEMENT_KEYS = new Set<EditableElementKey>(STYLE_EDITABLE_ELEMENT_KEYS);
 
-const NAVIGATION_LINK_SUGGESTIONS: Record<string, readonly string[]> = {
-  home: ['Accueil', 'Bienvenue', 'Notre univers'],
-  about: ['À propos', 'Notre histoire', 'La maison'],
-  menu: ['Menu', 'Carte', 'Offres du moment'],
-  contact: ['Contact', 'Nous trouver', 'Réserver'],
-  loginCta: ['Espace équipe', 'Connexion', 'Staff'],
-};
+const BACKGROUND_ELEMENT_KEYS = new Set<EditableElementKey>([
+  'navigation.style.background',
+  'hero.style.background',
+  'about.style.background',
+  'menu.style.background',
+  'contact.style.background',
+  'findUs.style.background',
+  'footer.style.background',
+]);
 
-const HERO_TITLE_SUGGESTIONS = [
-  'Des tacos qui réchauffent le cœur',
-  'Votre nouvelle cantina préférée',
-  'Saveurs authentiques, ambiance solaire',
-] as const;
+const IMAGE_ELEMENT_KEYS = new Set<EditableElementKey>([
+  'hero.backgroundImage',
+  'about.image',
+  'menu.image',
+  'contact.image',
+  'navigation.brandLogo',
+  'navigation.staffLogo',
+]);
 
-const HERO_SUBTITLE_SUGGESTIONS = [
-  'Une carte courte, des produits frais et un service aux petits soins.',
-  'Chaque assiette est préparée minute avec des ingrédients sourcés localement.',
-  'Installez-vous, on s’occupe de tout. Du premier sourire au dernier café.',
-] as const;
-
-const HERO_CTA_SUGGESTIONS = ['Commander maintenant', 'Voir la carte', 'Je réserve une table'] as const;
-const HERO_REORDER_SUGGESTIONS = ['Recommander ma dernière tournée', 'Encore la même !', 'Refaire ma commande'] as const;
-const HERO_HISTORY_TITLE_SUGGESTIONS = ['Commandes récentes', 'Vos dernières envies', 'Historique gourmand'] as const;
-
-const ABOUT_TITLE_SUGGESTIONS = ['Une histoire de famille', 'Notre promesse', 'La cuisine avec le cœur'] as const;
-const ABOUT_DESCRIPTION_SUGGESTIONS = [
-  "Depuis 2014, nous célébrons la street food mexicaine dans une ambiance chaleureuse et conviviale.",
-  "Des recettes transmises par notre abuela, revisitées avec des produits locaux et de saison.",
-  "Notre équipe imagine chaque semaine des créations éphémères pour surprendre vos papilles.",
-] as const;
-
-const MENU_LOADING_SUGGESTIONS = [
-  'Chargement des saveurs…',
-  'Préparation de la carte…',
-  'On dresse les plats…',
-] as const;
-
-const MENU_CTA_SUGGESTIONS = ['Explorer la carte complète', 'Je commande', 'Voir tous les plats'] as const;
-
-const CONTACT_ADDRESS_SUGGESTIONS = [
-  '12 rue du Soleil, Bogotá',
-  '45 avenue Central, Medellín',
-  '8 Calle del Sabor, Cartagena',
-] as const;
-
-const CONTACT_PHONE_SUGGESTIONS = ['+57 320 456 98 12', '+57 311 234 56 78', '+57 315 987 65 43'] as const;
-const CONTACT_EMAIL_SUGGESTIONS = ['hola@ouiouipos.co', 'contact@maison-gourmet.co', 'bonjour@cantinalatina.co'] as const;
-
-const FIND_US_TITLE_SUGGESTIONS = ['Encuéntranos', 'Visítanos hoy', 'Tu próxima parada foodie'] as const;
-const FIND_US_ADDRESS_LABEL_SUGGESTIONS = ['Dirección', 'Ubicación', 'Nos encuentras en'] as const;
-const FIND_US_ADDRESS_SUGGESTIONS = ['Cra 53 #75 - 98', 'Calle 84 #51B - 145', 'Av. Olaya Herrera #70 - 21'] as const;
-const FIND_US_CITY_LABEL_SUGGESTIONS = ['Email', 'Escríbenos', 'Contacto'] as const;
-const FIND_US_CITY_SUGGESTIONS = ['hola@ouiouipos.co', 'reservas@ouiouipos.co', 'eventos@ouiouipos.co'] as const;
-const FIND_US_HOURS_LABEL_SUGGESTIONS = ['Horarios', 'Horario de atención', 'Abrimos'] as const;
-const FIND_US_HOURS_SUGGESTIONS = [
-  'Lunes a domingo · 11h00 - 23h00',
-  'Martes a domingo · 12h00 - 22h30',
-  'Jueves a sábado · 18h00 - 02h00',
-] as const;
-const FIND_US_MAP_LABEL_SUGGESTIONS = ['Ver en Google Maps', 'Abrir mapa', 'Cómo llegar'] as const;
-
-const FOOTER_TEXT_SUGGESTIONS = [
-  '© 2024 Taqueria Sol — Toute la gourmandise du soleil en un clic.',
-  'Avec amour depuis Bogotá. Merci de soutenir les artisans locaux.',
-  'Cuisine responsable, service souriant. À très vite !',
-] as const;
-
-const ZONE_ORDER: readonly EditableZoneKey[] = ['navigation', 'hero', 'about', 'menu', 'contact', 'findUs', 'footer'];
-
-const ZONE_STEPS: ReadonlyArray<{
-  key: EditableZoneKey;
-  label: string;
-  description: string;
-  helper: string;
-}> = [
-  {
-    key: 'navigation',
-    label: 'Identité',
-    description: 'Définissez votre nom de marque et les entrées du menu.',
-    helper: 'Vos liens doivent refléter les étapes clés du parcours visiteur. Pensez à rester concis et explicite.',
-  },
-  {
-    key: 'hero',
-    label: 'Accueil',
-    description: "Rédigez l'accroche principale et vos CTA de bienvenue.",
-    helper: 'Un bon hero raconte qui vous êtes, ce que vous proposez et comment agir immédiatement.',
-  },
-  {
-    key: 'about',
-    label: 'À propos',
-    description: 'Partagez votre histoire et votre ADN culinaire.',
-    helper: "Quelques phrases suffisent pour expliquer votre vision. Restez authentique, donnez envie de vous rencontrer.",
-  },
-  {
-    key: 'menu',
-    label: 'Menu',
-    description: 'Présentez votre offre et les messages clés de commande.',
-    helper: 'Un CTA clair et un message rassurant suffisent à guider vos clients vers la commande.',
-  },
-  {
-    key: 'contact',
-    label: 'Contact',
-    description: 'Indiquez vos points de contact essentiels.',
-    helper: 'Adresse, téléphone et email permettent à vos clients de vous joindre facilement — pensez à vérifier leur exactitude.',
-  },
-  {
-    key: 'findUs',
-    label: 'Encuéntranos',
-    description: 'Mettez en avant votre localisation et facilitez la venue sur place.',
-    helper:
-      'Adresse précise, horaires et email rassurent vos visiteurs. Ajoutez un lien Google Maps pour guider facilement le déplacement.',
-  },
-  {
-    key: 'footer',
-    label: 'Pied de page',
-    description: 'Terminez avec un message de marque et vos mentions utiles.',
-    helper: 'Le pied de page rassure et fidélise. Ajoutez une touche personnelle pour marquer les esprits.',
-  },
-];
-
-const STYLE_BACKGROUND_FIELD_KEYS: Record<EditableZoneKey, ImageFieldKey> = {
-  navigation: 'navigation.style.background',
-  hero: 'hero.style.background',
-  about: 'about.style.background',
-  menu: 'menu.style.background',
-  contact: 'contact.style.background',
-  findUs: 'findUs.style.background',
-  footer: 'footer.style.background',
-};
-
-const IMAGE_FIELD_LABELS: Record<ImageFieldKey, string> = {
-  'hero.backgroundImage': 'Visuel de fond (hero)',
-  'about.image': 'Image de la section À propos',
-  'menu.image': 'Image de la section Menu',
-  'contact.image': 'Image de la section Contact',
-  'navigation.brandLogo': 'Logo principal (navigation)',
-  'navigation.staffLogo': "Logo d'accès équipe",
-  'navigation.style.background': 'Fond personnalisé (navigation)',
-  'hero.style.background': 'Fond personnalisé (hero)',
-  'about.style.background': 'Fond personnalisé (À propos)',
-  'menu.style.background': 'Fond personnalisé (menu)',
-  'contact.style.background': 'Fond personnalisé (contact)',
-  'findUs.style.background': 'Fond personnalisé (Encuéntranos)',
-  'footer.style.background': 'Fond personnalisé (pied de page)',
-};
-
-const ELEMENT_STYLE_LABELS: Partial<Record<EditableElementKey, string>> = {
+const ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
   'navigation.brand': 'Nom de la marque',
+  'navigation.brandLogo': 'Logo principal',
+  'navigation.staffLogo': "Logo d'accès équipe",
   'navigation.links.home': 'Lien Accueil',
   'navigation.links.about': 'Lien À propos',
   'navigation.links.menu': 'Lien Menu',
   'navigation.links.contact': 'Lien Contact',
   'navigation.links.loginCta': "Bouton d'accès staff",
+  'navigation.style.background': 'Fond de la navigation',
   'hero.title': 'Titre du hero',
   'hero.subtitle': 'Sous-titre du hero',
   'hero.ctaLabel': 'Bouton principal du hero',
   'hero.historyTitle': "Titre de l'historique",
   'hero.reorderCtaLabel': 'Bouton de réassort',
+  'hero.backgroundImage': 'Image du hero',
+  'hero.style.background': 'Fond du hero',
   'about.title': 'Titre À propos',
   'about.description': 'Texte À propos',
+  'about.image': 'Image À propos',
+  'about.style.background': 'Fond À propos',
   'menu.title': 'Titre du menu',
   'menu.ctaLabel': 'Bouton du menu',
   'menu.loadingLabel': 'Texte de chargement du menu',
+  'menu.image': 'Image du menu',
+  'menu.style.background': 'Fond du menu',
   'contact.title': 'Titre de contact',
   'contact.addressLabel': "Libellé de l'adresse",
   'contact.address': 'Adresse',
@@ -256,129 +105,34 @@ const ELEMENT_STYLE_LABELS: Partial<Record<EditableElementKey, string>> = {
   'contact.phone': 'Téléphone',
   'contact.emailLabel': "Libellé de l'email",
   'contact.email': 'Email',
+  'contact.image': 'Image contact',
+  'contact.style.background': 'Fond contact',
   'findUs.title': 'Titre Encuéntranos',
   'findUs.addressLabel': "Libellé de l'adresse (Encuéntranos)",
   'findUs.address': 'Adresse (Encuéntranos)',
-  'findUs.cityLabel': "Libellé de l'email",
-  'findUs.city': 'Email',
+  'findUs.cityLabel': "Libellé de contact",
+  'findUs.city': 'Email (Encuéntranos)',
   'findUs.hoursLabel': 'Libellé des horaires',
   'findUs.hours': 'Horaires',
   'findUs.mapLabel': 'Libellé du lien carte',
+  'findUs.style.background': 'Fond Encuéntranos',
   'footer.text': 'Texte du pied de page',
+  'footer.style.background': 'Fond du pied de page',
 };
 
-const INITIAL_IMAGE_ERRORS: Record<ImageFieldKey, string | null> = {
-  'hero.backgroundImage': null,
-  'about.image': null,
-  'menu.image': null,
-  'contact.image': null,
-  'navigation.brandLogo': null,
-  'navigation.staffLogo': null,
-  'navigation.style.background': null,
-  'hero.style.background': null,
-  'about.style.background': null,
-  'menu.style.background': null,
-  'contact.style.background': null,
-  'findUs.style.background': null,
-  'footer.style.background': null,
-};
+const TABS = [
+  { id: 'preview', label: 'Aperçu' },
+  { id: 'custom', label: 'Personnalisation' },
+] as const;
 
-const EDITABLE_ELEMENT_INPUT_IDS: Partial<Record<EditableElementKey, string>> = {
-  'navigation.brand': 'brand-name',
-  'navigation.links.home': 'nav-home',
-  'navigation.links.about': 'nav-about',
-  'navigation.links.menu': 'nav-menu',
-  'navigation.links.contact': 'nav-contact',
-  'navigation.links.loginCta': 'nav-login',
-  'navigation.style.background': 'navigation-background-type',
-  'hero.title': 'hero-title',
-  'hero.subtitle': 'hero-subtitle',
-  'hero.ctaLabel': 'hero-cta',
-  'hero.historyTitle': 'hero-history',
-  'hero.reorderCtaLabel': 'hero-reorder',
-  'hero.backgroundImage': 'hero-image',
-  'about.title': 'about-title',
-  'about.description': 'about-description',
-  'about.image': 'about-image',
-  'about.style.background': 'about-background-type',
-  'menu.title': 'menu-title',
-  'menu.ctaLabel': 'menu-cta',
-  'menu.loadingLabel': 'menu-loading',
-  'menu.image': 'menu-image',
-  'menu.style.background': 'menu-background-type',
-  'contact.title': 'contact-title',
-  'contact.addressLabel': 'contact-address-label',
-  'contact.address': 'contact-address',
-  'contact.phoneLabel': 'contact-phone-label',
-  'contact.phone': 'contact-phone',
-  'contact.emailLabel': 'contact-email-label',
-  'contact.email': 'contact-email',
-  'contact.image': 'contact-image',
-  'contact.style.background': 'contact-background-type',
-  'findUs.title': 'find-us-title',
-  'findUs.addressLabel': 'find-us-address-label',
-  'findUs.address': 'find-us-address',
-  'findUs.cityLabel': 'find-us-city-label',
-  'findUs.city': 'find-us-city',
-  'findUs.hoursLabel': 'find-us-hours-label',
-  'findUs.hours': 'find-us-hours',
-  'findUs.mapLabel': 'find-us-map-label',
-  'findUs.style.background': 'find-us-background-type',
-  'footer.text': 'footer-text',
-  'footer.style.background': 'footer-background-type',
-};
+type TabId = (typeof TABS)[number]['id'];
 
-const ASSET_TYPE_LABELS: Record<CustomizationAssetType, string> = {
-  image: 'Image',
-  video: 'Vidéo',
-  audio: 'Audio',
-  font: 'Police',
-  raw: 'Fichier',
-};
+type DraftUpdater = (current: SiteContent) => SiteContent;
 
-type ImageFieldKey =
-  | 'hero.backgroundImage'
-  | 'about.image'
-  | 'menu.image'
-  | 'contact.image'
-  | 'navigation.brandLogo'
-  | 'navigation.staffLogo'
-  | 'navigation.style.background'
-  | 'hero.style.background'
-  | 'about.style.background'
-  | 'menu.style.background'
-  | 'contact.style.background'
-  | 'findUs.style.background'
-  | 'footer.style.background';
-
-type NavigationFieldKey = keyof SiteContent['navigation']['links'];
-type HeroFieldKey = Exclude<keyof SiteContent['hero'], 'backgroundImage' | 'style'>;
-type MenuFieldKey = Exclude<keyof SiteContent['menu'], 'image' | 'style'>;
-type ContactFieldKey = Exclude<keyof SiteContent['contact'], 'image' | 'style'>;
-type FindUsFieldKey = Exclude<keyof SiteContent['findUs'], 'style'>;
-
-type ElementStyleProperty = keyof ElementStyle;
-
-type ImageInputHandler = (
-  field: ImageFieldKey,
-) => (event: React.ChangeEvent<HTMLInputElement>) => void;
-type ImageUploadHandler = (field: ImageFieldKey, file: File) => Promise<void>;
-type ImageClearHandler = (field: ImageFieldKey) => void;
-
-type AssetUploadHandler = (files: FileList | null) => Promise<void>;
-type AssetRemoveHandler = (id: string) => void;
-type AssetRenameHandler = (id: string, name: string) => void;
-type AssetApplyHandler = (field: ImageFieldKey, asset: CustomizationAsset) => void;
-
-type CompletionStatus = 'todo' | 'progress' | 'done';
-
-type ChecklistItem = {
-  label: string;
-  done: boolean;
-};
-
-type ZoneChecklistRecord = Record<EditableZoneKey, ChecklistItem[]>;
-type ZoneStatusRecord = Record<EditableZoneKey, CompletionStatus>;
+const createAssetId = (): string =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `asset-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 const guessAssetType = (file: File): CustomizationAssetType => {
   const { type, name } = file;
@@ -401,3277 +155,1003 @@ const guessAssetType = (file: File): CustomizationAssetType => {
   return 'raw';
 };
 
-const createAssetId = (): string =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `asset-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-const formatBytes = (bytes: number): string => {
-  if (!Number.isFinite(bytes) || bytes <= 0) {
-    return '—';
+const cloneSiteContent = (content: SiteContent): SiteContent => {
+  if (typeof globalThis.structuredClone === 'function') {
+    return globalThis.structuredClone(content);
   }
-  const units = ['o', 'Ko', 'Mo', 'Go'];
-  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / Math.pow(1024, exponent);
-  return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+  return JSON.parse(JSON.stringify(content)) as SiteContent;
 };
 
-const AssetTypeIcon: React.FC<{ type: CustomizationAssetType }> = ({ type }) => {
-  switch (type) {
-    case 'image':
-      return <ImageIcon className="h-4 w-4" aria-hidden="true" />;
-    case 'video':
-      return <Video className="h-4 w-4" aria-hidden="true" />;
-    case 'audio':
-      return <Music className="h-4 w-4" aria-hidden="true" />;
-    case 'font':
-      return <TypeIcon className="h-4 w-4" aria-hidden="true" />;
-    default:
-      return <Archive className="h-4 w-4" aria-hidden="true" />;
+const setNestedValue = (content: SiteContent, key: EditableElementKey, value: string | null): void => {
+  const segments = key.split('.');
+  const last = segments.pop();
+  if (!last) {
+    return;
   }
-};
 
-const createZoneChecklist = (draft: SiteContent): ZoneChecklistRecord => ({
-  navigation: [
-    { label: 'Nom de la marque défini', done: draft.navigation.brand.trim().length > 0 },
-    {
-      label: 'Liens principaux renseignés',
-      done: ['home', 'about', 'menu', 'contact'].every(key =>
-        draft.navigation.links[key as NavigationFieldKey].trim().length > 0,
-      ),
-    },
-  ],
-  hero: [
-    { label: 'Titre accrocheur rédigé', done: draft.hero.title.trim().length > 0 },
-    { label: 'Sous-titre descriptif rempli', done: draft.hero.subtitle.trim().length > 0 },
-    { label: 'CTA principal configuré', done: draft.hero.ctaLabel.trim().length > 0 },
-  ],
-  about: [
-    { label: 'Titre À propos complété', done: draft.about.title.trim().length > 0 },
-    { label: 'Texte de présentation rédigé', done: draft.about.description.trim().length > 0 },
-    { label: 'Visuel illustratif sélectionné', done: Boolean(draft.about.image) },
-  ],
-  menu: [
-    { label: 'Titre de section rempli', done: draft.menu.title.trim().length > 0 },
-    { label: 'CTA du menu défini', done: draft.menu.ctaLabel.trim().length > 0 },
-  ],
-  contact: [
-    { label: 'Titre de contact renseigné', done: draft.contact.title.trim().length > 0 },
-    { label: 'Adresse complète indiquée', done: draft.contact.address.trim().length > 0 },
-    { label: 'Téléphone ou email actifs', done: draft.contact.phone.trim().length > 0 && draft.contact.email.trim().length > 0 },
-  ],
-  findUs: [
-    { label: 'Titre Encuéntranos défini', done: draft.findUs.title.trim().length > 0 },
-    {
-      label: 'Adresse et email renseignés',
-      done: draft.findUs.address.trim().length > 0 && draft.findUs.city.trim().length > 0,
-    },
-    {
-      label: 'Horaires et lien carte prêts',
-      done: draft.findUs.hours.trim().length > 0 && draft.findUs.mapLabel.trim().length > 0,
-    },
-  ],
-  footer: [
-    { label: 'Message de pied de page personnalisé', done: draft.footer.text.trim().length > 0 },
-  ],
-});
-
-const getZoneCompletionStatus = (items: ChecklistItem[]): CompletionStatus => {
-  if (items.every(item => item.done)) {
-    return 'done';
-  }
-  if (items.some(item => item.done)) {
-    return 'progress';
-  }
-  return 'todo';
-};
-
-
-type EditorContext = {
-  draft: SiteContent;
-  imageErrors: Record<ImageFieldKey, string | null>;
-  isUploading: (field: ImageFieldKey) => boolean;
-  handleImageInputChange: ImageInputHandler;
-  handleImageUpload: ImageUploadHandler;
-  handleClearImage: ImageClearHandler;
-  handleStyleFontFamilyChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleFontSizeChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleTextColorChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleBackgroundColorChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleBackgroundTypeChange: (
-    zone: EditableZoneKey,
-    value: SectionStyle['background']['type'],
-  ) => void;
-  handleElementStyleChange: (
-    element: EditableElementKey,
-    property: ElementStyleProperty,
-    value: string,
-  ) => void;
-  handleElementStyleReset: (element: EditableElementKey, property?: ElementStyleProperty) => void;
-  fontOptions: readonly string[];
-  fontSizeOptions: readonly string[];
-  setBrandValue: (value: string, richText?: RichTextValue | null) => void;
-  setNavigationLinkValue: (
-    key: NavigationFieldKey,
-    value: string,
-    richText?: RichTextValue | null,
-  ) => void;
-  setHeroFieldValue: (key: HeroFieldKey, value: string, richText?: RichTextValue | null) => void;
-  setAboutTitleValue: (value: string, richText?: RichTextValue | null) => void;
-  setAboutDescriptionValue: (value: string, richText?: RichTextValue | null) => void;
-  setMenuFieldValue: (key: MenuFieldKey, value: string, richText?: RichTextValue | null) => void;
-  setContactFieldValue: (
-    key: ContactFieldKey,
-    value: string,
-    richText?: RichTextValue | null,
-  ) => void;
-  setFindUsFieldValue: (key: FindUsFieldKey, value: string, richText?: RichTextValue | null) => void;
-  setFooterTextValue: (value: string, richText?: RichTextValue | null) => void;
-  bestSellerProducts: Product[];
-  bestSellerLoading: boolean;
-  bestSellerError: string | null;
-  refreshBestSellerProducts: () => Promise<void>;
-  updateProduct: (productId: string, updates: Partial<Product>) => Promise<void>;
-  isBestSellerUpdating: (productId: string) => boolean;
-};
-
-type ActiveElementState = {
-  element: EditableElementKey;
-  anchor: DOMRect | null;
-};
-
-const SiteCustomization: React.FC = () => {
-  const { content, loading, error, updateContent } = useSiteContent();
-  const [draft, setDraft] = useState<SiteContent>(content);
-  const [isDirty, setIsDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [imageErrors, setImageErrors] = useState<Record<ImageFieldKey, string | null>>({
-    ...INITIAL_IMAGE_ERRORS,
+  let cursor: unknown = content;
+  segments.forEach(segment => {
+    if (cursor && typeof cursor === 'object') {
+      const target = (cursor as Record<string, unknown>)[segment];
+      if (target && typeof target === 'object') {
+        (cursor as Record<string, unknown>)[segment] = Array.isArray(target)
+          ? [...target]
+          : { ...target };
+      } else {
+        (cursor as Record<string, unknown>)[segment] = {};
+      }
+      cursor = (cursor as Record<string, unknown>)[segment];
+    }
   });
-  const [uploadingField, setUploadingField] = useState<ImageFieldKey | null>(null);
-  const [activeElementState, setActiveElementState] = useState<ActiveElementState | null>(null);
-  const [activeZone, setActiveZone] = useState<EditableZoneKey>('navigation');
-  const [guidedMode, setGuidedMode] = useState(true);
-  const [assetUploading, setAssetUploading] = useState(false);
-  const [assetError, setAssetError] = useState<string | null>(null);
-  const [assetLibraryOpen, setAssetLibraryOpen] = useState(false);
-  const [pendingAssetField, setPendingAssetField] = useState<ImageFieldKey | null>(null);
-  const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
-  const [bestSellerLoading, setBestSellerLoading] = useState(false);
-  const [bestSellerError, setBestSellerError] = useState<string | null>(null);
-  const [updatingProducts, setUpdatingProducts] = useState<Record<string, boolean>>({});
 
-  const previewContainerRef = useRef<HTMLDivElement | null>(null);
+  if (cursor && typeof cursor === 'object') {
+    (cursor as Record<string, unknown>)[last] = value;
+  }
+};
 
-  const isBestSellerUpdating = useCallback(
-    (productId: string) => Boolean(updatingProducts[productId]),
-    [updatingProducts],
-  );
+const applyElementStyleOverrides = (
+  content: SiteContent,
+  element: EditableElementKey,
+  overrides: Partial<ElementStyle>,
+): void => {
+  const sanitized: ElementStyle = {};
 
-  const loadBestSellerProducts = useCallback(async () => {
-    setBestSellerLoading(true);
-    try {
-      const products = await api.getBestSellerProducts();
-      setBestSellerProducts(products);
-      setBestSellerError(null);
-    } catch (error) {
-      console.error('Failed to fetch best seller products', error);
-      setBestSellerError("Impossible de charger les best sellers. Veuillez réessayer.");
-    } finally {
-      setBestSellerLoading(false);
+  if (overrides.fontFamily && overrides.fontFamily.trim().length > 0) {
+    sanitized.fontFamily = overrides.fontFamily.trim();
+  }
+  if (overrides.fontSize && overrides.fontSize.trim().length > 0) {
+    sanitized.fontSize = overrides.fontSize.trim();
+  }
+  if (overrides.textColor && overrides.textColor.trim().length > 0) {
+    sanitized.textColor = overrides.textColor.trim();
+  }
+  if (overrides.backgroundColor && overrides.backgroundColor.trim().length > 0) {
+    sanitized.backgroundColor = overrides.backgroundColor.trim();
+  }
+
+  const nextStyles = { ...content.elementStyles };
+  if (Object.keys(sanitized).length === 0) {
+    delete nextStyles[element];
+  } else {
+    nextStyles[element] = sanitized;
+  }
+  content.elementStyles = nextStyles;
+};
+
+const applyElementRichText = (
+  content: SiteContent,
+  element: EditableElementKey,
+  value: RichTextValue | null,
+): void => {
+  const next = { ...content.elementRichText };
+  if (value && value.html.trim().length > 0) {
+    next[element] = value;
+  } else {
+    delete next[element];
+  }
+  content.elementRichText = next;
+};
+
+const applySectionBackground = (
+  content: SiteContent,
+  element: EditableElementKey,
+  background: SectionStyle['background'],
+): void => {
+  const zone = resolveZoneFromElement(element);
+  const zoneContent = { ...content[zone] } as typeof content[EditableZoneKey];
+  const style = { ...zoneContent.style, background: { ...background } };
+  zoneContent.style = style;
+  (content as Record<EditableZoneKey, typeof zoneContent>)[zone] = zoneContent;
+};
+
+const appendAsset = (content: SiteContent, asset: CustomizationAsset): void => {
+  const library = content.assets?.library ?? [];
+  const existingIndex = library.findIndex(item => item.url === asset.url || item.id === asset.id);
+  const nextLibrary = existingIndex >= 0
+    ? library.map((item, index) => (index === existingIndex ? asset : item))
+    : [...library, asset];
+  content.assets = { ...content.assets, library: nextLibrary };
+};
+
+const getPlainTextValue = (content: SiteContent, key: EditableElementKey): string => {
+  const segments = key.split('.');
+  let cursor: unknown = content;
+  for (const segment of segments) {
+    if (!cursor || typeof cursor !== 'object') {
+      return '';
     }
-  }, []);
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+  return typeof cursor === 'string' ? cursor : '';
+};
+
+const getImageValue = (content: SiteContent, key: EditableElementKey): string | null => {
+  const value = getPlainTextValue(content, key);
+  return value.trim().length > 0 ? value : null;
+};
+
+const getElementStyle = (content: SiteContent, key: EditableElementKey): ElementStyle =>
+  content.elementStyles[key] ?? {};
+
+const getElementRichTextValue = (content: SiteContent, key: EditableElementKey): RichTextValue | null =>
+  content.elementRichText[key] ?? null;
+
+const getSectionBackground = (content: SiteContent, key: EditableElementKey): SectionStyle['background'] => {
+  const zone = resolveZoneFromElement(key);
+  return content[zone].style.background;
+};
+
+const createAssetFromFile = (file: File, url: string): CustomizationAsset => {
+  const baseName = file.name.replace(/\.[^/.]+$/, '').trim() || 'media';
+  const type = guessAssetType(file);
+  const name = type === 'font' ? sanitizeFontFamilyName(baseName) : baseName;
+  return {
+    id: createAssetId(),
+    name,
+    url,
+    format: file.type || 'application/octet-stream',
+    bytes: file.size,
+    type,
+    createdAt: new Date().toISOString(),
+  };
+};
+
+interface ModalProps {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  footer: React.ReactNode;
+}
+
+const Modal: React.FC<ModalProps> = ({ title, onClose, children, footer }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-6">
+    <div className="w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full p-1 text-slate-500 transition hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+        >
+          <X className="h-5 w-5" aria-hidden="true" />
+          <span className="sr-only">Fermer</span>
+        </button>
+      </div>
+      <div className="max-h-[70vh] overflow-y-auto px-6 py-5">{children}</div>
+      <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+        {footer}
+      </div>
+    </div>
+  </div>
+);
+
+interface TextElementEditorProps {
+  element: EditableElementKey;
+  label: string;
+  draft: SiteContent;
+  onApply: (updater: DraftUpdater) => void;
+  onClose: () => void;
+  fontOptions: readonly string[];
+  onAssetAdded: (asset: CustomizationAsset) => void;
+}
+
+const TextElementEditor: React.FC<TextElementEditorProps> = ({
+  element,
+  label,
+  draft,
+  onApply,
+  onClose,
+  fontOptions,
+  onAssetAdded,
+}) => {
+  const formId = `${element.replace(/\./g, '-')}-text-form`;
+  const initialPlain = getPlainTextValue(draft, element);
+  const initialRichText = getElementRichTextValue(draft, element);
+  const elementStyle = getElementStyle(draft, element);
+
+  const [plainText, setPlainText] = useState<string>(initialPlain);
+  const [richText, setRichText] = useState<RichTextValue | null>(initialRichText);
+  const [fontFamily, setFontFamily] = useState<string>(elementStyle.fontFamily ?? '');
+  const [fontSize, setFontSize] = useState<string>(elementStyle.fontSize ?? '');
+  const [textColor, setTextColor] = useState<string>(elementStyle.textColor ?? '');
+  const [backgroundColor, setBackgroundColor] = useState<string>(elementStyle.backgroundColor ?? '');
+  const [fontUploadError, setFontUploadError] = useState<string | null>(null);
+  const [uploadingFont, setUploadingFont] = useState<boolean>(false);
 
   useEffect(() => {
-    void loadBestSellerProducts();
-  }, [loadBestSellerProducts]);
+    setPlainText(initialPlain);
+    setRichText(initialRichText);
+    setFontFamily(elementStyle.fontFamily ?? '');
+    setFontSize(elementStyle.fontSize ?? '');
+    setTextColor(elementStyle.textColor ?? '');
+    setBackgroundColor(elementStyle.backgroundColor ?? '');
+  }, [initialPlain, initialRichText, elementStyle.fontFamily, elementStyle.fontSize, elementStyle.textColor, elementStyle.backgroundColor]);
 
-  const handleUpdateProduct = useCallback(
-    async (productId: string, updates: Partial<Product>) => {
-      setUpdatingProducts(prev => ({
-        ...prev,
-        [productId]: true,
-      }));
-      try {
-        await api.updateProduct(productId, updates);
-        await loadBestSellerProducts();
-        setBestSellerError(null);
-      } catch (error) {
-        console.error('Failed to update product', error);
-        setBestSellerError("Impossible de mettre à jour le produit. Veuillez réessayer.");
-      } finally {
-        setUpdatingProducts(prev => {
-          const next = { ...prev };
-          delete next[productId];
-          return next;
-        });
-      }
-    },
-    [loadBestSellerProducts],
-  );
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const sanitizedPlain = plainText;
 
-  useEffect(() => {
-    setDraft(content);
-    setIsDirty(false);
-    setStatusMessage(null);
-    setFormError(null);
-    setImageErrors({ ...INITIAL_IMAGE_ERRORS });
-    setAssetError(null);
-  }, [content]);
-
-  const previewContent = useMemo(() => resolveSiteContent(draft), [draft]);
-
-  const fontOptions = useMemo(() => {
-    const customFonts = draft.assets.library
-      .filter(asset => asset.type === 'font')
-      .map(asset => `"${sanitizeFontFamilyName(asset.name)}"`)
-      .filter((value, index, list) => list.indexOf(value) === index);
-    return [...FONT_FAMILY_SUGGESTIONS, ...customFonts];
-  }, [draft.assets.library]);
-
-  const fontSizeOptions = useMemo(() => [...FONT_SIZE_SUGGESTIONS], []);
-
-  const resolveNextElementRichText = (
-    prev: SiteContent,
-    key: EditableElementKey,
-    value: RichTextValue | null | undefined,
-  ) => {
-    if (value === undefined) {
-      return prev.elementRichText;
-    }
-    return updateElementRichTextMap(prev.elementRichText, key, value);
-  };
-
-  const cleanElementStyle = useCallback((style: ElementStyle | undefined): ElementStyle | null => {
-    if (!style) {
-      return null;
-    }
-
-    const next: ElementStyle = {};
-
-    const assignIfValid = (key: ElementStyleProperty, value: string | undefined) => {
-      if (typeof value !== 'string') {
-        return;
-      }
-      const trimmed = value.trim();
-      if (trimmed.length > 0) {
-        next[key] = trimmed;
-      }
-    };
-
-    assignIfValid('fontFamily', style.fontFamily);
-    assignIfValid('fontSize', style.fontSize);
-    assignIfValid('textColor', style.textColor);
-    assignIfValid('backgroundColor', style.backgroundColor);
-
-    return Object.keys(next).length > 0 ? next : null;
-  }, []);
-
-
-  const mutateDraft = (updater: (prev: SiteContent) => SiteContent) => {
-    setDraft(prev => updater(prev));
-    setIsDirty(true);
-    setStatusMessage(null);
-    setFormError(null);
-  };
-
-  const updateElementStyleEntry = useCallback(
-    (
-      element: EditableElementKey,
-      updater: (previous: ElementStyle | undefined) => ElementStyle | null,
-    ) => {
-      mutateDraft(prev => {
-        const nextElementStyles = { ...prev.elementStyles };
-        const nextValue = updater(prev.elementStyles[element]);
-
-        if (!nextValue) {
-          delete nextElementStyles[element];
-        } else {
-          nextElementStyles[element] = nextValue;
-        }
-
-        return {
-          ...prev,
-          elementStyles: nextElementStyles,
-        };
+    onApply(current => {
+      setNestedValue(current, element, sanitizedPlain);
+      applyElementRichText(current, element, richText);
+      applyElementStyleOverrides(current, element, {
+        fontFamily,
+        fontSize,
+        textColor,
+        backgroundColor,
       });
-    },
-    [mutateDraft],
-  );
-
-  const updateZone = <K extends EditableZoneKey>(
-    zone: K,
-    updater: (zoneContent: SiteContent[K]) => SiteContent[K],
-  ) => {
-    mutateDraft(prev => ({
-      ...prev,
-      [zone]: updater(prev[zone]),
-    }));
-  };
-
-  const updateZoneStyle = (
-    zone: EditableZoneKey,
-    updater: (style: SectionStyle) => SectionStyle,
-  ) => {
-    updateZone(zone, zoneContent => ({
-      ...zoneContent,
-      style: updater(zoneContent.style),
-    }));
-  };
-
-  const setBrandValue = (value: string, richText?: RichTextValue | null) => {
-    mutateDraft(prev => ({
-      ...prev,
-      navigation: {
-        ...prev.navigation,
-        brand: value,
-      },
-      elementRichText: resolveNextElementRichText(prev, 'navigation.brand', richText),
-    }));
-  };
-
-  const setNavigationLinkValue = (
-    key: NavigationFieldKey,
-    value: string,
-    richText?: RichTextValue | null,
-  ) => {
-    const elementKey = `navigation.links.${key}` as EditableElementKey;
-    mutateDraft(prev => ({
-      ...prev,
-      navigation: {
-        ...prev.navigation,
-        links: {
-          ...prev.navigation.links,
-          [key]: value,
-        },
-      },
-      elementRichText: resolveNextElementRichText(prev, elementKey, richText),
-    }));
-  };
-
-  const setHeroFieldValue = (key: HeroFieldKey, value: string, richText?: RichTextValue | null) => {
-    const elementKey = `hero.${key}` as EditableElementKey;
-    mutateDraft(prev => ({
-      ...prev,
-      hero: {
-        ...prev.hero,
-        [key]: value,
-      },
-      elementRichText: resolveNextElementRichText(prev, elementKey, richText),
-    }));
-  };
-
-  const setAboutTitleValue = (value: string, richText?: RichTextValue | null) => {
-    mutateDraft(prev => ({
-      ...prev,
-      about: {
-        ...prev.about,
-        title: value,
-      },
-      elementRichText: resolveNextElementRichText(prev, 'about.title', richText),
-    }));
-  };
-
-  const setAboutDescriptionValue = (value: string, richText?: RichTextValue | null) => {
-    mutateDraft(prev => ({
-      ...prev,
-      about: {
-        ...prev.about,
-        description: value,
-      },
-      elementRichText: resolveNextElementRichText(prev, 'about.description', richText),
-    }));
-  };
-
-  const setMenuFieldValue = (key: MenuFieldKey, value: string, richText?: RichTextValue | null) => {
-    const elementKey = `menu.${key}` as EditableElementKey;
-    mutateDraft(prev => ({
-      ...prev,
-      menu: {
-        ...prev.menu,
-        [key]: value,
-      },
-      elementRichText: resolveNextElementRichText(prev, elementKey, richText),
-    }));
-  };
-
-  const setContactFieldValue = (
-    key: ContactFieldKey,
-    value: string,
-    richText?: RichTextValue | null,
-  ) => {
-    const elementKey = `contact.${key}` as EditableElementKey;
-    mutateDraft(prev => ({
-      ...prev,
-      contact: {
-        ...prev.contact,
-        [key]: value,
-      },
-      elementRichText: resolveNextElementRichText(prev, elementKey, richText),
-    }));
-  };
-
-  const setFindUsFieldValue = (key: FindUsFieldKey, value: string, richText?: RichTextValue | null) => {
-    const elementKey = `findUs.${key}` as EditableElementKey;
-    mutateDraft(prev => ({
-      ...prev,
-      findUs: {
-        ...prev.findUs,
-        [key]: value,
-      },
-      elementRichText: resolveNextElementRichText(prev, elementKey, richText),
-    }));
-  };
-
-  const setFooterTextValue = (value: string, richText?: RichTextValue | null) => {
-    mutateDraft(prev => ({
-      ...prev,
-      footer: {
-        ...prev.footer,
-        text: value,
-      },
-      elementRichText: resolveNextElementRichText(prev, 'footer.text', richText),
-    }));
-  };
-
-  const setImageField = (field: ImageFieldKey, value: string | null) => {
-    mutateDraft(prev => {
-      switch (field) {
-        case 'hero.backgroundImage':
-          return {
-            ...prev,
-            hero: {
-              ...prev.hero,
-              backgroundImage: value,
-            },
-          };
-        case 'about.image':
-          return {
-            ...prev,
-            about: {
-              ...prev.about,
-              image: value,
-            },
-          };
-        case 'menu.image':
-          return {
-            ...prev,
-            menu: {
-              ...prev.menu,
-              image: value,
-            },
-          };
-        case 'contact.image':
-          return {
-            ...prev,
-            contact: {
-              ...prev.contact,
-              image: value,
-            },
-          };
-        case 'navigation.brandLogo':
-          return {
-            ...prev,
-            navigation: {
-              ...prev.navigation,
-              brandLogo: value,
-            },
-          };
-        case 'navigation.staffLogo':
-          return {
-            ...prev,
-            navigation: {
-              ...prev.navigation,
-              staffLogo: value,
-            },
-          };
-        case 'navigation.style.background':
-          return {
-            ...prev,
-            navigation: {
-              ...prev.navigation,
-              style: {
-                ...prev.navigation.style,
-                background: {
-                  ...prev.navigation.style.background,
-                  type: 'image',
-                  image: value,
-                },
-              },
-            },
-          };
-        case 'hero.style.background':
-          return {
-            ...prev,
-            hero: {
-              ...prev.hero,
-              style: {
-                ...prev.hero.style,
-                background: {
-                  ...prev.hero.style.background,
-                  type: 'image',
-                  image: value,
-                },
-              },
-            },
-          };
-        case 'about.style.background':
-          return {
-            ...prev,
-            about: {
-              ...prev.about,
-              style: {
-                ...prev.about.style,
-                background: {
-                  ...prev.about.style.background,
-                  type: 'image',
-                  image: value,
-                },
-              },
-            },
-          };
-        case 'menu.style.background':
-          return {
-            ...prev,
-            menu: {
-              ...prev.menu,
-              style: {
-                ...prev.menu.style,
-                background: {
-                  ...prev.menu.style.background,
-                  type: 'image',
-                  image: value,
-                },
-              },
-            },
-          };
-        case 'contact.style.background':
-          return {
-            ...prev,
-            contact: {
-              ...prev.contact,
-              style: {
-                ...prev.contact.style,
-                background: {
-                  ...prev.contact.style.background,
-                  type: 'image',
-                  image: value,
-                },
-              },
-            },
-          };
-        case 'findUs.style.background':
-          return {
-            ...prev,
-            findUs: {
-              ...prev.findUs,
-              style: {
-                ...prev.findUs.style,
-                background: {
-                  ...prev.findUs.style.background,
-                  type: 'image',
-                  image: value,
-                },
-              },
-            },
-          };
-        case 'footer.style.background':
-          return {
-            ...prev,
-            footer: {
-              ...prev.footer,
-              style: {
-                ...prev.footer.style,
-                background: {
-                  ...prev.footer.style.background,
-                  type: 'image',
-                  image: value,
-                },
-              },
-            },
-          };
-        default:
-          return prev;
-      }
+      return current;
     });
+    onClose();
   };
 
-  const handleImageInputChange: ImageInputHandler = field => event => {
-    const raw = event.target.value;
-    const trimmed = raw.trim();
-    const nextValue = trimmed.length > 0 ? trimmed : null;
-    setImageField(field, nextValue);
-    const isValid = !trimmed || normalizeCloudinaryImageUrl(trimmed);
-    setImageErrors(prev => ({
-      ...prev,
-      [field]: isValid ? null : imageWarning,
-    }));
-  };
-
-  const handleImageUpload: ImageUploadHandler = async (field, file) => {
-    setUploadingField(field);
-    setFormError(null);
-    setStatusMessage(null);
+  const handleFontUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    setFontUploadError(null);
+    setUploadingFont(true);
     try {
-      const uploadedUrl = await uploadCustomizationAsset(file, {
-        tags: ['customization', field.replace(/\./g, '_')],
-      });
-      setImageField(field, uploadedUrl);
-      setImageErrors(prev => ({
-        ...prev,
-        [field]: null,
-      }));
-    } catch (uploadError) {
-      console.error('Failed to upload customization asset', uploadError);
-      setFormError(
-        "Impossible de téléverser l'image. Vérifiez votre connexion ou la configuration Cloudinary.",
+      const url = await uploadCustomizationAsset(file, { tags: [guessAssetType(file)] });
+      const asset = createAssetFromFile(file, url);
+      onAssetAdded(asset);
+      setFontFamily(asset.name);
+    } catch (err) {
+      setFontUploadError(
+        err instanceof Error ? err.message : 'Impossible de téléverser la police. Réessayez plus tard.',
       );
     } finally {
-      setUploadingField(null);
+      setUploadingFont(false);
+      event.target.value = '';
     }
   };
 
-  const handleClearImage: ImageClearHandler = field => {
-    setImageField(field, null);
-    setImageErrors(prev => ({
-      ...prev,
-      [field]: null,
-    }));
-  };
-
-  const handleAssetUpload: AssetUploadHandler = async files => {
-    if (!files || files.length === 0) {
-      return;
-    }
-
-    setAssetUploading(true);
-    setAssetError(null);
-    try {
-      const uploadedAssets: CustomizationAsset[] = [];
-      for (const file of Array.from(files)) {
-        const url = await uploadCustomizationAsset(file, {
-          tags: ['customization', guessAssetType(file)],
-        });
-        uploadedAssets.push({
-          id: createAssetId(),
-          name: file.name.replace(/\.[^/.]+$/, '') || file.name,
-          url,
-          format: file.type || 'application/octet-stream',
-          bytes: file.size,
-          type: guessAssetType(file),
-          createdAt: new Date().toISOString(),
-        });
-      }
-
-      if (uploadedAssets.length > 0) {
-        mutateDraft(prev => ({
-          ...prev,
-          assets: {
-            ...prev.assets,
-            library: [...prev.assets.library, ...uploadedAssets],
-          },
-        }));
-        setStatusMessage(
-          uploadedAssets.length === 1
-            ? 'Nouvelle ressource ajoutée à la médiathèque personnalisée.'
-            : `${uploadedAssets.length} ressources ajoutées à la médiathèque personnalisée.`,
-        );
-      }
-    } catch (assetUploadError) {
-      console.error('Failed to upload customization asset', assetUploadError);
-      setAssetError("Téléversement impossible. Vérifiez vos presets Cloudinary ou réessayez.");
-    } finally {
-      setAssetUploading(false);
-    }
-  };
-
-  const handleAssetRemove: AssetRemoveHandler = id => {
-    mutateDraft(prev => ({
-      ...prev,
-      assets: {
-        ...prev.assets,
-        library: prev.assets.library.filter(asset => asset.id !== id),
-      },
-    }));
-  };
-
-  const handleAssetRename: AssetRenameHandler = (id, name) => {
-    const trimmed = name.trim();
-    mutateDraft(prev => ({
-      ...prev,
-      assets: {
-        ...prev.assets,
-        library: prev.assets.library.map(asset =>
-          asset.id === id
-            ? {
-                ...asset,
-                name: trimmed.length > 0 ? trimmed : asset.name,
-              }
-            : asset,
-        ),
-      },
-    }));
-  };
-
-  const handleAssetApply: AssetApplyHandler = (field, asset) => {
-    setImageField(field, asset.url);
-    setImageErrors(prev => ({
-      ...prev,
-      [field]: null,
-    }));
-    setStatusMessage('Ressource appliquée à la section sélectionnée.');
-    if (pendingAssetField && pendingAssetField === field) {
-      setPendingAssetField(null);
-      setAssetLibraryOpen(false);
-    }
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setStatusMessage(null);
-    setFormError(null);
-    try {
-      await updateContent(draft);
-      setIsDirty(false);
-      setStatusMessage('Modifications enregistrées avec succès.');
-    } catch (saveError) {
-      console.error('Failed to update site content', saveError);
-      setFormError('Impossible de sauvegarder vos changements. Réessayez dans un instant.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleReset = () => {
-    setDraft(content);
-    setIsDirty(false);
-    setStatusMessage(null);
-    setFormError(null);
-    setImageErrors({ ...INITIAL_IMAGE_ERRORS });
-    setActiveElementState(null);
-    setActiveZone('navigation');
-    setPendingAssetField(null);
-    setAssetLibraryOpen(false);
-  };
-
-  const isUploading = (field: ImageFieldKey) => uploadingField === field;
-
-  const openAssetLibrary = (field?: ImageFieldKey) => {
-    setPendingAssetField(field ?? null);
-    setAssetLibraryOpen(true);
-  };
-
-  const closeAssetLibrary = () => {
-    setAssetLibraryOpen(false);
-    setPendingAssetField(null);
-  };
-
-  const handleEditElement = (
-    element: EditableElementKey,
-    meta: { zone: EditableZoneKey; anchor: DOMRect | null },
-  ) => {
-    setActiveElementState({ element, anchor: meta.anchor ?? null });
-    setActiveZone(meta.zone);
-  };
-
-  const handleSelectZone = (zone: EditableZoneKey) => {
-    setActiveZone(zone);
-    setActiveElementState(null);
-  };
-
-  const zoneChecklist = useMemo(() => createZoneChecklist(draft), [draft]);
-
-  const zoneStatuses = useMemo<ZoneStatusRecord>(() => {
-    return ZONE_ORDER.reduce((acc, zone) => {
-      acc[zone] = getZoneCompletionStatus(zoneChecklist[zone]);
-      return acc;
-    }, {} as ZoneStatusRecord);
-  }, [zoneChecklist]);
-
-  const context: EditorContext = {
-    draft,
-    imageErrors,
-    isUploading,
-    handleImageInputChange,
-    handleImageUpload,
-    handleClearImage,
-    bestSellerProducts,
-    bestSellerLoading,
-    bestSellerError,
-    refreshBestSellerProducts: loadBestSellerProducts,
-    updateProduct: handleUpdateProduct,
-    isBestSellerUpdating,
-    handleStyleFontFamilyChange: (zone, value) => {
-      updateZoneStyle(zone, style => ({
-        ...style,
-        fontFamily: value,
-      }));
-    },
-    handleStyleFontSizeChange: (zone, value) => {
-      updateZoneStyle(zone, style => ({
-        ...style,
-        fontSize: value,
-      }));
-    },
-    handleStyleTextColorChange: (zone, value) => {
-      updateZoneStyle(zone, style => ({
-        ...style,
-        textColor: value,
-      }));
-    },
-    handleStyleBackgroundColorChange: (zone, value) => {
-      updateZoneStyle(zone, style => ({
-        ...style,
-        background: {
-          ...style.background,
-          color: value,
-        },
-      }));
-    },
-    handleStyleBackgroundTypeChange: (zone, type) => {
-      const fieldKey = STYLE_BACKGROUND_FIELD_KEYS[zone];
-      const defaultStyle = DEFAULT_SITE_CONTENT[zone].style;
-      updateZoneStyle(zone, style => ({
-        ...style,
-        background: {
-          ...style.background,
-          type,
-          color: style.background.color || defaultStyle.background.color,
-          image: type === 'image' ? style.background.image ?? defaultStyle.background.image : null,
-        },
-      }));
-      if (type === 'color') {
-        setImageErrors(prev => ({
-          ...prev,
-          [fieldKey]: null,
-        }));
-      }
-    },
-    handleElementStyleChange: (element, property, rawValue) => {
-      updateElementStyleEntry(element, previous => {
-        const next: ElementStyle = { ...(previous ?? {}) };
-        const trimmed = rawValue.trim();
-
-        if (trimmed.length === 0) {
-          delete next[property];
-        } else {
-          next[property] = trimmed;
-        }
-
-        return cleanElementStyle(next);
-      });
-    },
-    handleElementStyleReset: (element, property) => {
-      if (property) {
-        updateElementStyleEntry(element, previous => {
-          if (!previous) {
-            return null;
-          }
-          const next: ElementStyle = { ...previous };
-          delete next[property];
-          return cleanElementStyle(next);
-        });
-      } else {
-        updateElementStyleEntry(element, () => null);
-      }
-    },
-    fontOptions,
-    fontSizeOptions,
-    setBrandValue,
-    setNavigationLinkValue,
-    setHeroFieldValue,
-    setAboutTitleValue,
-    setAboutDescriptionValue,
-    setMenuFieldValue,
-    setContactFieldValue,
-    setFindUsFieldValue,
-    setFooterTextValue,
-  };
-
-  const assetState = {
-    uploading: assetUploading,
-    error: assetError,
-    assets: draft.assets.library,
-    onUpload: handleAssetUpload,
-    onRemove: handleAssetRemove,
-    onRename: handleAssetRename,
-    onApply: handleAssetApply,
-  };
+  const footer = (
+    <>
+      <button type="button" onClick={onClose} className="ui-btn-secondary">Annuler</button>
+      <button type="submit" form={formId} className="ui-btn-primary">Enregistrer</button>
+    </>
+  );
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <Modal title={`Personnaliser ${label}`} onClose={onClose} footer={footer}>
+      <form id={formId} onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Personnalisation du site</h1>
-          <p className="max-w-2xl text-sm text-gray-500">
-            Composez une vitrine sur mesure : contenu, styles, ressources médias et polices sont entièrement modulables. Toutes
-            vos créations sont centralisées dans le dossier Cloudinary <code className="rounded bg-slate-100 px-1">Custom</code>,
-            prêtes à être réutilisées ou téléchargées.
-          </p>
+          <label htmlFor={`${formId}-plain`} className="block text-sm font-medium text-slate-700">
+            Texte de base
+          </label>
+          <textarea
+            id={`${formId}-plain`}
+            className="ui-textarea mt-2 w-full"
+            value={plainText}
+            onChange={event => {
+              setPlainText(event.target.value);
+              setRichText(null);
+            }}
+            rows={3}
+          />
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="ui-btn ui-btn-secondary"
-            disabled={!isDirty || saving}
-          >
-            Réinitialiser
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="ui-btn ui-btn-primary"
-            disabled={!isDirty || saving}
-            data-state={saving ? 'loading' : 'idle'}
-          >
-            {saving ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
-        </div>
-      </div>
-
-      {(error || formError) && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {formError ?? error}
-        </div>
-      )}
-
-      {statusMessage && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {statusMessage}
-        </div>
-      )}
-
-      <GuidedHeader
-        activeZone={activeZone}
-        guidedMode={guidedMode}
-        onModeChange={setGuidedMode}
-        onSelect={handleSelectZone}
-        steps={ZONE_STEPS}
-        zoneStatuses={zoneStatuses}
-      />
-
-      <div ref={previewContainerRef} className="relative">
-        {loading ? (
-          <div className="flex justify-center rounded-[2.5rem] border border-slate-200 bg-slate-50 py-20">
-            <Loader2 className="h-10 w-10 animate-spin text-brand-primary" aria-hidden="true" />
-          </div>
-        ) : (
-          <>
-            <SitePreviewCanvas
-              content={previewContent}
-              bestSellerProducts={bestSellerProducts}
-              activeZone={activeZone}
-              onEdit={handleEditElement}
-            />
-            <FloatingZoneEditor
-              zone={activeZone}
-              activeElement={
-                activeElementState && resolveZoneFromElement(activeElementState.element) === activeZone
-                  ? activeElementState.element
-                  : null
-              }
-              guidedMode={guidedMode}
-              containerRef={previewContainerRef}
-              checklist={zoneChecklist[activeZone]}
-              zoneStatuses={zoneStatuses}
-              onClose={() => setActiveElementState(null)}
-              onNavigate={handleSelectZone}
-              onOpenAssets={openAssetLibrary}
-              context={context}
-            />
-            <ElementEditorModal
-              active={activeElementState}
-              context={context}
-              onClose={() => setActiveElementState(null)}
-              onOpenAssets={openAssetLibrary}
-            />
-          </>
-        )}
-      </div>
-
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Astuces de personnalisation avancée
-        </h2>
-        <ul className="mt-3 space-y-2 text-sm text-slate-600">
-          <li>
-            Utilisez des valeurs CSS complètes dans les champs de styles pour bénéficier de la pleine puissance du moteur (ex :
-            <code className="mx-1 rounded bg-slate-100 px-1">clamp()</code>,<code className="mx-1 rounded bg-slate-100 px-1">rgba()</code>...).
-          </li>
-          <li>
-            Les polices téléversées dans la médiathèque peuvent être intégrées via <code className="rounded bg-slate-100 px-1">@font-face</code>
-            dans votre feuille de styles publique ou à l'aide d'un service d'injection externe.
-          </li>
-          <li>
-            Chaque ressource envoyée est stockée dans <strong>Cloudinary / Custom</strong>. Vous pouvez les retoucher, les renommer ou les
-            remplacer directement depuis votre console Cloudinary sans casser les liens.
-          </li>
-        </ul>
-      </div>
-
-      <AssetLibraryOverlay
-        open={assetLibraryOpen}
-        onClose={closeAssetLibrary}
-        pendingField={pendingAssetField}
-        onPendingFieldUsed={() => setPendingAssetField(null)}
-        {...assetState}
-      />
-    </div>
-  );
-};
-
-const GuidedHeader: React.FC<{
-  activeZone: EditableZoneKey;
-  guidedMode: boolean;
-  onModeChange: (value: boolean) => void;
-  onSelect: (zone: EditableZoneKey) => void;
-  steps: ReadonlyArray<{ key: EditableZoneKey; label: string; description: string; helper: string }>;
-  zoneStatuses: ZoneStatusRecord;
-}> = ({ activeZone, guidedMode, onModeChange, onSelect, steps, zoneStatuses }) => {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-900">
-            {guidedMode ? 'Mode guidé activé' : 'Mode expert'}
-          </p>
-          <p className="text-xs text-slate-500">
-            {guidedMode
-              ? 'Suivez chaque étape pour construire une vitrine convaincante en quelques minutes.'
-              : 'Accédez rapidement aux réglages sans étapes intermédiaires.'}
-          </p>
-        </div>
-        <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 p-1 text-xs font-medium text-slate-600">
+          <p className="text-sm font-medium text-slate-700">Mise en forme avancée</p>
+          <RichTextEditor
+            id={`${formId}-rich`}
+            value={richText}
+            fallback={plainText}
+            onChange={value => {
+              setRichText(value);
+              if (value) {
+                setPlainText(value.plainText);
+              }
+            }}
+            className="mt-2"
+            placeholder="Saisissez votre texte..."
+          />
           <button
             type="button"
-            onClick={() => onModeChange(true)}
-            className={`rounded-full px-3 py-1 transition ${
-              guidedMode ? 'bg-white text-slate-900 shadow-sm' : 'hover:text-slate-900'
-            }`}
+            className="mt-2 text-sm font-medium text-brand-primary hover:text-brand-primary/80"
+            onClick={() => setRichText(null)}
           >
-            Mode guidé
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange(false)}
-            className={`rounded-full px-3 py-1 transition ${
-              guidedMode ? 'hover:text-slate-900' : 'bg-white text-slate-900 shadow-sm'
-            }`}
-          >
-            Mode expert
+            Supprimer la mise en forme personnalisée
           </button>
         </div>
-      </div>
-      <div className="mt-6 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
-        {steps.map(step => {
-          const status = zoneStatuses[step.key];
-          const isActive = step.key === activeZone;
-          const statusClasses =
-            status === 'done'
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              : status === 'progress'
-              ? 'bg-brand-primary/5 text-brand-primary border-brand-primary/20'
-              : 'bg-slate-50 text-slate-500 border-transparent';
-          const icon = status === 'done' ? (
-            <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-hidden="true" />
-          ) : status === 'progress' ? (
-            <Sparkles className="h-5 w-5 text-brand-primary" aria-hidden="true" />
-          ) : (
-            <Circle className="h-5 w-5 text-slate-300" aria-hidden="true" />
-          );
-
-          return (
-            <button
-              key={step.key}
-              type="button"
-              onClick={() => onSelect(step.key)}
-              className={`flex flex-col rounded-2xl border px-4 py-3 text-left transition ${
-                isActive ? 'ring-2 ring-brand-primary/20 shadow-brand-primary/10 border-brand-primary/40 bg-white' : statusClasses
-              }`}
-            >
-              <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                {icon}
-                {step.label}
-              </span>
-              <span className="mt-1 text-xs text-slate-500">{step.description}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-const Checklist: React.FC<{ items: ChecklistItem[] }> = ({ items }) => (
-  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Essentiels</p>
-    <ul className="mt-3 space-y-2">
-      {items.map((item, index) => (
-        <li key={index} className="flex items-center gap-2 text-sm text-slate-600">
-          {item.done ? (
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-hidden="true" />
-          ) : (
-            <Circle className="h-4 w-4 text-slate-300" aria-hidden="true" />
-          )}
-          <span className={item.done ? 'text-slate-400 line-through' : ''}>{item.label}</span>
-        </li>
-      ))}
-    </ul>
-  </div>
-);
-
-const FieldCard: React.FC<{
-  label: string;
-  htmlFor?: string;
-  description?: string;
-  active?: boolean;
-  children: React.ReactNode;
-}> = ({ label, htmlFor, description, active = false, children }) => (
-  <div
-    className={`rounded-2xl border p-4 shadow-sm transition ${
-      active
-        ? 'border-brand-primary/60 bg-brand-primary/5 ring-1 ring-brand-primary/20'
-        : 'border-slate-200 bg-white'
-    }`}
-  >
-    <label
-      htmlFor={htmlFor}
-      className="text-xs font-semibold uppercase tracking-wide text-slate-500"
-    >
-      {label}
-    </label>
-    <div className="mt-2 space-y-2 text-sm text-slate-700">{children}</div>
-    {description && <p className="mt-2 text-xs text-slate-500">{description}</p>}
-  </div>
-);
-
-const SuggestionChips: React.FC<{
-  options: readonly string[];
-  onSelect: (value: string) => void;
-  label?: string;
-}> = ({ options, onSelect, label }) => {
-  if (options.length === 0) {
-    return null;
-  }
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {label && <span className="text-xs font-medium text-slate-400">{label}</span>}
-      {options.map(option => (
-        <button
-          key={option}
-          type="button"
-          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-brand-primary/40 hover:bg-brand-primary/10 hover:text-brand-primary"
-          onClick={() => onSelect(option)}
-        >
-          <Sparkles className="h-3 w-3" aria-hidden="true" />
-          {option}
-        </button>
-      ))}
-    </div>
-  );
-};
-
-const ColorChip: React.FC<{ value: string; onSelect: (value: string) => void }> = ({ value, onSelect }) => (
-  <button
-    type="button"
-    onClick={() => onSelect(value)}
-    className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 shadow-sm transition hover:border-brand-primary/40 hover:text-brand-primary"
-  >
-    <span
-      aria-hidden="true"
-      className="h-4 w-4 rounded-full border border-slate-200"
-      style={{ backgroundColor: value === 'transparent' ? 'white' : value }}
-    />
-    {value}
-  </button>
-);
-
-const MediaInputField: React.FC<{
-  field: ImageFieldKey;
-  label: string;
-  value: string | null;
-  imageErrors: Record<ImageFieldKey, string | null>;
-  handleImageInputChange: ImageInputHandler;
-  handleImageUpload: ImageUploadHandler;
-  handleClearImage: ImageClearHandler;
-  isUploading: (field: ImageFieldKey) => boolean;
-  onOpenAssets: (field: ImageFieldKey) => void;
-}> = ({
-  field,
-  label,
-  value,
-  imageErrors,
-  handleImageInputChange,
-  handleImageUpload,
-  handleClearImage,
-  isUploading,
-  onOpenAssets,
-}) => (
-  <FieldCard label={label} htmlFor={`${field}-input`}>
-    <input
-      id={`${field}-input`}
-      className="ui-input w-full"
-      value={value ?? ''}
-      onChange={handleImageInputChange(field)}
-      placeholder="https://res.cloudinary.com/..."
-    />
-    <p className="text-xs text-slate-500">{imageWarning}</p>
-    {imageErrors[field] && <p className="text-xs text-red-600">{imageErrors[field]}</p>}
-    <div className="flex flex-wrap items-center gap-2 text-xs">
-      <label className="ui-btn ui-btn-secondary cursor-pointer">
-        Importer
-        <input
-          type="file"
-          accept="image/*,video/*,audio/*,.ttf,.otf,.woff,.woff2,.svg"
-          className="hidden"
-          onChange={event => {
-            const file = event.target.files?.[0];
-            if (file) {
-              void handleImageUpload(field, file);
-              event.target.value = '';
-            }
-          }}
-        />
-      </label>
-      <button type="button" className="ui-btn ui-btn-ghost" onClick={() => onOpenAssets(field)}>
-        Médiathèque
-      </button>
-      <button
-        type="button"
-        className="ui-btn ui-btn-ghost"
-        onClick={() => handleClearImage(field)}
-        disabled={!value || isUploading(field)}
-      >
-        Retirer
-      </button>
-      {isUploading(field) && (
-        <span className="inline-flex items-center gap-2 text-xs text-slate-500">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Téléversement…
-        </span>
-      )}
-    </div>
-    {value && (
-      <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
-        <img src={value} alt="Prévisualisation" className="h-32 w-full object-cover" />
-      </div>
-    )}
-  </FieldCard>
-);
-
-const ZoneStyleEditor: React.FC<{
-  zone: EditableZoneKey;
-  style: SectionStyle;
-  activeElement: EditableElementKey | null;
-  elementStyle?: ElementStyle;
-  fontOptions: readonly string[];
-  fontSizeOptions: readonly string[];
-  handleStyleFontFamilyChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleFontSizeChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleTextColorChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleBackgroundColorChange: (zone: EditableZoneKey, value: string) => void;
-  handleStyleBackgroundTypeChange: (
-    zone: EditableZoneKey,
-    value: SectionStyle['background']['type'],
-  ) => void;
-  handleElementStyleChange: (
-    element: EditableElementKey,
-    property: ElementStyleProperty,
-    value: string,
-  ) => void;
-  handleElementStyleReset: (element: EditableElementKey, property?: ElementStyleProperty) => void;
-  handleImageInputChange: ImageInputHandler;
-  handleImageUpload: ImageUploadHandler;
-  handleClearImage: ImageClearHandler;
-  imageErrors: Record<ImageFieldKey, string | null>;
-  isUploading: (field: ImageFieldKey) => boolean;
-  onOpenAssets: (field: ImageFieldKey) => void;
-  showZoneControls?: boolean;
-}> = ({
-  zone,
-  style,
-  activeElement,
-  elementStyle,
-  fontOptions,
-  fontSizeOptions,
-  handleStyleFontFamilyChange,
-  handleStyleFontSizeChange,
-  handleStyleTextColorChange,
-  handleStyleBackgroundColorChange,
-  handleStyleBackgroundTypeChange,
-  handleElementStyleChange,
-  handleElementStyleReset,
-  handleImageInputChange,
-  handleImageUpload,
-  handleClearImage,
-  imageErrors,
-  isUploading,
-  onOpenAssets,
-  showZoneControls = true,
-}) => {
-  const backgroundField = STYLE_BACKGROUND_FIELD_KEYS[zone];
-  const isBackgroundImage = style.background.type === 'image';
-
-  const validateCssValue = useCallback((property: string, value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return { valid: true, message: null } as const;
-    }
-    if (typeof window === 'undefined' || typeof window.CSS === 'undefined') {
-      return { valid: true, message: null } as const;
-    }
-    return window.CSS.supports(property, trimmed)
-      ? { valid: true, message: null }
-      : { valid: false, message: 'Cette valeur ne semble pas être reconnue comme une valeur CSS valide.' };
-  }, []);
-
-  const fontFamilyValidation = validateCssValue('font-family', style.fontFamily);
-  const fontSizeValidation = validateCssValue('font-size', style.fontSize);
-  const textColorValidation = validateCssValue('color', style.textColor);
-  const backgroundColorValidation =
-    style.background.type === 'color'
-      ? validateCssValue('background-color', style.background.color)
-      : { valid: true, message: null };
-
-  const supportsElementStyle =
-    Boolean(activeElement && STYLE_EDITABLE_ELEMENT_KEYS.includes(activeElement));
-  const elementLabel = activeElement ? ELEMENT_STYLE_LABELS[activeElement] ?? activeElement : null;
-  const elementOverrides = elementStyle ?? {};
-  const hasElementOverrides = Object.keys(elementOverrides).length > 0;
-
-  const elementFontFamilyValidation =
-    supportsElementStyle && elementOverrides.fontFamily
-      ? validateCssValue('font-family', elementOverrides.fontFamily)
-      : { valid: true, message: null };
-  const elementFontSizeValidation =
-    supportsElementStyle && elementOverrides.fontSize
-      ? validateCssValue('font-size', elementOverrides.fontSize)
-      : { valid: true, message: null };
-  const elementTextColorValidation =
-    supportsElementStyle && elementOverrides.textColor
-      ? validateCssValue('color', elementOverrides.textColor)
-      : { valid: true, message: null };
-  const elementBackgroundColorValidation =
-    supportsElementStyle && elementOverrides.backgroundColor
-      ? validateCssValue('background-color', elementOverrides.backgroundColor)
-      : { valid: true, message: null };
-
-  const handleElementInput = (property: ElementStyleProperty) => (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    if (!activeElement) {
-      return;
-    }
-    handleElementStyleChange(activeElement, property, event.target.value);
-  };
-
-  const applyElementSuggestion = (property: ElementStyleProperty, value: string) => {
-    if (!activeElement) {
-      return;
-    }
-    handleElementStyleChange(activeElement, property, value);
-  };
-
-  const resetElementStyle = (property?: ElementStyleProperty) => {
-    if (!activeElement) {
-      return;
-    }
-    handleElementStyleReset(activeElement, property);
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Styles de l'élément
-          </h3>
-          {supportsElementStyle && (
-            <button
-              type="button"
-              className="text-xs font-medium text-brand-primary hover:text-brand-primary/80 disabled:opacity-50"
-              onClick={() => resetElementStyle()}
-              disabled={!hasElementOverrides}
-            >
-              Réinitialiser l'élément
-            </button>
-          )}
-        </div>
-        {supportsElementStyle ? (
-          <>
-            <p className="text-xs text-slate-500">
-              {elementLabel ? (
-                <>
-                  Personnalisez <strong>{elementLabel}</strong>.{' '}
-                </>
-              ) : null}
-              Laissez un champ vide pour hériter du style de la zone.
-            </p>
-            <FieldCard
-              label="Police personnalisée"
-              htmlFor={`${zone}-element-font-family`}
-              active={!elementFontFamilyValidation.valid}
-            >
-              <input
-                id={`${zone}-element-font-family`}
-                className={`ui-input w-full ${
-                  elementFontFamilyValidation.valid
-                    ? ''
-                    : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                }`}
-                value={elementOverrides.fontFamily ?? ''}
-                onChange={handleElementInput('fontFamily')}
-                list={`${zone}-element-font-family-options`}
-                placeholder={style.fontFamily}
-              />
-              <datalist id={`${zone}-element-font-family-options`}>
-                {fontOptions.map(font => (
-                  <option key={font} value={font} />
-                ))}
-              </datalist>
-              {!elementFontFamilyValidation.valid && (
-                <p className="text-xs text-red-600">{elementFontFamilyValidation.message}</p>
-              )}
-              <SuggestionChips
-                options={fontOptions}
-                onSelect={value => applyElementSuggestion('fontFamily', value)}
-              />
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                <span>Valeur héritée : {style.fontFamily}</span>
-                <button
-                  type="button"
-                  className="text-brand-primary hover:text-brand-primary/80 disabled:opacity-50"
-                  onClick={() => resetElementStyle('fontFamily')}
-                  disabled={!elementOverrides.fontFamily}
-                >
-                  Réinitialiser
-                </button>
-              </div>
-            </FieldCard>
-
-            <FieldCard
-              label="Taille spécifique"
-              htmlFor={`${zone}-element-font-size`}
-              active={!elementFontSizeValidation.valid}
-            >
-              <input
-                id={`${zone}-element-font-size`}
-                className={`ui-input w-full ${
-                  elementFontSizeValidation.valid
-                    ? ''
-                    : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                }`}
-                value={elementOverrides.fontSize ?? ''}
-                onChange={handleElementInput('fontSize')}
-                list={`${zone}-element-font-size-options`}
-                placeholder={style.fontSize}
-              />
-              <datalist id={`${zone}-element-font-size-options`}>
-                {fontSizeOptions.map(size => (
-                  <option key={size} value={size} />
-                ))}
-              </datalist>
-              {!elementFontSizeValidation.valid && (
-                <p className="text-xs text-red-600">{elementFontSizeValidation.message}</p>
-              )}
-              <SuggestionChips
-                options={fontSizeOptions}
-                onSelect={value => applyElementSuggestion('fontSize', value)}
-              />
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                <span>Valeur héritée : {style.fontSize}</span>
-                <button
-                  type="button"
-                  className="text-brand-primary hover:text-brand-primary/80 disabled:opacity-50"
-                  onClick={() => resetElementStyle('fontSize')}
-                  disabled={!elementOverrides.fontSize}
-                >
-                  Réinitialiser
-                </button>
-              </div>
-            </FieldCard>
-
-            <FieldCard
-              label="Couleur du texte"
-              htmlFor={`${zone}-element-text-color`}
-              active={!elementTextColorValidation.valid}
-            >
-              <input
-                id={`${zone}-element-text-color`}
-                className={`ui-input w-full ${
-                  elementTextColorValidation.valid
-                    ? ''
-                    : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                }`}
-                value={elementOverrides.textColor ?? ''}
-                onChange={handleElementInput('textColor')}
-                placeholder={style.textColor}
-              />
-              {!elementTextColorValidation.valid && (
-                <p className="text-xs text-red-600">{elementTextColorValidation.message}</p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {COLOR_SUGGESTIONS.map(color => (
-                  <ColorChip
-                    key={color}
-                    value={color}
-                    onSelect={value => applyElementSuggestion('textColor', value)}
-                  />
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                <span>Valeur héritée : {style.textColor}</span>
-                <button
-                  type="button"
-                  className="text-brand-primary hover:text-brand-primary/80 disabled:opacity-50"
-                  onClick={() => resetElementStyle('textColor')}
-                  disabled={!elementOverrides.textColor}
-                >
-                  Réinitialiser
-                </button>
-              </div>
-            </FieldCard>
-
-            <FieldCard
-              label="Couleur de fond"
-              htmlFor={`${zone}-element-background-color`}
-              active={!elementBackgroundColorValidation.valid}
-            >
-              <input
-                id={`${zone}-element-background-color`}
-                className={`ui-input w-full ${
-                  elementBackgroundColorValidation.valid
-                    ? ''
-                    : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                }`}
-                value={elementOverrides.backgroundColor ?? ''}
-                onChange={handleElementInput('backgroundColor')}
-                placeholder={style.background.color}
-              />
-              {!elementBackgroundColorValidation.valid && (
-                <p className="text-xs text-red-600">{elementBackgroundColorValidation.message}</p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {COLOR_SUGGESTIONS.map(color => (
-                  <ColorChip
-                    key={color}
-                    value={color}
-                    onSelect={value => applyElementSuggestion('backgroundColor', value)}
-                  />
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                <span>Valeur héritée : {style.background.color}</span>
-                <button
-                  type="button"
-                  className="text-brand-primary hover:text-brand-primary/80 disabled:opacity-50"
-                  onClick={() => resetElementStyle('backgroundColor')}
-                  disabled={!elementOverrides.backgroundColor}
-                >
-                  Réinitialiser
-                </button>
-              </div>
-            </FieldCard>
-          </>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
-            Sélectionnez un texte ou un bouton dans la prévisualisation pour ajuster son style individuel.
-          </div>
-        )}
-      </div>
-
-      {showZoneControls && (
-        <div className="space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Style de la zone
-          </h3>
-          <FieldCard label="Police" htmlFor={`${zone}-font-family`} active={!fontFamilyValidation.valid}>
-          <input
-            id={`${zone}-font-family`}
-            className={`ui-input w-full ${
-              fontFamilyValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-            }`}
-            value={style.fontFamily}
-            onChange={event => handleStyleFontFamilyChange(zone, event.target.value)}
-            list={`${zone}-font-family-options`}
-            placeholder="Ex: 'Open Sans', sans-serif"
-          />
-          <datalist id={`${zone}-font-family-options`}>
-            {fontOptions.map(font => (
-              <option key={font} value={font} />
-            ))}
-          </datalist>
-          {!fontFamilyValidation.valid && (
-            <p className="text-xs text-red-600">{fontFamilyValidation.message}</p>
-          )}
-          <SuggestionChips
-            options={FONT_FAMILY_SUGGESTIONS}
-            onSelect={value => handleStyleFontFamilyChange(zone, value)}
-          />
-        </FieldCard>
-
-          <FieldCard label="Taille du texte" htmlFor={`${zone}-font-size`} active={!fontSizeValidation.valid}>
-          <input
-            id={`${zone}-font-size`}
-            className={`ui-input w-full ${
-              fontSizeValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-            }`}
-            value={style.fontSize}
-            onChange={event => handleStyleFontSizeChange(zone, event.target.value)}
-            list={`${zone}-font-size-options`}
-            placeholder="Ex: 1.125rem"
-          />
-          <datalist id={`${zone}-font-size-options`}>
-            {fontSizeOptions.map(size => (
-              <option key={size} value={size} />
-            ))}
-          </datalist>
-          {!fontSizeValidation.valid && (
-            <p className="text-xs text-red-600">{fontSizeValidation.message}</p>
-          )}
-          <SuggestionChips
-            options={FONT_SIZE_SUGGESTIONS}
-            onSelect={value => handleStyleFontSizeChange(zone, value)}
-          />
-        </FieldCard>
-
-          <FieldCard label="Couleur du texte" htmlFor={`${zone}-text-color`} active={!textColorValidation.valid}>
-          <input
-            id={`${zone}-text-color`}
-            className={`ui-input w-full ${
-              textColorValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-            }`}
-            value={style.textColor}
-            onChange={event => handleStyleTextColorChange(zone, event.target.value)}
-            placeholder="Ex: #0f172a"
-          />
-          {!textColorValidation.valid && (
-            <p className="text-xs text-red-600">{textColorValidation.message}</p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {COLOR_SUGGESTIONS.map(color => (
-              <ColorChip key={color} value={color} onSelect={value => handleStyleTextColorChange(zone, value)} />
-            ))}
-          </div>
-        </FieldCard>
-
-          <FieldCard label="Fond" htmlFor={`${zone}-background-type`}>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              id={`${zone}-background-type`}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                style.background.type === 'color'
-                  ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
-                  : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
-              }`}
-              onClick={() => handleStyleBackgroundTypeChange(zone, 'color')}
-            >
-              Couleur
-            </button>
-            <button
-              type="button"
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                style.background.type === 'image'
-                  ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
-                  : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
-              }`}
-              onClick={() => handleStyleBackgroundTypeChange(zone, 'image')}
-            >
-              Image
-            </button>
-          </div>
-          {style.background.type === 'color' ? (
-            <div className="mt-3 space-y-2">
-              <input
-                id={`${zone}-background-color`}
-                className={`ui-input w-full ${
-                  backgroundColorValidation.valid
-                    ? ''
-                    : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                }`}
-                value={style.background.color}
-                onChange={event => handleStyleBackgroundColorChange(zone, event.target.value)}
-                placeholder="Ex: rgba(255, 255, 255, 0.85)"
-              />
-              {!backgroundColorValidation.valid && (
-                <p className="text-xs text-red-600">{backgroundColorValidation.message}</p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {COLOR_SUGGESTIONS.map(color => (
-                  <ColorChip
-                    key={color}
-                    value={color}
-                    onSelect={value => handleStyleBackgroundColorChange(zone, value)}
-                  />
-                ))}
-              </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor={`${formId}-font`} className="block text-sm font-medium text-slate-700">
+              Police
+            </label>
+            <input
+              id={`${formId}-font`}
+              className="ui-input mt-2 w-full"
+              value={fontFamily}
+              onChange={event => setFontFamily(event.target.value)}
+              list={`${formId}-font-options`}
+              placeholder="Ex: Poppins"
+            />
+            <datalist id={`${formId}-font-options`}>
+              {fontOptions.map(option => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+            <div className="mt-2 flex items-center gap-3">
+              <label className="ui-btn-secondary relative cursor-pointer">
+                <input
+                  type="file"
+                  accept=".woff,.woff2,.ttf,.otf"
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                  onChange={handleFontUpload}
+                  disabled={uploadingFont}
+                />
+                <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
+                Importer une police
+              </label>
+              {uploadingFont && <Loader2 className="h-4 w-4 animate-spin text-brand-primary" aria-hidden="true" />}
             </div>
-          ) : (
-            <MediaInputField
-              field={backgroundField}
-              label={IMAGE_FIELD_LABELS[backgroundField]}
-              value={style.background.image}
-              imageErrors={imageErrors}
-              handleImageInputChange={handleImageInputChange}
-              handleImageUpload={handleImageUpload}
-              handleClearImage={handleClearImage}
-              isUploading={isUploading}
-              onOpenAssets={onOpenAssets}
+            {fontUploadError && <p className="mt-2 text-sm text-amber-600">{fontUploadError}</p>}
+          </div>
+          <div>
+            <label htmlFor={`${formId}-size`} className="block text-sm font-medium text-slate-700">
+              Taille du texte
+            </label>
+            <input
+              id={`${formId}-size`}
+              className="ui-input mt-2 w-full"
+              value={fontSize}
+              onChange={event => setFontSize(event.target.value)}
+              list={`${formId}-size-options`}
+              placeholder="Ex: 18px"
             />
-          )}
-        </FieldCard>
+            <datalist id={`${formId}-size-options`}>
+              {FONT_SIZE_SUGGESTIONS.map(size => (
+                <option key={size} value={size} />
+              ))}
+            </datalist>
+          </div>
         </div>
-      )}
-    </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor={`${formId}-text-color`} className="block text-sm font-medium text-slate-700">
+              Couleur du texte
+            </label>
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                id={`${formId}-text-color`}
+                className="ui-input w-full"
+                value={textColor}
+                onChange={event => setTextColor(event.target.value)}
+                placeholder="Ex: #0f172a"
+              />
+              <input
+                type="color"
+                className="h-10 w-10 rounded border border-slate-200"
+                value={textColor || '#000000'}
+                onChange={event => setTextColor(event.target.value)}
+                aria-label="Choisir la couleur du texte"
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {COLOR_SUGGESTIONS.map(color => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setTextColor(color)}
+                  className="h-8 w-8 rounded-full border border-slate-200"
+                  style={{ backgroundColor: color === 'transparent' ? '#ffffff' : color }}
+                  title={color}
+                />
+              ))}
+            </div>
+          </div>
+          <div>
+            <label htmlFor={`${formId}-bg-color`} className="block text-sm font-medium text-slate-700">
+              Couleur de fond
+            </label>
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                id={`${formId}-bg-color`}
+                className="ui-input w-full"
+                value={backgroundColor}
+                onChange={event => setBackgroundColor(event.target.value)}
+                placeholder="Ex: rgba(255,255,255,0.8)"
+              />
+              <input
+                type="color"
+                className="h-10 w-10 rounded border border-slate-200"
+                value={backgroundColor || '#ffffff'}
+                onChange={event => setBackgroundColor(event.target.value)}
+                aria-label="Choisir la couleur d'arrière-plan"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-200 pt-4">
+          <p className="text-sm text-slate-500">Laissez un champ vide pour hériter du style par défaut.</p>
+          <button
+            type="button"
+            className="text-sm font-medium text-brand-primary hover:text-brand-primary/80"
+            onClick={() => {
+              setFontFamily('');
+              setFontSize('');
+              setTextColor('');
+              setBackgroundColor('');
+            }}
+          >
+            Réinitialiser le style
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 
+interface ImageElementEditorProps {
+  element: EditableElementKey;
+  label: string;
+  draft: SiteContent;
+  onApply: (updater: DraftUpdater) => void;
+  onClose: () => void;
+  onAssetAdded: (asset: CustomizationAsset) => void;
+}
 
-const ZoneEditorContent: React.FC<{ zone: EditableZoneKey; context: EditorContext }> = ({
-  zone,
-  context,
+const ImageElementEditor: React.FC<ImageElementEditorProps> = ({
+  element,
+  label,
+  draft,
+  onApply,
+  onClose,
+  onAssetAdded,
 }) => {
-  const [rankDrafts, setRankDrafts] = useState<Record<string, string>>({});
+  const formId = `${element.replace(/\./g, '-')}-image-form`;
+  const initialImage = getImageValue(draft, element) ?? '';
+  const [imageUrl, setImageUrl] = useState<string>(initialImage);
+  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<boolean>(false);
 
   useEffect(() => {
-    setRankDrafts(prev => {
-      const next: Record<string, string> = {};
-      context.bestSellerProducts.forEach(product => {
-        next[product.id] = prev[product.id] ?? (product.best_seller_rank?.toString() ?? '');
-      });
-      return next;
+    setImageUrl(initialImage);
+  }, [initialImage]);
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = imageUrl.trim();
+    const normalized = normalizeCloudinaryImageUrl(trimmed) ?? (trimmed.length > 0 ? trimmed : null);
+
+    onApply(current => {
+      setNestedValue(current, element, normalized);
+      return current;
     });
-  }, [context.bestSellerProducts]);
+    onClose();
+  };
 
-  const handleBestSellerRankChange = useCallback((productId: string, value: string) => {
-    if (/^\d*$/.test(value)) {
-      setRankDrafts(prev => ({
-        ...prev,
-        [productId]: value,
-      }));
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
     }
-  }, []);
+    setError(null);
+    setUploading(true);
+    try {
+      const url = await uploadCustomizationAsset(file, { tags: [guessAssetType(file)] });
+      const asset = createAssetFromFile(file, url);
+      onAssetAdded(asset);
+      setImageUrl(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Téléversement impossible. Vérifiez votre connexion.");
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
 
-  const handleBestSellerRankSubmit = useCallback(
-    async (productId: string) => {
-      const product = context.bestSellerProducts.find(item => item.id === productId);
-      const currentValue = product?.best_seller_rank?.toString() ?? '';
-      const rawValue = (rankDrafts[productId] ?? currentValue).trim();
-      if (rawValue === currentValue) {
-        return;
-      }
-      const rankValue = rawValue === '' ? null : Number.parseInt(rawValue, 10);
-      if (rawValue !== '' && Number.isNaN(rankValue)) {
-        return;
-      }
-      await context.updateProduct(productId, { best_seller_rank: rankValue });
-    },
-    [context, rankDrafts],
+  const footer = (
+    <>
+      <button type="button" onClick={onClose} className="ui-btn-secondary">Annuler</button>
+      <button type="submit" form={formId} className="ui-btn-primary">Enregistrer</button>
+    </>
   );
 
-  const handleBestSellerToggle = useCallback(
-    async (productId: string, isBestSeller: boolean) => {
-      await context.updateProduct(productId, { is_best_seller: isBestSeller });
-    },
-    [context],
-  );
-
-  const getRichTextValue = (key: EditableElementKey) => draft.elementRichText?.[key] ?? null;
-
-  const renderRichTextField = (
-    key: EditableElementKey,
-    fallback: string,
-    onValueChange: (plainText: string, richText?: RichTextValue | null) => void,
-    placeholder?: string,
-  ) => (
-    <RichTextEditor
-      id={`${key.replace(/\./g, '-')}-editor`}
-      value={getRichTextValue(key)}
-      fallback={fallback}
-      onChange={next => onValueChange(next?.plainText ?? '', next)}
-      placeholder={placeholder}
-    />
-  );
-
-  if (zone !== 'menu') {
-    return null;
-  }
+  const previewUrl = imageUrl.trim();
 
   return (
-    <div className="space-y-4">
-      <FieldCard
-        label="Gestion des best sellers"
-        description="Ajustez l'ordre et la sélection des produits mis en avant dans la section menu."
-      >
-        <div className="space-y-3 text-sm">
-          <p className="text-xs text-slate-500">
-            Les best sellers apparaissent automatiquement dans la prévisualisation à droite.
+    <Modal title={`Personnaliser ${label}`} onClose={onClose} footer={footer}>
+      <form id={formId} onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label htmlFor={`${formId}-input`} className="block text-sm font-medium text-slate-700">
+            URL de l'image
+          </label>
+          <input
+            id={`${formId}-input`}
+            className="ui-input mt-2 w-full"
+            value={imageUrl}
+            onChange={event => setImageUrl(event.target.value)}
+            placeholder="https://..."
+          />
+          <p className="mt-2 text-xs text-slate-500">
+            Fournissez une URL Cloudinary ou téléversez un fichier pour l'ajouter automatiquement.
           </p>
-          {context.bestSellerError && <p className="text-xs text-red-600">{context.bestSellerError}</p>}
-          {context.bestSellerLoading ? (
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              Chargement des best sellers…
-            </div>
-          ) : context.bestSellerProducts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
-              Aucun produit best seller configuré pour le moment.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {context.bestSellerProducts.map(product => {
-                const rankDraft = rankDrafts[product.id] ?? '';
-                return (
-                  <div
-                    key={product.id}
-                    className="flex flex-col gap-2 rounded-2xl border border-slate-200 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="flex flex-1 items-center gap-3">
-                      <div className="h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-                        {product.image_url ? (
-                          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
-                            Pas d'image
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">{product.name}</p>
-                        <p className="text-xs text-slate-500">
-                          {formatCurrencyCOP(product.price_cents / 100)} · {product.category_name ?? 'Sans catégorie'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 sm:w-72">
-                      <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Position dans la liste
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          className="ui-input w-20"
-                          value={rankDraft}
-                          onChange={event => handleBestSellerRankChange(product.id, event.target.value)}
-                          onBlur={() => void handleBestSellerRankSubmit(product.id)}
-                          onKeyDown={event => {
-                            if (event.key === 'Enter') {
-                              event.preventDefault();
-                              void handleBestSellerRankSubmit(product.id);
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="ui-btn ui-btn-secondary"
-                          onClick={() => void handleBestSellerRankSubmit(product.id)}
-                          disabled={context.isBestSellerUpdating(product.id)}
-                        >
-                          Mettre à jour
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>Inclure dans la sélection</span>
-                        <button
-                          type="button"
-                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition ${
-                            product.is_best_seller
-                              ? 'border-emerald-300 bg-emerald-50 text-emerald-600'
-                              : 'border-slate-200 text-slate-500 hover:border-brand-primary/40 hover:text-brand-primary'
-                          }`}
-                          onClick={() => void handleBestSellerToggle(product.id, !product.is_best_seller)}
-                        >
-                          {product.is_best_seller ? (
-                            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                          ) : (
-                            <Circle className="h-3.5 w-3.5" aria-hidden="true" />
-                          )}
-                          {product.is_best_seller ? 'Actif' : 'Désactivé'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
-      </FieldCard>
-    </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="ui-btn-secondary relative cursor-pointer">
+            <input
+              type="file"
+              accept="image/*,video/*,audio/*,.ttf,.otf,.woff,.woff2"
+              className="absolute inset-0 cursor-pointer opacity-0"
+              onChange={handleUpload}
+              disabled={uploading}
+            />
+            <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
+            Importer un média
+          </label>
+          {uploading && <Loader2 className="h-4 w-4 animate-spin text-brand-primary" aria-hidden="true" />}
+          <button
+            type="button"
+            onClick={() => setImageUrl('')}
+            className="text-sm font-medium text-brand-primary hover:text-brand-primary/80"
+          >
+            Supprimer le média
+          </button>
+        </div>
+        {error && (
+          <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+            <AlertTriangle className="mt-0.5 h-4 w-4" aria-hidden="true" />
+            <p>{error}</p>
+          </div>
+        )}
+        {previewUrl && (
+          <div className="overflow-hidden rounded-2xl border border-slate-200">
+            <img src={previewUrl} alt="Aperçu" className="h-56 w-full object-cover" />
+          </div>
+        )}
+      </form>
+    </Modal>
   );
 };
 
+interface BackgroundElementEditorProps {
+  element: EditableElementKey;
+  label: string;
+  draft: SiteContent;
+  onApply: (updater: DraftUpdater) => void;
+  onClose: () => void;
+  onAssetAdded: (asset: CustomizationAsset) => void;
+}
 
-type ElementEditorConfig = {
-  title: string;
-  description?: string;
-  content: React.ReactNode;
-};
+const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
+  element,
+  label,
+  draft,
+  onApply,
+  onClose,
+  onAssetAdded,
+}) => {
+  const formId = `${element.replace(/\./g, '-')}-background-form`;
+  const background = getSectionBackground(draft, element);
+  const [backgroundType, setBackgroundType] = useState<SectionStyle['background']['type']>(background.type);
+  const [color, setColor] = useState<string>(background.color);
+  const [imageUrl, setImageUrl] = useState<string>(background.image ?? '');
+  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<boolean>(false);
 
-const getElementEditorConfig = (
-  element: EditableElementKey,
-  context: EditorContext,
-  onOpenAssets: (field?: ImageFieldKey) => void,
-): ElementEditorConfig | null => {
-  const { draft, imageErrors } = context;
+  useEffect(() => {
+    setBackgroundType(background.type);
+    setColor(background.color);
+    setImageUrl(background.image ?? '');
+  }, [background.type, background.color, background.image]);
 
-  const renderBackgroundEditor = (zone: EditableZoneKey, label?: string) => {
-    const style = context.draft[zone].style;
-    const backgroundField = STYLE_BACKGROUND_FIELD_KEYS[zone];
-    const resolvedLabel = label ?? IMAGE_FIELD_LABELS[backgroundField];
-    const validateCssValue = (property: string, value: string) => {
-      const trimmed = value.trim();
-      if (!trimmed) {
-        return { valid: true, message: null } as const;
-      }
-      if (typeof window === 'undefined' || typeof window.CSS === 'undefined') {
-        return { valid: true, message: null } as const;
-      }
-      return window.CSS.supports(property, trimmed)
-        ? { valid: true, message: null }
-        : { valid: false, message: 'Cette valeur ne semble pas être reconnue comme une valeur CSS valide.' };
-    };
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmedColor = color.trim() || 'transparent';
+    const trimmedImage = imageUrl.trim();
+    const normalizedImage = normalizeCloudinaryImageUrl(trimmedImage) ?? (trimmedImage.length > 0 ? trimmedImage : null);
 
-    const backgroundColorValidation =
-      style.background.type === 'color'
-        ? validateCssValue('background-color', style.background.color)
-        : { valid: true, message: null };
+    onApply(current => {
+      applySectionBackground(current, element, {
+        type: backgroundType,
+        color: trimmedColor,
+        image: backgroundType === 'image' ? normalizedImage : null,
+      });
+      return current;
+    });
+    onClose();
+  };
 
-    return (
-      <FieldCard label={resolvedLabel} htmlFor={`${zone}-background-type`}>
-        <div className="flex flex-wrap items-center gap-2">
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    setError(null);
+    setUploading(true);
+    try {
+      const url = await uploadCustomizationAsset(file, { tags: [guessAssetType(file)] });
+      const asset = createAssetFromFile(file, url);
+      onAssetAdded(asset);
+      setImageUrl(url);
+      setBackgroundType('image');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Téléversement impossible.');
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const footer = (
+    <>
+      <button type="button" onClick={onClose} className="ui-btn-secondary">Annuler</button>
+      <button type="submit" form={formId} className="ui-btn-primary">Enregistrer</button>
+    </>
+  );
+
+  const previewUrl = imageUrl.trim();
+
+  return (
+    <Modal title={`Personnaliser ${label}`} onClose={onClose} footer={footer}>
+      <form id={formId} onSubmit={handleSubmit} className="space-y-6">
+        <div className="flex gap-3">
           <button
             type="button"
-            id={`${zone}-background-type`}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-              style.background.type === 'color'
-                ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
-                : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
-            }`}
-            onClick={() => context.handleStyleBackgroundTypeChange(zone, 'color')}
+            className={`ui-btn-secondary flex-1 ${backgroundType === 'color' ? 'ring-2 ring-brand-primary' : ''}`}
+            onClick={() => setBackgroundType('color')}
           >
             Couleur
           </button>
           <button
             type="button"
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-              style.background.type === 'image'
-                ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
-                : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
-            }`}
-            onClick={() => context.handleStyleBackgroundTypeChange(zone, 'image')}
+            className={`ui-btn-secondary flex-1 ${backgroundType === 'image' ? 'ring-2 ring-brand-primary' : ''}`}
+            onClick={() => setBackgroundType('image')}
           >
             Image
           </button>
         </div>
-        {style.background.type === 'color' ? (
-          <div className="mt-3 space-y-2">
+        <div>
+          <label htmlFor={`${formId}-color`} className="block text-sm font-medium text-slate-700">
+            Couleur
+          </label>
+          <div className="mt-2 flex items-center gap-3">
             <input
-              id={`${zone}-background-color`}
-              className={`ui-input w-full ${
-                backgroundColorValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-              }`}
-              value={style.background.color}
-              onChange={event => context.handleStyleBackgroundColorChange(zone, event.target.value)}
-              placeholder="Ex: rgba(255, 255, 255, 0.85)"
+              id={`${formId}-color`}
+              className="ui-input w-full"
+              value={color}
+              onChange={event => setColor(event.target.value)}
+              placeholder="Ex: rgba(15,23,42,0.75)"
             />
-            {!backgroundColorValidation.valid && (
-              <p className="text-xs text-red-600">{backgroundColorValidation.message}</p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              {COLOR_SUGGESTIONS.map(color => (
-                <ColorChip
-                  key={color}
-                  value={color}
-                  onSelect={value => context.handleStyleBackgroundColorChange(zone, value)}
+            <input
+              type="color"
+              className="h-10 w-10 rounded border border-slate-200"
+              value={color || '#ffffff'}
+              onChange={event => setColor(event.target.value)}
+              aria-label="Choisir la couleur d'arrière-plan"
+            />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {COLOR_SUGGESTIONS.map(option => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setColor(option)}
+                className="h-8 w-8 rounded-full border border-slate-200"
+                style={{ backgroundColor: option === 'transparent' ? '#ffffff' : option }}
+                title={option}
+              />
+            ))}
+          </div>
+        </div>
+        {backgroundType === 'image' && (
+          <div className="space-y-4">
+            <div>
+              <label htmlFor={`${formId}-image`} className="block text-sm font-medium text-slate-700">
+                URL de l'image
+              </label>
+              <input
+                id={`${formId}-image`}
+                className="ui-input mt-2 w-full"
+                value={imageUrl}
+                onChange={event => setImageUrl(event.target.value)}
+                placeholder="https://..."
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="ui-btn-secondary relative cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                  onChange={handleUpload}
+                  disabled={uploading}
                 />
-              ))}
+                <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
+                Importer une image
+              </label>
+              {uploading && <Loader2 className="h-4 w-4 animate-spin text-brand-primary" aria-hidden="true" />}
+              <button
+                type="button"
+                onClick={() => setImageUrl('')}
+                className="text-sm font-medium text-brand-primary hover:text-brand-primary/80"
+              >
+                Retirer l'image
+              </button>
             </div>
-          </div>
-        ) : (
-          <MediaInputField
-            field={backgroundField}
-            label={IMAGE_FIELD_LABELS[backgroundField]}
-            value={style.background.image}
-            imageErrors={imageErrors}
-            handleImageInputChange={context.handleImageInputChange}
-            handleImageUpload={context.handleImageUpload}
-            handleClearImage={context.handleClearImage}
-            isUploading={context.isUploading}
-            onOpenAssets={field => onOpenAssets(field)}
-          />
-        )}
-      </FieldCard>
-    );
-  };
-
-  switch (element) {
-    case 'navigation.brand':
-      return {
-        title: 'Nom de la marque',
-        content: (
-          <FieldCard label="Nom de la marque" htmlFor="brand-name">
-            {renderRichTextField('navigation.brand', draft.navigation.brand, context.setBrandValue)}
-            <SuggestionChips
-              options={NAVIGATION_BRAND_SUGGESTIONS}
-              onSelect={value => context.setBrandValue(value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'navigation.links.home':
-    case 'navigation.links.about':
-    case 'navigation.links.menu':
-    case 'navigation.links.contact': {
-      const key = element.split('.')[2] as NavigationFieldKey;
-      const label = `Lien ${NAVIGATION_LINK_SUGGESTIONS[key][0] ?? key}`;
-      return {
-        title: label,
-        content: (
-          <FieldCard label={label} htmlFor={`nav-${key}`}>
-            {renderRichTextField(
-              element,
-              draft.navigation.links[key],
-              (text, rich) => context.setNavigationLinkValue(key, text, rich),
-            )}
-            <SuggestionChips
-              options={NAVIGATION_LINK_SUGGESTIONS[key]}
-              onSelect={value => context.setNavigationLinkValue(key, value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    }
-    case 'navigation.links.loginCta':
-      return {
-        title: "Bouton d'accès équipe",
-        content: (
-          <FieldCard label="Bouton d'accès équipe" htmlFor="nav-login">
-            {renderRichTextField(
-              'navigation.links.loginCta',
-              draft.navigation.links.loginCta,
-              (text, rich) => context.setNavigationLinkValue('loginCta', text, rich),
-            )}
-            <SuggestionChips
-              options={NAVIGATION_LINK_SUGGESTIONS.loginCta}
-              onSelect={value => context.setNavigationLinkValue('loginCta', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'navigation.brandLogo':
-      return {
-        title: 'Logo principal',
-        content: (
-          <MediaInputField
-            field="navigation.brandLogo"
-            label={IMAGE_FIELD_LABELS['navigation.brandLogo']}
-            value={draft.navigation.brandLogo}
-            imageErrors={imageErrors}
-            handleImageInputChange={context.handleImageInputChange}
-            handleImageUpload={context.handleImageUpload}
-            handleClearImage={context.handleClearImage}
-            isUploading={context.isUploading}
-            onOpenAssets={field => onOpenAssets(field)}
-          />
-        ),
-      };
-    case 'navigation.staffLogo':
-      return {
-        title: "Logo d'accès équipe",
-        content: (
-          <MediaInputField
-            field="navigation.staffLogo"
-            label={IMAGE_FIELD_LABELS['navigation.staffLogo']}
-            value={draft.navigation.staffLogo}
-            imageErrors={imageErrors}
-            handleImageInputChange={context.handleImageInputChange}
-            handleImageUpload={context.handleImageUpload}
-            handleClearImage={context.handleClearImage}
-            isUploading={context.isUploading}
-            onOpenAssets={field => onOpenAssets(field)}
-          />
-        ),
-      };
-    case 'navigation.style.background':
-      return {
-        title: IMAGE_FIELD_LABELS['navigation.style.background'],
-        content: renderBackgroundEditor('navigation'),
-      };
-    case 'hero.title':
-      return {
-        title: 'Titre principal',
-        content: (
-          <FieldCard label="Titre principal" htmlFor="hero-title">
-            {renderRichTextField('hero.title', draft.hero.title, (text, rich) =>
-              context.setHeroFieldValue('title', text, rich),
-            )}
-            <SuggestionChips
-              options={HERO_TITLE_SUGGESTIONS}
-              onSelect={value => context.setHeroFieldValue('title', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'hero.subtitle':
-      return {
-        title: 'Sous-titre',
-        content: (
-          <FieldCard label="Sous-titre" htmlFor="hero-subtitle">
-            {renderRichTextField('hero.subtitle', draft.hero.subtitle, (text, rich) =>
-              context.setHeroFieldValue('subtitle', text, rich),
-            )}
-            <SuggestionChips
-              options={HERO_SUBTITLE_SUGGESTIONS}
-              onSelect={value => context.setHeroFieldValue('subtitle', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'hero.ctaLabel':
-      return {
-        title: 'CTA principal',
-        content: (
-          <FieldCard label="CTA principal" htmlFor="hero-cta">
-            {renderRichTextField('hero.ctaLabel', draft.hero.ctaLabel, (text, rich) =>
-              context.setHeroFieldValue('ctaLabel', text, rich),
-            )}
-            <SuggestionChips
-              options={HERO_CTA_SUGGESTIONS}
-              onSelect={value => context.setHeroFieldValue('ctaLabel', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'hero.reorderCtaLabel':
-      return {
-        title: 'CTA historique',
-        content: (
-          <FieldCard label="CTA historique" htmlFor="hero-reorder">
-            {renderRichTextField('hero.reorderCtaLabel', draft.hero.reorderCtaLabel, (text, rich) =>
-              context.setHeroFieldValue('reorderCtaLabel', text, rich),
-            )}
-            <SuggestionChips
-              options={HERO_REORDER_SUGGESTIONS}
-              onSelect={value => context.setHeroFieldValue('reorderCtaLabel', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'hero.historyTitle':
-      return {
-        title: 'Titre du bloc historique',
-        content: (
-          <FieldCard label="Titre du bloc historique" htmlFor="hero-history">
-            {renderRichTextField('hero.historyTitle', draft.hero.historyTitle, (text, rich) =>
-              context.setHeroFieldValue('historyTitle', text, rich),
-            )}
-            <SuggestionChips
-              options={HERO_HISTORY_TITLE_SUGGESTIONS}
-              onSelect={value => context.setHeroFieldValue('historyTitle', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'hero.backgroundImage':
-      return {
-        title: 'Visuel de fond',
-        content: (
-          <MediaInputField
-            field="hero.backgroundImage"
-            label={IMAGE_FIELD_LABELS['hero.backgroundImage']}
-            value={draft.hero.backgroundImage}
-            imageErrors={imageErrors}
-            handleImageInputChange={context.handleImageInputChange}
-            handleImageUpload={context.handleImageUpload}
-            handleClearImage={context.handleClearImage}
-            isUploading={context.isUploading}
-            onOpenAssets={field => onOpenAssets(field)}
-          />
-        ),
-      };
-    case 'hero.style.background':
-      return {
-        title: IMAGE_FIELD_LABELS['hero.style.background'],
-        content: renderBackgroundEditor('hero'),
-      };
-    case 'about.title':
-      return {
-        title: 'Titre',
-        content: (
-          <FieldCard label="Titre" htmlFor="about-title">
-            {renderRichTextField('about.title', draft.about.title, (text, rich) =>
-              context.setAboutTitleValue(text, rich),
-            )}
-            <SuggestionChips
-              options={ABOUT_TITLE_SUGGESTIONS}
-              onSelect={value => context.setAboutTitleValue(value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'about.description':
-      return {
-        title: 'Description',
-        content: (
-          <FieldCard label="Description" htmlFor="about-description">
-            {renderRichTextField('about.description', draft.about.description, (text, rich) =>
-              context.setAboutDescriptionValue(text, rich),
-            )}
-            <SuggestionChips
-              options={ABOUT_DESCRIPTION_SUGGESTIONS}
-              onSelect={value => context.setAboutDescriptionValue(value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'about.image':
-      return {
-        title: 'Image de section',
-        content: (
-          <MediaInputField
-            field="about.image"
-            label={IMAGE_FIELD_LABELS['about.image']}
-            value={draft.about.image}
-            imageErrors={imageErrors}
-            handleImageInputChange={context.handleImageInputChange}
-            handleImageUpload={context.handleImageUpload}
-            handleClearImage={context.handleClearImage}
-            isUploading={context.isUploading}
-            onOpenAssets={field => onOpenAssets(field)}
-          />
-        ),
-      };
-    case 'about.style.background':
-      return {
-        title: IMAGE_FIELD_LABELS['about.style.background'],
-        content: renderBackgroundEditor('about'),
-      };
-    case 'menu.title':
-      return {
-        title: 'Titre',
-        content: (
-          <FieldCard label="Titre" htmlFor="menu-title">
-            {renderRichTextField('menu.title', draft.menu.title, (text, rich) =>
-              context.setMenuFieldValue('title', text, rich),
-            )}
-          </FieldCard>
-        ),
-      };
-    case 'menu.ctaLabel':
-      return {
-        title: 'CTA',
-        content: (
-          <FieldCard label="CTA" htmlFor="menu-cta">
-            {renderRichTextField('menu.ctaLabel', draft.menu.ctaLabel, (text, rich) =>
-              context.setMenuFieldValue('ctaLabel', text, rich),
-            )}
-            <SuggestionChips
-              options={MENU_CTA_SUGGESTIONS}
-              onSelect={value => context.setMenuFieldValue('ctaLabel', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'menu.loadingLabel':
-      return {
-        title: 'Message de chargement',
-        content: (
-          <FieldCard label="Message de chargement" htmlFor="menu-loading">
-            {renderRichTextField('menu.loadingLabel', draft.menu.loadingLabel, (text, rich) =>
-              context.setMenuFieldValue('loadingLabel', text, rich),
-            )}
-            <SuggestionChips
-              options={MENU_LOADING_SUGGESTIONS}
-              onSelect={value => context.setMenuFieldValue('loadingLabel', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'menu.image':
-      return {
-        title: 'Visuel de la section menu',
-        content: (
-          <MediaInputField
-            field="menu.image"
-            label={IMAGE_FIELD_LABELS['menu.image']}
-            value={draft.menu.image}
-            imageErrors={imageErrors}
-            handleImageInputChange={context.handleImageInputChange}
-            handleImageUpload={context.handleImageUpload}
-            handleClearImage={context.handleClearImage}
-            isUploading={context.isUploading}
-            onOpenAssets={field => onOpenAssets(field)}
-          />
-        ),
-      };
-    case 'menu.style.background':
-      return {
-        title: IMAGE_FIELD_LABELS['menu.style.background'],
-        content: renderBackgroundEditor('menu'),
-      };
-    case 'contact.title':
-      return {
-        title: 'Titre',
-        content: (
-          <FieldCard label="Titre" htmlFor="contact-title">
-            {renderRichTextField('contact.title', draft.contact.title, (text, rich) =>
-              context.setContactFieldValue('title', text, rich),
-            )}
-          </FieldCard>
-        ),
-      };
-    case 'contact.addressLabel':
-      return {
-        title: 'Label adresse',
-        content: (
-          <FieldCard label="Label adresse" htmlFor="contact-address-label">
-            {renderRichTextField('contact.addressLabel', draft.contact.addressLabel, (text, rich) =>
-              context.setContactFieldValue('addressLabel', text, rich),
-            )}
-          </FieldCard>
-        ),
-      };
-    case 'contact.address':
-      return {
-        title: 'Adresse',
-        content: (
-          <FieldCard label="Adresse" htmlFor="contact-address">
-            {renderRichTextField('contact.address', draft.contact.address, (text, rich) =>
-              context.setContactFieldValue('address', text, rich),
-            )}
-            <SuggestionChips
-              options={CONTACT_ADDRESS_SUGGESTIONS}
-              onSelect={value => context.setContactFieldValue('address', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'contact.phoneLabel':
-      return {
-        title: 'Label téléphone',
-        content: (
-          <FieldCard label="Label téléphone" htmlFor="contact-phone-label">
-            {renderRichTextField('contact.phoneLabel', draft.contact.phoneLabel, (text, rich) =>
-              context.setContactFieldValue('phoneLabel', text, rich),
-            )}
-          </FieldCard>
-        ),
-      };
-    case 'contact.phone':
-      return {
-        title: 'Téléphone',
-        content: (
-          <FieldCard label="Téléphone" htmlFor="contact-phone">
-            {renderRichTextField('contact.phone', draft.contact.phone, (text, rich) =>
-              context.setContactFieldValue('phone', text, rich),
-            )}
-            <SuggestionChips
-              options={CONTACT_PHONE_SUGGESTIONS}
-              onSelect={value => context.setContactFieldValue('phone', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'contact.emailLabel':
-      return {
-        title: 'Label email',
-        content: (
-          <FieldCard label="Label email" htmlFor="contact-email-label">
-            {renderRichTextField('contact.emailLabel', draft.contact.emailLabel, (text, rich) =>
-              context.setContactFieldValue('emailLabel', text, rich),
-            )}
-          </FieldCard>
-        ),
-      };
-    case 'contact.email':
-      return {
-        title: 'Email',
-        content: (
-          <FieldCard label="Email" htmlFor="contact-email">
-            {renderRichTextField('contact.email', draft.contact.email, (text, rich) =>
-              context.setContactFieldValue('email', text, rich),
-            )}
-            <SuggestionChips
-              options={CONTACT_EMAIL_SUGGESTIONS}
-              onSelect={value => context.setContactFieldValue('email', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'contact.image':
-      return {
-        title: 'Visuel de la section contact',
-        content: (
-          <MediaInputField
-            field="contact.image"
-            label={IMAGE_FIELD_LABELS['contact.image']}
-            value={draft.contact.image}
-            imageErrors={imageErrors}
-            handleImageInputChange={context.handleImageInputChange}
-            handleImageUpload={context.handleImageUpload}
-            handleClearImage={context.handleClearImage}
-            isUploading={context.isUploading}
-            onOpenAssets={field => onOpenAssets(field)}
-          />
-        ),
-      };
-    case 'contact.style.background':
-      return {
-        title: IMAGE_FIELD_LABELS['contact.style.background'],
-        content: renderBackgroundEditor('contact'),
-      };
-    case 'findUs.title':
-      return {
-        title: 'Titre',
-        content: (
-          <FieldCard label="Titre" htmlFor="find-us-title">
-            {renderRichTextField('findUs.title', draft.findUs.title, (text, rich) =>
-              context.setFindUsFieldValue('title', text, rich),
-            )}
-            <SuggestionChips
-              options={FIND_US_TITLE_SUGGESTIONS}
-              onSelect={value => context.setFindUsFieldValue('title', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'findUs.addressLabel':
-      return {
-        title: 'Label adresse',
-        content: (
-          <FieldCard label="Label adresse" htmlFor="find-us-address-label">
-            {renderRichTextField('findUs.addressLabel', draft.findUs.addressLabel, (text, rich) =>
-              context.setFindUsFieldValue('addressLabel', text, rich),
-            )}
-            <SuggestionChips
-              options={FIND_US_ADDRESS_LABEL_SUGGESTIONS}
-              onSelect={value => context.setFindUsFieldValue('addressLabel', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'findUs.address':
-      return {
-        title: 'Adresse',
-        content: (
-          <FieldCard label="Adresse" htmlFor="find-us-address">
-            {renderRichTextField('findUs.address', draft.findUs.address, (text, rich) =>
-              context.setFindUsFieldValue('address', text, rich),
-            )}
-            <SuggestionChips
-              options={FIND_US_ADDRESS_SUGGESTIONS}
-              onSelect={value => context.setFindUsFieldValue('address', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'findUs.cityLabel':
-      return {
-        title: 'Label email',
-        content: (
-          <FieldCard label="Label email" htmlFor="find-us-city-label">
-            {renderRichTextField('findUs.cityLabel', draft.findUs.cityLabel, (text, rich) =>
-              context.setFindUsFieldValue('cityLabel', text, rich),
-            )}
-            <SuggestionChips
-              options={FIND_US_CITY_LABEL_SUGGESTIONS}
-              onSelect={value => context.setFindUsFieldValue('cityLabel', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'findUs.city':
-      return {
-        title: 'Email',
-        content: (
-          <FieldCard label="Email" htmlFor="find-us-city">
-            {renderRichTextField('findUs.city', draft.findUs.city, (text, rich) =>
-              context.setFindUsFieldValue('city', text, rich),
-            )}
-            <SuggestionChips
-              options={FIND_US_CITY_SUGGESTIONS}
-              onSelect={value => context.setFindUsFieldValue('city', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'findUs.hoursLabel':
-      return {
-        title: 'Label horaires',
-        content: (
-          <FieldCard label="Label horaires" htmlFor="find-us-hours-label">
-            {renderRichTextField('findUs.hoursLabel', draft.findUs.hoursLabel, (text, rich) =>
-              context.setFindUsFieldValue('hoursLabel', text, rich),
-            )}
-            <SuggestionChips
-              options={FIND_US_HOURS_LABEL_SUGGESTIONS}
-              onSelect={value => context.setFindUsFieldValue('hoursLabel', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'findUs.hours':
-      return {
-        title: 'Horaires',
-        content: (
-          <FieldCard label="Horaires" htmlFor="find-us-hours">
-            {renderRichTextField('findUs.hours', draft.findUs.hours, (text, rich) =>
-              context.setFindUsFieldValue('hours', text, rich),
-            )}
-            <SuggestionChips
-              options={FIND_US_HOURS_SUGGESTIONS}
-              onSelect={value => context.setFindUsFieldValue('hours', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'findUs.mapLabel':
-      return {
-        title: 'Libellé du lien carte',
-        content: (
-          <FieldCard label="Libellé du lien carte" htmlFor="find-us-map-label">
-            {renderRichTextField('findUs.mapLabel', draft.findUs.mapLabel, (text, rich) =>
-              context.setFindUsFieldValue('mapLabel', text, rich),
-            )}
-            <SuggestionChips
-              options={FIND_US_MAP_LABEL_SUGGESTIONS}
-              onSelect={value => context.setFindUsFieldValue('mapLabel', value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'findUs.style.background':
-      return {
-        title: IMAGE_FIELD_LABELS['findUs.style.background'],
-        content: renderBackgroundEditor('findUs'),
-      };
-    case 'footer.text':
-      return {
-        title: 'Texte de pied de page',
-        content: (
-          <FieldCard label="Texte" htmlFor="footer-text">
-            {renderRichTextField('footer.text', draft.footer.text, (text, rich) =>
-              context.setFooterTextValue(text, rich),
-            )}
-            <SuggestionChips
-              options={FOOTER_TEXT_SUGGESTIONS}
-              onSelect={value => context.setFooterTextValue(value, null)}
-            />
-          </FieldCard>
-        ),
-      };
-    case 'footer.style.background':
-      return {
-        title: IMAGE_FIELD_LABELS['footer.style.background'],
-        content: renderBackgroundEditor('footer'),
-      };
-    default:
-      return null;
-  }
-};
-
-const ElementEditorModal: React.FC<{
-  active: ActiveElementState | null;
-  context: EditorContext;
-  onClose: () => void;
-  onOpenAssets: (field?: ImageFieldKey) => void;
-}> = ({ active, context, onClose, onOpenAssets }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [position, setPosition] = useState<{
-    top: number | string;
-    left: number | string;
-    transform?: string;
-    width: number;
-  }>({
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 360,
-  });
-
-  useLayoutEffect(() => {
-    if (!active) {
-      return;
-    }
-
-    const updatePosition = () => {
-      if (typeof window === 'undefined') {
-        return;
-      }
-      const width = Math.min(420, window.innerWidth - 32);
-      if (active.anchor) {
-        const anchor = active.anchor;
-        const left = Math.min(
-          Math.max(16, anchor.left + anchor.width / 2 - width / 2),
-          Math.max(16, window.innerWidth - width - 16),
-        );
-        const top = Math.min(Math.max(16, anchor.bottom + 12), Math.max(16, window.innerHeight - 16));
-        setPosition({ top, left, width });
-      } else {
-        setPosition({ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width });
-      }
-    };
-
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
-    return () => {
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-    };
-  }, [active]);
-
-  useEffect(() => {
-    if (!active) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      } else if (event.key === 'Tab') {
-        const container = containerRef.current;
-        if (!container) {
-          return;
-        }
-        const focusable = Array.from(
-          container.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-          ),
-        );
-        if (focusable.length === 0) {
-          return;
-        }
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (event.shiftKey) {
-          if (document.activeElement === first || !container.contains(document.activeElement)) {
-            last.focus();
-            event.preventDefault();
-          }
-        } else if (document.activeElement === last) {
-          first.focus();
-          event.preventDefault();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [active, onClose]);
-
-  useEffect(() => {
-    if (!active) {
-      return;
-    }
-    const frame = window.setTimeout(() => {
-      const container = containerRef.current;
-      if (!container) {
-        return;
-      }
-      const focusTarget =
-        container.querySelector<HTMLElement>(
-          'input, textarea, select, button:not([data-close="true"]), [tabindex]:not([tabindex="-1"])',
-        ) ?? container;
-      focusTarget.focus({ preventScroll: true });
-    }, 0);
-    return () => window.clearTimeout(frame);
-  }, [active]);
-
-  if (!active) {
-    return null;
-  }
-
-  const zone = resolveZoneFromElement(active.element);
-  const zoneMetadata = ZONE_STEPS.find(step => step.key === zone);
-  const config = getElementEditorConfig(active.element, context, onOpenAssets);
-
-  if (!config) {
-    return null;
-  }
-
-  const dialogStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: position.top,
-    left: position.left,
-    width: position.width,
-    maxWidth: 'calc(100% - 32px)',
-  };
-
-  if (position.transform) {
-    dialogStyle.transform = position.transform;
-  }
-
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-slate-900/40" aria-hidden="true" onClick={onClose} />
-      <div
-        ref={containerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="element-editor-title"
-        aria-describedby={config.description ? 'element-editor-description' : undefined}
-        className="pointer-events-auto"
-        style={dialogStyle}
-        tabIndex={-1}
-      >
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl focus:outline-none">
-          <header className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              {zoneMetadata && (
-                <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
-                  {zoneMetadata.label}
-                </p>
-              )}
-              <h2 id="element-editor-title" className="text-lg font-semibold text-slate-900">
-                {config.title}
-              </h2>
-              {config.description && (
-                <p id="element-editor-description" className="text-sm text-slate-500">
-                  {config.description}
-                </p>
-              )}
-            </div>
-            <button
-              type="button"
-              data-close="true"
-              onClick={onClose}
-              className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
-              aria-label="Fermer l’éditeur"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </header>
-          <div className="mt-4 space-y-4">
-            {config.content}
-            <ZoneStyleEditor
-              zone={zone}
-              style={context.draft[zone].style}
-              activeElement={active.element}
-              elementStyle={context.draft.elementStyles[active.element]}
-              fontOptions={context.fontOptions}
-              fontSizeOptions={context.fontSizeOptions}
-              handleStyleFontFamilyChange={context.handleStyleFontFamilyChange}
-              handleStyleFontSizeChange={context.handleStyleFontSizeChange}
-              handleStyleTextColorChange={context.handleStyleTextColorChange}
-              handleStyleBackgroundColorChange={context.handleStyleBackgroundColorChange}
-              handleStyleBackgroundTypeChange={context.handleStyleBackgroundTypeChange}
-              handleElementStyleChange={context.handleElementStyleChange}
-              handleElementStyleReset={context.handleElementStyleReset}
-              handleImageInputChange={context.handleImageInputChange}
-              handleImageUpload={context.handleImageUpload}
-              handleClearImage={context.handleClearImage}
-              imageErrors={context.imageErrors}
-              isUploading={context.isUploading}
-              onOpenAssets={field => onOpenAssets(field)}
-              showZoneControls={false}
-            />
-          </div>
-          <footer className="mt-6 flex justify-end">
-            <button type="button" className="ui-btn ui-btn-secondary" onClick={onClose}>
-              Fermer
-            </button>
-          </footer>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const FloatingZoneEditor: React.FC<{
-  zone: EditableZoneKey;
-  activeElement: EditableElementKey | null;
-  guidedMode: boolean;
-  containerRef: React.RefObject<HTMLDivElement>;
-  checklist: ChecklistItem[];
-  zoneStatuses: ZoneStatusRecord;
-  onClose: () => void;
-  onNavigate: (zone: EditableZoneKey) => void;
-  onOpenAssets: (field?: ImageFieldKey) => void;
-  context: EditorContext;
-}> = ({
-  zone,
-  activeElement,
-  guidedMode,
-  containerRef,
-  checklist,
-  zoneStatuses,
-  onClose,
-  onNavigate,
-  onOpenAssets,
-  context,
-}) => {
-  const metadata = ZONE_STEPS.find(step => step.key === zone)!;
-  const currentIndex = ZONE_ORDER.indexOf(zone);
-  const previousZone = currentIndex > 0 ? ZONE_ORDER[currentIndex - 1] : null;
-  const nextZone = currentIndex < ZONE_ORDER.length - 1 ? ZONE_ORDER[currentIndex + 1] : null;
-  const status = zoneStatuses[zone];
-  const statusLabel =
-    status === 'done' ? 'Complet' : status === 'progress' ? 'En cours' : 'À compléter';
-  const statusClasses =
-    status === 'done'
-      ? 'bg-emerald-50 text-emerald-600'
-      : status === 'progress'
-      ? 'bg-brand-primary/10 text-brand-primary'
-      : 'bg-slate-100 text-slate-500';
-
-  const [cardStyle, setCardStyle] = useState<{ top: number; left: number; width: number }>({
-    top: 24,
-    left: 24,
-    width: 420,
-  });
-  const [showHelper, setShowHelper] = useState(false);
-
-  useEffect(() => setShowHelper(false), [zone]);
-
-  useLayoutEffect(() => {
-    const updatePosition = () => {
-      const container = containerRef.current;
-      if (!container) {
-        return;
-      }
-      const containerRect = container.getBoundingClientRect();
-      const width = Math.min(420, containerRect.width - 32);
-      const left = Math.min(
-        Math.max(16, containerRect.width / 2 - width / 2),
-        Math.max(16, containerRect.width - width - 16),
-      );
-      const top = 24;
-      setCardStyle({ top, left, width });
-    };
-
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    return () => window.removeEventListener('resize', updatePosition);
-  }, [containerRef, zone]);
-
-  if (!containerRef.current) {
-    return null;
-  }
-
-  return (
-    <div className="pointer-events-none absolute inset-0 z-40">
-      <div
-        className="pointer-events-auto"
-        style={{
-          position: 'absolute',
-          top: cardStyle.top,
-          left: cardStyle.left,
-          width: cardStyle.width,
-          maxWidth: 'calc(100% - 32px)',
-        }}
-      >
-        <div className="rounded-[28px] border border-slate-200 bg-white/95 p-6 shadow-xl backdrop-blur">
-          <header className="flex items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brand-primary">
-                <span>
-                  Étape {currentIndex + 1}/{ZONE_ORDER.length}
-                </span>
-                <span className={`rounded-full px-3 py-1 text-[10px] font-medium ${statusClasses}`}>{statusLabel}</span>
+            {error && (
+              <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                <AlertTriangle className="mt-0.5 h-4 w-4" aria-hidden="true" />
+                <p>{error}</p>
               </div>
-              <h2 className="text-lg font-semibold text-slate-900">{metadata.label}</h2>
-              <p className="text-sm text-slate-500">{metadata.description}</p>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 text-xs font-medium text-brand-primary hover:text-brand-primary/80"
-                onClick={() => setShowHelper(prev => !prev)}
-              >
-                <HelpCircle className="h-4 w-4" aria-hidden="true" /> Aide rapide
-              </button>
-              {showHelper && (
-                <div className="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-3 text-xs text-brand-primary">
-                  {metadata.helper}
-                </div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
-              aria-label="Fermer l’éditeur"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </header>
-
-          <div className="mt-5 space-y-6">
-            {guidedMode && <Checklist items={checklist} />}
-            <ZoneEditorContent zone={zone} context={context} />
-            <ZoneStyleEditor
-              zone={zone}
-              style={context.draft[zone].style}
-              activeElement={activeElement}
-              elementStyle={activeElement ? context.draft.elementStyles[activeElement] : undefined}
-              fontOptions={context.fontOptions}
-              fontSizeOptions={context.fontSizeOptions}
-              handleStyleFontFamilyChange={context.handleStyleFontFamilyChange}
-              handleStyleFontSizeChange={context.handleStyleFontSizeChange}
-              handleStyleTextColorChange={context.handleStyleTextColorChange}
-              handleStyleBackgroundColorChange={context.handleStyleBackgroundColorChange}
-              handleStyleBackgroundTypeChange={context.handleStyleBackgroundTypeChange}
-              handleElementStyleChange={context.handleElementStyleChange}
-              handleElementStyleReset={context.handleElementStyleReset}
-              handleImageInputChange={context.handleImageInputChange}
-              handleImageUpload={context.handleImageUpload}
-              handleClearImage={context.handleClearImage}
-              imageErrors={context.imageErrors}
-              isUploading={context.isUploading}
-              onOpenAssets={field => onOpenAssets(field)}
-            />
-          </div>
-
-          <footer className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {previousZone ? (
-              <button
-                type="button"
-                className="ui-btn ui-btn-ghost"
-                onClick={() => onNavigate(previousZone)}
-              >
-                Retour
-              </button>
-            ) : (
-              <span className="text-xs text-slate-400">Vous êtes au début du parcours guidé</span>
             )}
-            <div className="flex flex-wrap items-center gap-2">
-              <button type="button" className="ui-btn ui-btn-secondary" onClick={() => onOpenAssets()}>
-                Médiathèque
-              </button>
-              <button
-                type="button"
-                className="ui-btn ui-btn-primary inline-flex items-center gap-1"
-                onClick={() => {
-                  if (nextZone) {
-                    onNavigate(nextZone);
-                  } else {
-                    onClose();
-                  }
-                }}
-              >
-                {nextZone ? 'Étape suivante' : 'Terminer'}
-                <ChevronRight className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-          </footer>
-        </div>
-      </div>
-    </div>
+            {previewUrl && (
+              <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <img src={previewUrl} alt="Aperçu" className="h-48 w-full object-cover" />
+              </div>
+            )}
+          </div>
+        )}
+      </form>
+    </Modal>
   );
 };
 
-const AssetLibraryOverlay: React.FC<{
-  open: boolean;
-  onClose: () => void;
-  assets: CustomizationAsset[];
-  uploading: boolean;
-  error: string | null;
-  onUpload: AssetUploadHandler;
-  onRemove: AssetRemoveHandler;
-  onRename: AssetRenameHandler;
-  onApply: AssetApplyHandler;
-  pendingField: ImageFieldKey | null;
-  onPendingFieldUsed: () => void;
-}> = ({
-  open,
-  onClose,
-  assets,
-  uploading,
-  error,
-  onUpload,
-  onRemove,
-  onRename,
-  onApply,
-  pendingField,
-  onPendingFieldUsed,
-}) => {
-  const [filter, setFilter] = useState<'all' | CustomizationAssetType>('all');
-  const [selectedField, setSelectedField] = useState<Record<string, ImageFieldKey | ''>>({});
-  const [multiTargets, setMultiTargets] = useState<Record<string, ImageFieldKey[]>>({});
-  const [copiedAssetId, setCopiedAssetId] = useState<string | null>(null);
+const SiteCustomization: React.FC = () => {
+  const { content, loading, error, updateContent } = useSiteContent();
+  const [draft, setDraft] = useState<SiteContent>(content);
+  const [activeElement, setActiveElement] = useState<EditableElementKey | null>(null);
+  const [activeZone, setActiveZone] = useState<EditableZoneKey | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>('custom');
+  const [saving, setSaving] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
+  const [bestSellerLoading, setBestSellerLoading] = useState<boolean>(false);
+  const [bestSellerError, setBestSellerError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
-    setCopiedAssetId(null);
-  }, [open]);
+    setDraft(content);
+  }, [content]);
 
   useEffect(() => {
-    if (!open || !pendingField) {
-      return;
-    }
-    setSelectedField(prev => {
-      const next = { ...prev };
-      assets.forEach(asset => {
-        if (!next[asset.id]) {
-          next[asset.id] = pendingField;
+    let mounted = true;
+    const fetchBestSellers = async () => {
+      setBestSellerLoading(true);
+      setBestSellerError(null);
+      try {
+        const products = await api.getBestSellerProducts();
+        if (mounted) {
+          setBestSellerProducts(products);
         }
-      });
-      return next;
-    });
-  }, [open, pendingField, assets]);
+      } catch (err) {
+        if (mounted) {
+          setBestSellerError(
+            err instanceof Error
+              ? err.message
+              : 'Impossible de charger les produits mis en avant.',
+          );
+        }
+      } finally {
+        if (mounted) {
+          setBestSellerLoading(false);
+        }
+      }
+    };
 
-  const imageFieldEntries = useMemo(
-    () => (Object.entries(IMAGE_FIELD_LABELS) as [ImageFieldKey, string][]),
+    void fetchBestSellers();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!saveSuccess) {
+      return;
+    }
+    const timeout = setTimeout(() => setSaveSuccess(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [saveSuccess]);
+
+  const applyDraftUpdate = useCallback(
+    (updater: DraftUpdater) => {
+      setDraft(prev => {
+        const clone = cloneSiteContent(prev);
+        return updater(clone);
+      });
+    },
     [],
   );
 
-  const filteredAssets = useMemo(
-    () => (filter === 'all' ? assets : assets.filter(asset => asset.type === filter)),
-    [assets, filter],
+  const appendAssetToDraft = useCallback((asset: CustomizationAsset) => {
+    setDraft(prev => {
+      const clone = cloneSiteContent(prev);
+      appendAsset(clone, asset);
+      return clone;
+    });
+  }, []);
+
+  const handleEdit = useCallback(
+    (element: EditableElementKey, meta: { zone: EditableZoneKey; anchor: DOMRect | null }) => {
+      setActiveElement(element);
+      setActiveZone(meta.zone);
+    },
+    [],
   );
 
-  const handleCopy = async (asset: CustomizationAsset) => {
+  const closeEditor = useCallback(() => {
+    setActiveElement(null);
+    setActiveZone(null);
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(null);
     try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(asset.url);
-        setCopiedAssetId(asset.id);
-      }
-    } catch (clipboardError) {
-      console.warn('Clipboard copy failed', clipboardError);
+      const updated = await updateContent(draft);
+      setDraft(updated);
+      setSaveSuccess('Modifications enregistrées avec succès.');
+    } catch (err) {
+      setSaveError(
+        err instanceof Error ? err.message : 'Une erreur est survenue lors de la sauvegarde.',
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
-  const applyAsset = (field: ImageFieldKey, asset: CustomizationAsset) => {
-    onApply(field, asset);
-    if (pendingField && pendingField === field) {
-      onPendingFieldUsed();
-    }
-  };
+  const fontOptions = useMemo(() => {
+    const base = Array.from(FONT_FAMILY_SUGGESTIONS);
+    const custom = draft.assets.library
+      .filter(asset => asset.type === 'font')
+      .map(asset => sanitizeFontFamilyName(asset.name));
+    return Array.from(new Set([...base, ...custom]));
+  }, [draft.assets.library]);
 
-  const applyMultiple = (asset: CustomizationAsset) => {
-    const targets = multiTargets[asset.id] ?? [];
-    targets.forEach(field => applyAsset(field, asset));
-    setMultiTargets(prev => ({ ...prev, [asset.id]: [] }));
-  };
+  const activeLabel = activeElement ? ELEMENT_LABELS[activeElement] ?? activeElement : null;
+  const elementType = activeElement
+    ? BACKGROUND_ELEMENT_KEYS.has(activeElement)
+      ? 'background'
+      : IMAGE_ELEMENT_KEYS.has(activeElement)
+      ? 'image'
+      : TEXT_ELEMENT_KEYS.has(activeElement)
+      ? 'text'
+      : 'text'
+    : null;
 
-  if (!open) {
-    return null;
+  if (loading) {
+    return (
+      <div className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-3">
+        <Loader2 className="h-10 w-10 animate-spin text-brand-primary" aria-hidden="true" />
+        <p className="text-sm text-slate-500">Chargement du contenu du site…</p>
+      </div>
+    );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-      <div className="relative w-full max-w-5xl rounded-[32px] bg-white p-6 shadow-2xl">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">Médiathèque personnalisée</h2>
-            <p className="text-sm text-slate-500">
-              Glissez vos visuels, vidéos, polices ou sons pour les réutiliser instantanément dans toutes les sections du site.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
-            aria-label="Fermer la médiathèque"
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </header>
-
-        <div className="mt-6 rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 p-4">
-          <label className="flex cursor-pointer flex-col items-start gap-2 text-sm text-slate-600">
-            <span className="inline-flex items-center gap-2 rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-medium text-brand-primary">
-              <Upload className="h-3.5 w-3.5" aria-hidden="true" /> Importer depuis mon ordinateur
-            </span>
-            <span className="text-xs text-slate-400">
-              Formats acceptés : images, vidéos, audio, polices, fichiers compressés…
-            </span>
-            <input
-              type="file"
-              className="hidden"
-              multiple
-              accept="image/*,video/*,audio/*,.ttf,.otf,.woff,.woff2,.zip,.svg,.json,.pdf"
-              onChange={event => {
-                void onUpload(event.target.files);
-                event.target.value = '';
-              }}
-            />
-          </label>
-          {uploading && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Téléversement en cours…
+    <div className="space-y-8">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Site public</h1>
+          <p className="text-sm text-slate-500">
+            Cliquez sur l'icône en forme de crayon pour personnaliser chaque bloc de contenu, image ou logo.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {saveSuccess && (
+            <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              {saveSuccess}
             </div>
           )}
-          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+          {saveError && (
+            <div className="flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-sm text-amber-700">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              {saveError}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleSave}
+            className="ui-btn-primary"
+            disabled={saving}
+          >
+            {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
+          </button>
         </div>
+      </header>
 
-        <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600">
-          {(['all', 'image', 'video', 'audio', 'font', 'raw'] as const).map(key => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setFilter(key)}
-              className={`rounded-full border px-3 py-1 transition ${
-                filter === key
-                  ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
-                  : 'border-slate-200 text-slate-500 hover:border-brand-primary/40 hover:text-brand-primary'
-              }`}
-            >
-              {key === 'all' ? 'Tous' : ASSET_TYPE_LABELS[key]}
-            </button>
-          ))}
+      {error && (
+        <div className="flex items-start gap-3 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+          <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+          <div>
+            <p>{error}</p>
+            <p className="mt-1">Les valeurs affichées correspondent à la configuration par défaut.</p>
+          </div>
         </div>
+      )}
 
-        {filteredAssets.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-6 text-center text-sm text-slate-500">
-            {assets.length === 0
-              ? 'Aucune ressource personnalisée pour le moment. Importez vos premiers fichiers pour les retrouver ici.'
-              : 'Aucune ressource ne correspond à ce filtre.'}
+      <nav className="flex w-full items-center gap-2 rounded-full bg-slate-100 p-1">
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
+              activeTab === tab.id
+                ? 'bg-white text-slate-900 shadow'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      <div>
+        {activeTab === 'preview' ? (
+          <div className="rounded-[2.5rem] border border-slate-200 bg-slate-50 p-6">
+            <SitePreviewCanvas
+              content={draft}
+              bestSellerProducts={bestSellerProducts}
+              onEdit={() => undefined}
+              activeZone={null}
+              showEditButtons={false}
+            />
           </div>
         ) : (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredAssets.map(asset => {
-              const isNew = Date.now() - new Date(asset.createdAt).getTime() < 1000 * 60 * 10;
-              const field = selectedField[asset.id] ?? '';
-              const multi = multiTargets[asset.id] ?? [];
-              return (
-                <div key={asset.id} className="flex h-full flex-col rounded-3xl border border-slate-200 p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-                        <AssetTypeIcon type={asset.type} />
-                      </span>
-                      <div className="min-w-0">
-                        <input
-                          className="w-full truncate rounded-md border border-transparent px-0 text-base font-semibold text-slate-900 focus:border-slate-300 focus:px-2 focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                          value={asset.name}
-                          onChange={event => onRename(asset.id, event.target.value)}
-                        />
-                        <p className="text-xs text-slate-500">
-                          {ASSET_TYPE_LABELS[asset.type]} · {formatBytes(asset.bytes)} ·{' '}
-                          {new Date(asset.createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                    {isNew && (
-                      <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-[10px] font-medium text-brand-primary">
-                        Nouveau
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                    {asset.type === 'image' ? (
-                      <img src={asset.url} alt={asset.name} className="h-40 w-full object-cover" />
-                    ) : (
-                      <div className="flex h-40 items-center justify-center text-slate-400">
-                        <AssetTypeIcon type={asset.type} />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span className="truncate" title={asset.url}>
-                        {asset.url}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <select
-                        className="ui-select flex-1"
-                        value={field}
-                        onChange={event =>
-                          setSelectedField(prev => ({
-                            ...prev,
-                            [asset.id]: event.target.value as ImageFieldKey,
-                          }))
-                        }
-                      >
-                        <option value="">Choisir une section…</option>
-                        {imageFieldEntries.map(([key, label]) => (
-                          <option key={key} value={key}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        className="ui-btn ui-btn-primary"
-                        disabled={!field}
-                        onClick={() => {
-                          if (field) {
-                            applyAsset(field as ImageFieldKey, asset);
-                          }
-                        }}
-                      >
-                        Utiliser
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <button
-                        type="button"
-                        className="ui-btn ui-btn-ghost"
-                        onClick={() => handleCopy(asset)}
-                      >
-                        {copiedAssetId === asset.id ? 'Lien copié !' : 'Copier le lien'}
-                      </button>
-                      <button
-                        type="button"
-                        className="ui-btn ui-btn-ghost"
-                        onClick={() => onRemove(asset.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Supprimer
-                      </button>
-                    </div>
-                    <details className="group rounded-2xl border border-slate-200 p-3 text-xs text-slate-600">
-                      <summary className="flex cursor-pointer items-center justify-between font-medium text-slate-700">
-                        Dupliquer dans…
-                      </summary>
-                      <div className="mt-3 space-y-2">
-                        {imageFieldEntries.map(([key, label]) => {
-                          const selected = multi.includes(key);
-                          return (
-                            <label key={key} className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                                checked={selected}
-                                onChange={() =>
-                                  setMultiTargets(prev => {
-                                    const current = new Set(prev[asset.id] ?? []);
-                                    if (current.has(key)) {
-                                      current.delete(key);
-                                    } else {
-                                      current.add(key);
-                                    }
-                                    return {
-                                      ...prev,
-                                      [asset.id]: Array.from(current),
-                                    };
-                                  })
-                                }
-                              />
-                              <span>{label}</span>
-                            </label>
-                          );
-                        })}
-                        <button
-                          type="button"
-                          className="ui-btn ui-btn-secondary w-full"
-                          disabled={(multiTargets[asset.id] ?? []).length === 0}
-                          onClick={() => applyMultiple(asset)}
-                        >
-                          Appliquer aux sections sélectionnées
-                        </button>
-                      </div>
-                    </details>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="space-y-4">
+            {bestSellerError && (
+              <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+                <p>{bestSellerError}</p>
+              </div>
+            )}
+            <SitePreviewCanvas
+              content={draft}
+              bestSellerProducts={bestSellerProducts}
+              onEdit={(element, meta) => handleEdit(element, meta)}
+              activeZone={activeZone}
+            />
+            {bestSellerLoading && (
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Chargement des produits populaires…
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {activeElement && elementType === 'text' && activeLabel && (
+        <TextElementEditor
+          element={activeElement}
+          label={activeLabel}
+          draft={draft}
+          onApply={applyDraftUpdate}
+          onClose={closeEditor}
+          fontOptions={fontOptions}
+          onAssetAdded={appendAssetToDraft}
+        />
+      )}
+
+      {activeElement && elementType === 'image' && activeLabel && (
+        <ImageElementEditor
+          element={activeElement}
+          label={activeLabel}
+          draft={draft}
+          onApply={applyDraftUpdate}
+          onClose={closeEditor}
+          onAssetAdded={appendAssetToDraft}
+        />
+      )}
+
+      {activeElement && elementType === 'background' && activeLabel && (
+        <BackgroundElementEditor
+          element={activeElement}
+          label={activeLabel}
+          draft={draft}
+          onApply={applyDraftUpdate}
+          onClose={closeEditor}
+          onAssetAdded={appendAssetToDraft}
+        />
+      )}
     </div>
   );
 };
 
-
 export default SiteCustomization;
-

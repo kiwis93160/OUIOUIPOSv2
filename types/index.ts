@@ -29,6 +29,8 @@ export type EditableZoneKey = (typeof EDITABLE_ZONE_KEYS)[number];
 
 export const EDITABLE_ELEMENT_KEYS = [
   'navigation.brand',
+  'navigation.brandLogo',
+  'navigation.staffLogo',
   'navigation.links.home',
   'navigation.links.about',
   'navigation.links.menu',
@@ -78,7 +80,9 @@ export const STYLE_EDITABLE_ELEMENT_KEYS = EDITABLE_ELEMENT_KEYS.filter(
   key =>
     !key.endsWith('.style.background') &&
     !key.endsWith('.image') &&
-    key !== 'hero.backgroundImage',
+    key !== 'hero.backgroundImage' &&
+    key !== 'navigation.brandLogo' &&
+    key !== 'navigation.staffLogo',
 ) as EditableElementKey[];
 
 export interface ElementStyle {
