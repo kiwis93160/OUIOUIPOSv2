@@ -23,7 +23,7 @@ export interface SectionStyle {
   textColor: string;
 }
 
-export const EDITABLE_ZONE_KEYS = ['navigation', 'hero', 'about', 'menu', 'contact', 'footer'] as const;
+export const EDITABLE_ZONE_KEYS = ['navigation', 'hero', 'about', 'menu', 'contact', 'findUs', 'footer'] as const;
 
 export type EditableZoneKey = (typeof EDITABLE_ZONE_KEYS)[number];
 
@@ -59,6 +59,15 @@ export const EDITABLE_ELEMENT_KEYS = [
   'contact.email',
   'contact.image',
   'contact.style.background',
+  'findUs.title',
+  'findUs.addressLabel',
+  'findUs.address',
+  'findUs.cityLabel',
+  'findUs.city',
+  'findUs.hoursLabel',
+  'findUs.hours',
+  'findUs.mapLabel',
+  'findUs.style.background',
   'footer.text',
   'footer.style.background',
 ] as const;
@@ -151,6 +160,17 @@ export interface SiteContent {
     emailLabel: string;
     email: string;
     image: string | null;
+    style: SectionStyle;
+  };
+  findUs: {
+    title: string;
+    addressLabel: string;
+    address: string;
+    cityLabel: string;
+    city: string;
+    hoursLabel: string;
+    hours: string;
+    mapLabel: string;
     style: SectionStyle;
   };
   footer: {
