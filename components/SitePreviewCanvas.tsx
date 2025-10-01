@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Edit2, Mail, MapPin, Phone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Edit2, Mail, MapPin, Quote, Star } from 'lucide-react';
 import { EditableElementKey, EditableZoneKey, Product, SiteContent } from '../types';
 import useCustomFonts from '../hooks/useCustomFonts';
 import {
@@ -28,8 +28,8 @@ export const resolveZoneFromElement = (element: EditableElementKey): EditableZon
   if (element.startsWith('menu.')) {
     return 'menu';
   }
-  if (element.startsWith('contact.')) {
-    return 'contact';
+  if (element.startsWith('instagramReviews.')) {
+    return 'instagramReviews';
   }
   if (element.startsWith('findUs.')) {
     return 'findUs';
@@ -162,9 +162,8 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
   const menuBackgroundStyle = createBackgroundStyle(content.menu.style);
   const menuTextStyle = createTextStyle(content.menu.style);
   const menuBodyTextStyle = createBodyTextStyle(content.menu.style);
-  const contactBackgroundStyle = createBackgroundStyle(content.contact.style);
-  const contactTextStyle = createTextStyle(content.contact.style);
-  const contactBodyTextStyle = createBodyTextStyle(content.contact.style);
+  const instagramReviewsBackgroundStyle = createBackgroundStyle(content.instagramReviews.style);
+  const instagramReviewsTextStyle = createTextStyle(content.instagramReviews.style);
   const findUsBackgroundStyle = createBackgroundStyle(content.findUs.style);
   const findUsTextStyle = createTextStyle(content.findUs.style);
   const footerBackgroundStyle = createBackgroundStyle(content.footer.style);
@@ -202,7 +201,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
     hero: content.hero.style,
     about: content.about.style,
     menu: content.menu.style,
-    contact: content.contact.style,
+    instagramReviews: content.instagramReviews.style,
     findUs: content.findUs.style,
     footer: content.footer.style,
   };
@@ -700,159 +699,113 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
         </EditableElement>
       </SectionCard>
 
-      <SectionCard zone="contact" activeZone={activeZone}>
+      <SectionCard zone="instagramReviews" activeZone={activeZone}>
         <EditableElement
-          id="contact.style.background"
-          label="Modifier le fond de la section Contact"
+          id="instagramReviews.style.background"
+          label="Modifier le fond de la section Avis Instagram"
           onEdit={onEdit}
           className="block"
           buttonClassName="right-4 top-4"
         >
-          <section className="section section-surface" style={{ ...contactBackgroundStyle, ...contactTextStyle }}>
-            <div className="section-inner section-inner--wide section-inner--center" style={contactTextStyle}>
-              <EditableElement
-                id="contact.title"
-                label="Modifier le titre Contact"
-                onEdit={onEdit}
-                className="block"
-                buttonClassName="right-0 -top-3"
-              >
-                {renderRichTextElement(
-                  'contact.title',
-                  'h2',
-                  {
-                    className: 'section-title',
-                    style: getElementTextStyle('contact.title'),
-                  },
-                  content.contact.title,
-                )}
-              </EditableElement>
-              {content.contact.image && (
+          <section
+            className="section section-reviews"
+            style={{ ...instagramReviewsBackgroundStyle, ...instagramReviewsTextStyle }}
+          >
+            <div className="section-inner section-inner--wide">
+              <div className="reviews-heading">
                 <EditableElement
-                  id="contact.image"
-                  label="Modifier l'image Contact"
+                  id="instagramReviews.title"
+                  label="Modifier le titre des avis"
                   onEdit={onEdit}
-                  className="mb-8 block"
-                  buttonClassName="right-4 top-4"
+                  className="block"
+                  buttonClassName="right-0 -top-3"
                 >
-                  <img
-                    src={content.contact.image}
-                    alt={content.contact.title}
-                    className="h-64 w-full rounded-xl object-cover shadow-lg"
-                  />
+                  {renderRichTextElement(
+                    'instagramReviews.title',
+                    'h2',
+                    {
+                      className: 'section-title',
+                      style: getElementTextStyle('instagramReviews.title'),
+                    },
+                    content.instagramReviews.title,
+                  )}
                 </EditableElement>
-              )}
-              <div className="contact-grid">
-                <div className="contact-card" style={contactTextStyle}>
-                  <MapPin className="contact-card__icon" />
-                  <EditableElement
-                    id="contact.addressLabel"
-                    label="Modifier le libellé de l'adresse"
-                    onEdit={onEdit}
-                    className="block"
-                    buttonClassName="right-0 -top-3"
-                  >
-                    {renderRichTextElement(
-                      'contact.addressLabel',
-                      'h3',
-                      {
-                        className: 'contact-card__title',
-                        style: getElementTextStyle('contact.addressLabel'),
-                      },
-                      content.contact.addressLabel,
-                    )}
-                  </EditableElement>
-                  <EditableElement
-                    id="contact.address"
-                    label="Modifier l'adresse"
-                    onEdit={onEdit}
-                    className="mt-1 block"
-                    buttonClassName="right-0 -top-3"
-                  >
-                    {renderRichTextElement(
-                      'contact.address',
-                      'p',
-                      {
-                        className: 'contact-card__text',
-                        style: getElementBodyTextStyle('contact.address'),
-                      },
-                      content.contact.address,
-                    )}
-                  </EditableElement>
+                <EditableElement
+                  id="instagramReviews.subtitle"
+                  label="Modifier le sous-titre des avis"
+                  onEdit={onEdit}
+                  className="mt-3 block"
+                  buttonClassName="right-0 -top-3"
+                >
+                  {renderRichTextElement(
+                    'instagramReviews.subtitle',
+                    'p',
+                    {
+                      className: 'reviews-subtitle',
+                      style: getElementBodyTextStyle('instagramReviews.subtitle'),
+                    },
+                    content.instagramReviews.subtitle,
+                  )}
+                </EditableElement>
+              </div>
+              <div className="reviews-carousel">
+                <div className="reviews-track">
+                  <article className="review-card" aria-hidden={false}>
+                    <div className="review-card__content">
+                      <header className="review-card__header">
+                        <span className="review-card__avatar" aria-hidden="true">
+                          <img src="https://i.pravatar.cc/96?img=12" alt="" />
+                        </span>
+                        <div className="review-card__meta">
+                          <p className="review-card__name">Camila G.</p>
+                          <p className="review-card__handle">@camilafoodie • il y a 2 jours</p>
+                        </div>
+                        <span className="review-card__badge">Instagram</span>
+                      </header>
+                      <div className="review-card__stars" aria-label="Note 5 sur 5">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <Star key={index} aria-hidden="true" />
+                        ))}
+                      </div>
+                      <blockquote className="review-card__quote">
+                        <Quote aria-hidden="true" className="review-card__quote-icon" />
+                        <p>
+                          "Des portions généreuses et des sauces incroyables. On sent que tout est préparé avec passion, vivement la prochaine commande !"
+                        </p>
+                      </blockquote>
+                      <div className="review-card__footer">
+                        <div className="review-card__highlight">
+                          <span className="review-card__story-ring" aria-hidden="true">
+                            <img
+                              src={content.instagramReviews.image ?? 'https://picsum.photos/seed/reviewpreview/160/160'}
+                              alt=""
+                            />
+                          </span>
+                          <div>
+                            <p className="review-card__highlight-title">Story highlight</p>
+                            <p className="review-card__highlight-caption">5 étoiles assurées ✨</p>
+                          </div>
+                        </div>
+                        <p className="review-card__location">Bogotá, CO</p>
+                      </div>
+                    </div>
+                    <div className="review-card__media">
+                      <span className="review-card__media-frame">
+                        <img
+                          src={content.instagramReviews.image ?? 'https://picsum.photos/seed/reviewpreview/320/320'}
+                          alt={content.instagramReviews.title}
+                        />
+                      </span>
+                    </div>
+                  </article>
                 </div>
-                <div className="contact-card" style={contactTextStyle}>
-                  <Phone className="contact-card__icon" />
-                  <EditableElement
-                    id="contact.phoneLabel"
-                    label="Modifier le libellé du téléphone"
-                    onEdit={onEdit}
-                    className="block"
-                    buttonClassName="right-0 -top-3"
-                  >
-                    {renderRichTextElement(
-                      'contact.phoneLabel',
-                      'h3',
-                      {
-                        className: 'contact-card__title',
-                        style: getElementTextStyle('contact.phoneLabel'),
-                      },
-                      content.contact.phoneLabel,
-                    )}
-                  </EditableElement>
-                  <EditableElement
-                    id="contact.phone"
-                    label="Modifier le numéro de téléphone"
-                    onEdit={onEdit}
-                    className="mt-1 block"
-                    buttonClassName="right-0 -top-3"
-                  >
-                    {renderRichTextElement(
-                      'contact.phone',
-                      'p',
-                      {
-                        className: 'contact-card__text',
-                        style: getElementBodyTextStyle('contact.phone'),
-                      },
-                      content.contact.phone,
-                    )}
-                  </EditableElement>
-                </div>
-                <div className="contact-card" style={contactTextStyle}>
-                  <Mail className="contact-card__icon" />
-                  <EditableElement
-                    id="contact.emailLabel"
-                    label="Modifier le libellé de l'email"
-                    onEdit={onEdit}
-                    className="block"
-                    buttonClassName="right-0 -top-3"
-                  >
-                    {renderRichTextElement(
-                      'contact.emailLabel',
-                      'h3',
-                      {
-                        className: 'contact-card__title',
-                        style: getElementTextStyle('contact.emailLabel'),
-                      },
-                      content.contact.emailLabel,
-                    )}
-                  </EditableElement>
-                  <EditableElement
-                    id="contact.email"
-                    label="Modifier l'adresse email"
-                    onEdit={onEdit}
-                    className="mt-1 block"
-                    buttonClassName="right-0 -top-3"
-                  >
-                    {renderRichTextElement(
-                      'contact.email',
-                      'p',
-                      {
-                        className: 'contact-card__text',
-                        style: getElementBodyTextStyle('contact.email'),
-                      },
-                      content.contact.email,
-                    )}
-                  </EditableElement>
+                <div className="reviews-controls" aria-hidden="true">
+                  <button type="button" className="reviews-control" disabled>
+                    <ChevronLeft aria-hidden="true" />
+                  </button>
+                  <button type="button" className="reviews-control" disabled>
+                    <ChevronRight aria-hidden="true" />
+                  </button>
                 </div>
               </div>
             </div>

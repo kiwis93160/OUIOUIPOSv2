@@ -23,7 +23,7 @@ export interface SectionStyle {
   textColor: string;
 }
 
-export const EDITABLE_ZONE_KEYS = ['navigation', 'hero', 'about', 'menu', 'contact', 'findUs', 'footer'] as const;
+export const EDITABLE_ZONE_KEYS = ['navigation', 'hero', 'about', 'menu', 'instagramReviews', 'findUs', 'footer'] as const;
 
 export type EditableZoneKey = (typeof EDITABLE_ZONE_KEYS)[number];
 
@@ -52,15 +52,10 @@ export const EDITABLE_ELEMENT_KEYS = [
   'menu.loadingLabel',
   'menu.image',
   'menu.style.background',
-  'contact.title',
-  'contact.addressLabel',
-  'contact.address',
-  'contact.phoneLabel',
-  'contact.phone',
-  'contact.emailLabel',
-  'contact.email',
-  'contact.image',
-  'contact.style.background',
+  'instagramReviews.title',
+  'instagramReviews.subtitle',
+  'instagramReviews.image',
+  'instagramReviews.style.background',
   'findUs.title',
   'findUs.addressLabel',
   'findUs.address',
@@ -155,14 +150,9 @@ export interface SiteContent {
     image: string | null;
     style: SectionStyle;
   };
-  contact: {
+  instagramReviews: {
     title: string;
-    addressLabel: string;
-    address: string;
-    phoneLabel: string;
-    phone: string;
-    emailLabel: string;
-    email: string;
+    subtitle: string;
     image: string | null;
     style: SectionStyle;
   };
