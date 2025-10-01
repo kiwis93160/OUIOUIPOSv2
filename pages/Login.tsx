@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
 import { EditableElementKey, Product, Order } from '../types';
-import { Clock, Mail, MapPin, Phone, Menu, X } from 'lucide-react';
+import { Clock, Mail, MapPin, Phone, Menu, X, ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
@@ -19,6 +19,48 @@ import {
 
 const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
 const DEFAULT_STAFF_LOGO = '/logo-staff.svg';
+
+const INSTAGRAM_REVIEWS = [
+  {
+    id: 'review-laura',
+    name: 'Laura Méndez',
+    handle: '@laurita.eats',
+    avatarUrl: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1521305916504-4a1121188589?auto=format&fit=crop&w=640&q=80',
+    postImageAlt: "Assiette de tacos colorés garnis d'herbes fraîches.",
+    message:
+      'Impossible de résister à leurs tacos al pastor ! Service ultra chaleureux et vibes latinas au top. Je reviens dès la semaine prochaine ✨',
+    highlight: 'Story « Taco Tuesday »',
+    location: 'Bogotá · Service du soir',
+    timeAgo: 'il y a 2 jours',
+  },
+  {
+    id: 'review-camila',
+    name: 'Camila Torres',
+    handle: '@camigoesout',
+    avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1478145046317-39f10e56b5e9?auto=format&fit=crop&w=640&q=80',
+    postImageAlt: 'Gros plan sur des arepas dorées et une sauce maison.',
+    message:
+      'Les arepas croustillantes et le guacamole maison… c’est un 10/10 ! Mention spéciale pour la playlist qui nous transporte direct à Medellín.',
+    highlight: 'Reel « Brunch entre amigas »',
+    location: 'Medellín · Brunch du dimanche',
+    timeAgo: 'il y a 5 jours',
+  },
+  {
+    id: 'review-sebastian',
+    name: 'Sebastián Ruiz',
+    handle: '@ruizhungry',
+    avatarUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=640&q=80',
+    postImageAlt: 'Table conviviale avec plusieurs plats mexicains et des boissons fraîches.',
+    message:
+      'On a privatisé la terrasse pour un afterwork : organisation parfaite, cocktails frais et portions généreuses. La team a adoré !',
+    highlight: 'Post « Team Afterwork »',
+    location: 'Barranquilla · Terrasse privatisée',
+    timeAgo: 'il y a 1 semaine',
+  },
+] as const;
 
 type PinInputProps = {
   pin: string;
@@ -201,6 +243,7 @@ const Login: React.FC = () => {
   const [menuLoading, setMenuLoading] = useState(true);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
+  const [activeReviewIndex, setActiveReviewIndex] = useState(0);
   const findUsMapQuery = [findUs.address, findUs.city].filter(Boolean).join(', ').trim();
   const encodedFindUsQuery = findUsMapQuery.length > 0 ? encodeURIComponent(findUsMapQuery) : '';
   const findUsMapUrl = encodedFindUsQuery
@@ -214,6 +257,17 @@ const Login: React.FC = () => {
   const bestSellerCount = bestSellersToDisplay.length;
   const menuGridClassName = computeMenuGridClassName(bestSellerCount);
   const menuCardClassName = computeMenuCardClassName(bestSellerCount);
+  const instagramReviews = INSTAGRAM_REVIEWS;
+  const reviewCount = instagramReviews.length;
+  const isSingleReview = reviewCount <= 1;
+
+  const handleNextReview = useCallback(() => {
+    setActiveReviewIndex(index => (index + 1) % reviewCount);
+  }, [reviewCount]);
+
+  const handlePreviousReview = useCallback(() => {
+    setActiveReviewIndex(index => (index - 1 + reviewCount) % reviewCount);
+  }, [reviewCount]);
 
   const submitPin = useCallback(async (pinToSubmit: string) => {
     if (loading) return;
@@ -260,6 +314,16 @@ const Login: React.FC = () => {
     };
     fetchMenuPreview();
   }, []);
+
+  useEffect(() => {
+    if (reviewCount <= 1) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setActiveReviewIndex(index => (index + 1) % reviewCount);
+    }, 6500);
+    return () => window.clearInterval(timer);
+  }, [reviewCount]);
 
   useEffect(() => {
     try {
@@ -520,6 +584,110 @@ const Login: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="instagram-reviews-title"
+          className="section section-reviews"
+        >
+          <div className="section-inner section-inner--wide">
+            <div className="reviews-heading">
+              <h2 id="instagram-reviews-title" className="section-title">
+                Ils nous adorent sur Instagram
+              </h2>
+              <p className="reviews-subtitle">
+                Des foodies de toute la Colombie partagent leur coup de cœur pour notre cuisine : ambiance solaire, service
+                attentionné et assiettes qui brillent autant que leurs stories.
+              </p>
+            </div>
+            <div className="reviews-carousel">
+              <div
+                className="reviews-track"
+                style={{ transform: `translateX(-${activeReviewIndex * 100}%)` }}
+              >
+                {instagramReviews.map((review, index) => (
+                  <article
+                    key={review.id}
+                    className="review-card"
+                    aria-hidden={index !== activeReviewIndex}
+                  >
+                    <div className="review-card__content">
+                      <header className="review-card__header">
+                        <span className="review-card__avatar" aria-hidden="true">
+                          <img src={review.avatarUrl} alt="" />
+                        </span>
+                        <div className="review-card__meta">
+                          <p className="review-card__name">{review.name}</p>
+                          <p className="review-card__handle">{review.handle} • {review.timeAgo}</p>
+                        </div>
+                        <span className="review-card__badge">Instagram</span>
+                      </header>
+                      <div className="review-card__stars" aria-label="Note 5 sur 5">
+                        {Array.from({ length: 5 }).map((_, starIndex) => (
+                          <Star key={starIndex} aria-hidden="true" />
+                        ))}
+                      </div>
+                      <blockquote className="review-card__quote">
+                        <Quote aria-hidden="true" className="review-card__quote-icon" />
+                        <p>{review.message}</p>
+                      </blockquote>
+                      <div className="review-card__footer">
+                        <div className="review-card__highlight">
+                          <span className="review-card__story-ring" aria-hidden="true">
+                            <img src={review.postImageUrl} alt="" />
+                          </span>
+                          <div>
+                            <p className="review-card__highlight-title">{review.highlight}</p>
+                            <p className="review-card__highlight-caption">5 étoiles assurées ✨</p>
+                          </div>
+                        </div>
+                        <p className="review-card__location">{review.location}</p>
+                      </div>
+                    </div>
+                    <div className="review-card__media">
+                      <span className="review-card__media-frame">
+                        <img src={review.postImageUrl} alt={review.postImageAlt} />
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              {!isSingleReview && (
+                <div className="reviews-controls">
+                  <button
+                    type="button"
+                    className="reviews-control"
+                    onClick={handlePreviousReview}
+                    aria-label="Voir l'avis précédent"
+                  >
+                    <ChevronLeft aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="reviews-control"
+                    onClick={handleNextReview}
+                    aria-label="Voir l'avis suivant"
+                  >
+                    <ChevronRight aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+            </div>
+            {reviewCount > 1 && (
+              <div className="reviews-pagination" role="tablist" aria-label="Avis Instagram">
+                {instagramReviews.map((review, index) => (
+                  <button
+                    key={review.id}
+                    type="button"
+                    className={`reviews-dot${index === activeReviewIndex ? ' reviews-dot--active' : ''}`}
+                    onClick={() => setActiveReviewIndex(index)}
+                    aria-label={`Afficher l'avis de ${review.name}`}
+                    aria-current={index === activeReviewIndex}
+                  />
+                ))}
               </div>
             )}
           </div>
