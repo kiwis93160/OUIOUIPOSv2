@@ -1,6 +1,31 @@
 import { CSSProperties } from 'react';
 import { ElementStyle, SectionStyle } from '../types';
 
+export const formatFontFamily = (fontFamily?: string | null): string | undefined => {
+  if (!fontFamily) {
+    return fontFamily ?? undefined;
+  }
+
+  const trimmed = fontFamily.trim();
+
+  if (trimmed.length === 0 || trimmed.includes(',')) {
+    return trimmed.length === 0 ? undefined : trimmed;
+  }
+
+  const isQuoted = /^(['"]).*\1$/.test(trimmed);
+  if (isQuoted) {
+    return trimmed;
+  }
+
+  const needsQuoting = /[^a-zA-Z0-9-]/.test(trimmed);
+  if (!needsQuoting) {
+    return trimmed;
+  }
+
+  const escaped = trimmed.replace(/'/g, "\\'");
+  return `'${escaped}'`;
+};
+
 export const createBackgroundStyle = (style: SectionStyle): CSSProperties => {
   if (style.background.type === 'image' && style.background.image) {
     return {
@@ -50,7 +75,7 @@ export const createHeroBackgroundStyle = (
 
 export const createTextStyle = (style: SectionStyle): CSSProperties => ({
   color: style.textColor,
-  fontFamily: style.fontFamily,
+  fontFamily: formatFontFamily(style.fontFamily),
 });
 
 export const createBodyTextStyle = (style: SectionStyle): CSSProperties => ({
@@ -64,7 +89,7 @@ export const createElementTextStyle = (
 ): CSSProperties => {
   const style: CSSProperties = {
     color: elementStyle?.textColor ?? sectionStyle.textColor,
-    fontFamily: elementStyle?.fontFamily ?? sectionStyle.fontFamily,
+    fontFamily: formatFontFamily(elementStyle?.fontFamily ?? sectionStyle.fontFamily),
   };
 
   if (elementStyle?.backgroundColor && elementStyle.backgroundColor.trim().length > 0) {
