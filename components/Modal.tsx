@@ -11,8 +11,6 @@ interface ModalProps {
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
-  if (!isOpen) return null;
-
   const sizeClasses = {
     sm: 'max-w-sm',
     md: 'max-w-lg',
@@ -23,6 +21,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
   const headingId = useId();
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -35,7 +35,9 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose]);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   return (
     <div
