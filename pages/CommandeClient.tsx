@@ -63,7 +63,7 @@ const ItemCustomizationModal: React.FC<ItemCustomizationModalProps> = ({ isOpen,
                         <span className="font-bold text-lg w-8 text-center text-gray-800">{quantity}</span>
                         <button onClick={() => setQuantity(q => q + 1)} className="p-2 rounded-full bg-gray-200 text-gray-800"><Plus size={18}/></button>
                     </div>
-                    <button onClick={handleSave} className="bg-brand-primary text-brand-secondary font-bold py-2 px-6 rounded-lg hover:bg-yellow-400 transition">
+                    <button onClick={handleSave} className="bg-orange-500 text-white font-bold py-2 px-6 rounded-lg transition hover:bg-orange-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-300">
                         Añadir ({formatCurrencyCOP(product.prix_vente * quantity)})
                     </button>
                 </div>
@@ -332,7 +332,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                         </div>
                                         <button
                                             onClick={() => handleReorder(order)}
-                                            className="bg-brand-accent text-white font-semibold py-2 px-4 rounded-lg text-base hover:bg-red-700 transition"
+                                            className="bg-orange-500 text-white font-semibold py-2 px-4 rounded-lg text-base transition hover:bg-orange-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-300"
                                         >
                                             Pedir de nuevo
                                         </button>
@@ -489,30 +489,28 @@ const CommandeClient: React.FC = () => {
     };
 
     return (
-        <div style={heroBackgroundStyle} className="min-h-screen">
-            <div className="bg-slate-950/85 text-slate-100 min-h-screen">
-                <header
-                    className="shadow-md backdrop-blur p-4 sticky top-0 z-40 border-b border-white/40"
-                    style={navigationBackgroundStyle}
-                >
-                    <div className="container mx-auto flex justify-between items-center">
-                        <h1 className="text-2xl font-bold" style={navigationTextStyle}>OUIOUITACOS</h1>
-                        <button
-                            onClick={() => navigate('/login')}
-                            className="flex items-center gap-2 text-sm font-medium transition hover:opacity-80"
-                            style={navigationTextStyle}
-                        >
-                            <ArrowLeft size={16}/> Volver al inicio
-                        </button>
-                    </div>
-                </header>
+        <div style={heroBackgroundStyle} className="min-h-screen text-slate-100">
+            <header
+                className="shadow-md backdrop-blur p-4 sticky top-0 z-40 border-b border-white/40"
+                style={navigationBackgroundStyle}
+            >
+                <div className="container mx-auto flex justify-between items-center">
+                    <h1 className="text-2xl font-bold" style={navigationTextStyle}>OUIOUITACOS</h1>
+                    <button
+                        onClick={() => navigate('/login')}
+                        className="flex items-center gap-2 text-sm font-medium transition hover:opacity-80"
+                        style={navigationTextStyle}
+                    >
+                        <ArrowLeft size={16}/> Volver al inicio
+                    </button>
+                </div>
+            </header>
 
-                {activeOrderId ? (
-                    <CustomerOrderTracker orderId={activeOrderId} onNewOrderClick={handleNewOrder} variant="page" />
-                ) : (
-                    <OrderMenuView onOrderSubmitted={handleOrderSubmitted} />
-                )}
-            </div>
+            {activeOrderId ? (
+                <CustomerOrderTracker orderId={activeOrderId} onNewOrderClick={handleNewOrder} variant="page" />
+            ) : (
+                <OrderMenuView onOrderSubmitted={handleOrderSubmitted} />
+            )}
         </div>
     );
 };
