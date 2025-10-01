@@ -1,9 +1,12 @@
 import React from 'react';
 import { Edit2, Mail, MapPin, Phone } from 'lucide-react';
-import { Product, SiteContent } from '../types';
+import { EditableElementKey, EditableZoneKey, Product, SiteContent } from '../types';
 import {
   createBackgroundStyle,
   createBodyTextStyle,
+  createElementBackgroundStyle,
+  createElementBodyTextStyle,
+  createElementTextStyle,
   createHeroBackgroundStyle,
   createTextStyle,
 } from '../utils/siteStyleHelpers';
@@ -11,43 +14,6 @@ import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
 const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
 const DEFAULT_STAFF_LOGO = '/logo-staff.svg';
-
-export type EditableZoneKey = 'navigation' | 'hero' | 'about' | 'menu' | 'contact' | 'footer';
-
-export type EditableElementKey =
-  | 'navigation.brand'
-  | 'navigation.links.home'
-  | 'navigation.links.about'
-  | 'navigation.links.menu'
-  | 'navigation.links.contact'
-  | 'navigation.links.loginCta'
-  | 'navigation.style.background'
-  | 'hero.title'
-  | 'hero.subtitle'
-  | 'hero.ctaLabel'
-  | 'hero.historyTitle'
-  | 'hero.reorderCtaLabel'
-  | 'hero.backgroundImage'
-  | 'about.title'
-  | 'about.description'
-  | 'about.image'
-  | 'about.style.background'
-  | 'menu.title'
-  | 'menu.ctaLabel'
-  | 'menu.loadingLabel'
-  | 'menu.image'
-  | 'menu.style.background'
-  | 'contact.title'
-  | 'contact.addressLabel'
-  | 'contact.address'
-  | 'contact.phoneLabel'
-  | 'contact.phone'
-  | 'contact.emailLabel'
-  | 'contact.email'
-  | 'contact.image'
-  | 'contact.style.background'
-  | 'footer.text'
-  | 'footer.style.background';
 
 export const resolveZoneFromElement = (element: EditableElementKey): EditableZoneKey => {
   if (element.startsWith('navigation.')) {
@@ -185,6 +151,34 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
   const footerBackgroundStyle = createBackgroundStyle(content.footer.style);
   const footerTextStyle = createBodyTextStyle(content.footer.style);
 
+  const elementStyles = content.elementStyles ?? {};
+
+  const zoneStyleMap: Record<EditableZoneKey, typeof content.navigation.style> = {
+    navigation: content.navigation.style,
+    hero: content.hero.style,
+    about: content.about.style,
+    menu: content.menu.style,
+    contact: content.contact.style,
+    footer: content.footer.style,
+  };
+
+  const getElementStyle = (key: EditableElementKey) => elementStyles[key];
+
+  const getElementTextStyle = (key: EditableElementKey) => {
+    const zone = resolveZoneFromElement(key);
+    return createElementTextStyle(zoneStyleMap[zone], getElementStyle(key));
+  };
+
+  const getElementBodyTextStyle = (key: EditableElementKey) => {
+    const zone = resolveZoneFromElement(key);
+    return createElementBodyTextStyle(zoneStyleMap[zone], getElementStyle(key));
+  };
+
+  const getElementBackgroundStyle = (key: EditableElementKey) => {
+    const zone = resolveZoneFromElement(key);
+    return createElementBackgroundStyle(zoneStyleMap[zone], getElementStyle(key));
+  };
+
   return (
     <div className="space-y-6 rounded-[2.5rem] border border-gray-200 bg-slate-50 p-6 shadow-inner">
       <SectionCard zone="navigation" activeZone={activeZone}>
@@ -211,7 +205,12 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="ml-3 inline-flex items-center"
                   buttonClassName="-right-3 -top-3"
                 >
-                  <span className="login-brand__name">{content.navigation.brand}</span>
+                  <span
+                    className="login-brand__name"
+                    style={getElementTextStyle('navigation.brand')}
+                  >
+                    {content.navigation.brand}
+                  </span>
                 </EditableElement>
               </div>
               <nav className="login-nav" aria-label="Navigation principale">
@@ -223,7 +222,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="inline-flex"
                   buttonClassName="-right-2 -top-2"
                 >
-                  <span className="login-nav__link" style={navigationBodyStyle}>
+                  <span
+                    className="login-nav__link"
+                    style={getElementBodyTextStyle('navigation.links.home')}
+                  >
                     {content.navigation.links.home}
                   </span>
                 </EditableElement>
@@ -235,7 +237,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="inline-flex"
                   buttonClassName="-right-2 -top-2"
                 >
-                  <span className="login-nav__link" style={navigationBodyStyle}>
+                  <span
+                    className="login-nav__link"
+                    style={getElementBodyTextStyle('navigation.links.about')}
+                  >
                     {content.navigation.links.about}
                   </span>
                 </EditableElement>
@@ -247,7 +252,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="inline-flex"
                   buttonClassName="-right-2 -top-2"
                 >
-                  <span className="login-nav__link" style={navigationBodyStyle}>
+                  <span
+                    className="login-nav__link"
+                    style={getElementBodyTextStyle('navigation.links.menu')}
+                  >
                     {content.navigation.links.menu}
                   </span>
                 </EditableElement>
@@ -259,7 +267,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="inline-flex"
                   buttonClassName="-right-2 -top-2"
                 >
-                  <span className="login-nav__link" style={navigationBodyStyle}>
+                  <span
+                    className="login-nav__link"
+                    style={getElementBodyTextStyle('navigation.links.contact')}
+                  >
                     {content.navigation.links.contact}
                   </span>
                 </EditableElement>
@@ -274,7 +285,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   <button
                     type="button"
                     className="login-nav__staff-btn"
-                    style={{ fontFamily: content.navigation.style.fontFamily }}
+                    style={{
+                      ...getElementBodyTextStyle('navigation.links.loginCta'),
+                      ...getElementBackgroundStyle('navigation.links.loginCta'),
+                    }}
                     aria-label={content.navigation.links.loginCta}
                     disabled
                   >
@@ -305,7 +319,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="block"
                   buttonClassName="right-0 -top-3"
                 >
-                  <h2 className="hero-title" style={heroTextStyle}>
+                  <h2 className="hero-title" style={getElementTextStyle('hero.title')}>
                     {content.hero.title}
                   </h2>
                 </EditableElement>
@@ -316,7 +330,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="mt-4 block"
                   buttonClassName="right-0 -top-3"
                 >
-                  <p className="hero-subtitle" style={heroBodyTextStyle}>
+                  <p className="hero-subtitle" style={getElementBodyTextStyle('hero.subtitle')}>
                     {content.hero.subtitle}
                   </p>
                 </EditableElement>
@@ -330,7 +344,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   <button
                     type="button"
                     className="ui-btn ui-btn-accent hero-cta"
-                    style={{ fontFamily: content.hero.style.fontFamily }}
+                    style={{
+                      ...getElementBodyTextStyle('hero.ctaLabel'),
+                      ...getElementBackgroundStyle('hero.ctaLabel'),
+                    }}
                     disabled
                   >
                     {content.hero.ctaLabel}
@@ -340,16 +357,16 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   <EditableElement
                     id="hero.historyTitle"
                     label="Modifier le titre de l'historique"
-                    onEdit={onEdit}
-                    className="block"
-                    buttonClassName="right-0 -top-3"
-                  >
-                    <p className="hero-history__title" style={heroBodyTextStyle}>
-                      {content.hero.historyTitle}
-                    </p>
-                  </EditableElement>
-                  <EditableElement
-                    id="hero.reorderCtaLabel"
+                  onEdit={onEdit}
+                  className="block"
+                  buttonClassName="right-0 -top-3"
+                >
+                  <p className="hero-history__title" style={getElementBodyTextStyle('hero.historyTitle')}>
+                    {content.hero.historyTitle}
+                  </p>
+                </EditableElement>
+                <EditableElement
+                  id="hero.reorderCtaLabel"
                     label="Modifier le bouton de réassort"
                     onEdit={onEdit}
                     className="hero-history__list"
@@ -369,7 +386,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                           <button
                             type="button"
                             className="hero-history__cta"
-                            style={{ fontFamily: content.hero.style.fontFamily }}
+                            style={{
+                              ...getElementBodyTextStyle('hero.reorderCtaLabel'),
+                              ...getElementBackgroundStyle('hero.reorderCtaLabel'),
+                            }}
                             disabled
                           >
                             {content.hero.reorderCtaLabel}
@@ -402,7 +422,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 className="block"
                 buttonClassName="right-0 -top-3"
               >
-                <h2 className="section-title" style={aboutTextStyle}>
+                <h2 className="section-title" style={getElementTextStyle('about.title')}>
                   {content.about.title}
                 </h2>
               </EditableElement>
@@ -413,7 +433,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 className="mt-4 block"
                 buttonClassName="right-0 -top-3"
               >
-                <p className="section-text section-text--muted" style={aboutBodyTextStyle}>
+                <p
+                  className="section-text section-text--muted"
+                  style={getElementBodyTextStyle('about.description')}
+                >
                   {content.about.description}
                 </p>
               </EditableElement>
@@ -454,7 +477,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 className="block"
                 buttonClassName="right-0 -top-3"
               >
-                <h2 className="section-title" style={menuTextStyle}>
+                <h2 className="section-title" style={getElementTextStyle('menu.title')}>
                   {content.menu.title}
                 </h2>
               </EditableElement>
@@ -523,7 +546,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   <button
                     type="button"
                     className="ui-btn ui-btn-primary hero-cta"
-                    style={{ fontFamily: content.menu.style.fontFamily }}
+                    style={{
+                      ...getElementBodyTextStyle('menu.ctaLabel'),
+                      ...getElementBackgroundStyle('menu.ctaLabel'),
+                    }}
                     disabled
                   >
                     {content.menu.ctaLabel}
@@ -536,7 +562,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     buttonClassName="-right-3 -top-3"
                     as="span"
                   >
-                    <p className="section-text section-text--muted" style={menuBodyTextStyle}>
+                    <p
+                      className="section-text section-text--muted"
+                      style={getElementBodyTextStyle('menu.loadingLabel')}
+                    >
                       {content.menu.loadingLabel}
                     </p>
                   </EditableElement>
@@ -564,7 +593,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 className="block"
                 buttonClassName="right-0 -top-3"
               >
-                <h2 className="section-title" style={contactTextStyle}>
+                <h2 className="section-title" style={getElementTextStyle('contact.title')}>
                   {content.contact.title}
                 </h2>
               </EditableElement>
@@ -593,7 +622,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <h3 className="contact-card__title" style={contactTextStyle}>
+                    <h3 className="contact-card__title" style={getElementTextStyle('contact.addressLabel')}>
                       {content.contact.addressLabel}
                     </h3>
                   </EditableElement>
@@ -604,7 +633,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="mt-1 block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <p className="contact-card__text" style={contactBodyTextStyle}>
+                    <p className="contact-card__text" style={getElementBodyTextStyle('contact.address')}>
                       {content.contact.address}
                     </p>
                   </EditableElement>
@@ -618,7 +647,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <h3 className="contact-card__title" style={contactTextStyle}>
+                    <h3 className="contact-card__title" style={getElementTextStyle('contact.phoneLabel')}>
                       {content.contact.phoneLabel}
                     </h3>
                   </EditableElement>
@@ -629,7 +658,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="mt-1 block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <p className="contact-card__text" style={contactBodyTextStyle}>
+                    <p className="contact-card__text" style={getElementBodyTextStyle('contact.phone')}>
                       {content.contact.phone}
                     </p>
                   </EditableElement>
@@ -643,7 +672,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <h3 className="contact-card__title" style={contactTextStyle}>
+                    <h3 className="contact-card__title" style={getElementTextStyle('contact.emailLabel')}>
                       {content.contact.emailLabel}
                     </h3>
                   </EditableElement>
@@ -654,7 +683,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="mt-1 block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <p className="contact-card__text" style={contactBodyTextStyle}>
+                    <p className="contact-card__text" style={getElementBodyTextStyle('contact.email')}>
                       {content.contact.email}
                     </p>
                   </EditableElement>
@@ -682,7 +711,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 className="block"
                 buttonClassName="right-0 -top-3"
               >
-                <p style={footerTextStyle}>
+                <p style={getElementBodyTextStyle('footer.text')}>
                   &copy; {new Date().getFullYear()} {content.navigation.brand}. {content.footer.text}
                 </p>
               </EditableElement>
