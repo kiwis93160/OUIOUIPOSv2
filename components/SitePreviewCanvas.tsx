@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit2, Mail, MapPin, Phone } from 'lucide-react';
+import { Clock, Edit2, Mail, MapPin, Phone } from 'lucide-react';
 import { EditableElementKey, EditableZoneKey, Product, SiteContent } from '../types';
 import useCustomFonts from '../hooks/useCustomFonts';
 import {
@@ -31,6 +31,9 @@ export const resolveZoneFromElement = (element: EditableElementKey): EditableZon
   }
   if (element.startsWith('contact.')) {
     return 'contact';
+  }
+  if (element.startsWith('findUs.')) {
+    return 'findUs';
   }
   if (element.startsWith('footer.')) {
     return 'footer';
@@ -149,6 +152,8 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
   const contactBackgroundStyle = createBackgroundStyle(content.contact.style);
   const contactTextStyle = createTextStyle(content.contact.style);
   const contactBodyTextStyle = createBodyTextStyle(content.contact.style);
+  const findUsBackgroundStyle = createBackgroundStyle(content.findUs.style);
+  const findUsTextStyle = createTextStyle(content.findUs.style);
   const footerBackgroundStyle = createBackgroundStyle(content.footer.style);
   const footerTextStyle = createBodyTextStyle(content.footer.style);
 
@@ -185,6 +190,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
     about: content.about.style,
     menu: content.menu.style,
     contact: content.contact.style,
+    findUs: content.findUs.style,
     footer: content.footer.style,
   };
 
@@ -204,6 +210,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
     const zone = resolveZoneFromElement(key);
     return createElementBackgroundStyle(zoneStyleMap[zone], getElementStyle(key));
   };
+
+  const findUsMapQuery = [content.findUs.address, content.findUs.city].filter(Boolean).join(', ').trim();
+  const encodedFindUsQuery = findUsMapQuery.length > 0 ? encodeURIComponent(findUsMapQuery) : '';
+  const findUsMapUrl = encodedFindUsQuery
+    ? `https://www.google.com/maps?q=${encodedFindUsQuery}`
+    : 'https://www.google.com/maps';
+  const findUsMapEmbedUrl = encodedFindUsQuery
+    ? `https://www.google.com/maps?q=${encodedFindUsQuery}&output=embed`
+    : 'about:blank';
 
   return (
     <div className="space-y-6 rounded-[2.5rem] border border-gray-200 bg-slate-50 p-6 shadow-inner">
@@ -831,6 +846,218 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     )}
                   </EditableElement>
                 </div>
+              </div>
+            </div>
+          </section>
+        </EditableElement>
+      </SectionCard>
+
+      <SectionCard zone="findUs" activeZone={activeZone}>
+        <EditableElement
+          id="findUs.style.background"
+          label="Modifier le fond de la section Encuéntranos"
+          onEdit={onEdit}
+          className="block"
+          buttonClassName="right-4 top-4"
+        >
+          <section className="section section-surface" style={{ ...findUsBackgroundStyle, ...findUsTextStyle }}>
+            <div className="find-us-grid" style={findUsTextStyle}>
+              <div className="find-us-panel" style={findUsTextStyle}>
+                <EditableElement
+                  id="findUs.title"
+                  label="Modifier le titre Encuéntranos"
+                  onEdit={onEdit}
+                  className="block"
+                  buttonClassName="right-0 -top-3"
+                >
+                  {renderRichTextElement(
+                    'findUs.title',
+                    'h2',
+                    {
+                      className: 'section-title',
+                      style: getElementTextStyle('findUs.title'),
+                    },
+                    content.findUs.title,
+                  )}
+                </EditableElement>
+                <div className="find-us-details">
+                  <div className="find-us-detail" style={findUsTextStyle}>
+                    <MapPin className="find-us-detail__icon" aria-hidden="true" />
+                    <div>
+                      <EditableElement
+                        id="findUs.addressLabel"
+                        label="Modifier le libellé de l'adresse"
+                        onEdit={onEdit}
+                        className="block"
+                        buttonClassName="right-0 -top-3"
+                      >
+                        {renderRichTextElement(
+                          'findUs.addressLabel',
+                          'h3',
+                          {
+                            className: 'find-us-detail__title',
+                            style: getElementTextStyle('findUs.addressLabel'),
+                          },
+                          content.findUs.addressLabel,
+                        )}
+                      </EditableElement>
+                      <EditableElement
+                        id="findUs.address"
+                        label="Modifier l'adresse"
+                        onEdit={onEdit}
+                        className="mt-1 block"
+                        buttonClassName="right-0 -top-3"
+                      >
+                        {renderRichTextElement(
+                          'findUs.address',
+                          'p',
+                          {
+                            className: 'find-us-detail__text',
+                            style: getElementBodyTextStyle('findUs.address'),
+                          },
+                          content.findUs.address,
+                        )}
+                      </EditableElement>
+                    </div>
+                  </div>
+                  <div className="find-us-detail" style={findUsTextStyle}>
+                    <MapPin className="find-us-detail__icon" aria-hidden="true" />
+                    <div>
+                      <EditableElement
+                        id="findUs.cityLabel"
+                        label="Modifier le libellé de la ville"
+                        onEdit={onEdit}
+                        className="block"
+                        buttonClassName="right-0 -top-3"
+                      >
+                        {renderRichTextElement(
+                          'findUs.cityLabel',
+                          'h3',
+                          {
+                            className: 'find-us-detail__title',
+                            style: getElementTextStyle('findUs.cityLabel'),
+                          },
+                          content.findUs.cityLabel,
+                        )}
+                      </EditableElement>
+                      <EditableElement
+                        id="findUs.city"
+                        label="Modifier la ville"
+                        onEdit={onEdit}
+                        className="mt-1 block"
+                        buttonClassName="right-0 -top-3"
+                      >
+                        {renderRichTextElement(
+                          'findUs.city',
+                          'p',
+                          {
+                            className: 'find-us-detail__text',
+                            style: getElementBodyTextStyle('findUs.city'),
+                          },
+                          content.findUs.city,
+                        )}
+                      </EditableElement>
+                    </div>
+                  </div>
+                  <div className="find-us-detail" style={findUsTextStyle}>
+                    <Clock className="find-us-detail__icon" aria-hidden="true" />
+                    <div>
+                      <EditableElement
+                        id="findUs.hoursLabel"
+                        label="Modifier le libellé des horaires"
+                        onEdit={onEdit}
+                        className="block"
+                        buttonClassName="right-0 -top-3"
+                      >
+                        {renderRichTextElement(
+                          'findUs.hoursLabel',
+                          'h3',
+                          {
+                            className: 'find-us-detail__title',
+                            style: getElementTextStyle('findUs.hoursLabel'),
+                          },
+                          content.findUs.hoursLabel,
+                        )}
+                      </EditableElement>
+                      <EditableElement
+                        id="findUs.hours"
+                        label="Modifier les horaires"
+                        onEdit={onEdit}
+                        className="mt-1 block"
+                        buttonClassName="right-0 -top-3"
+                      >
+                        {renderRichTextElement(
+                          'findUs.hours',
+                          'p',
+                          {
+                            className: 'find-us-detail__text',
+                            style: getElementBodyTextStyle('findUs.hours'),
+                          },
+                          content.findUs.hours,
+                        )}
+                      </EditableElement>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="find-us-map" style={findUsTextStyle}>
+                {encodedFindUsQuery ? (
+                  <div className="find-us-map__frame">
+                    <iframe
+                      title={`Carte Google Maps pour ${findUsMapQuery}`}
+                      src={findUsMapEmbedUrl}
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                    <a
+                      className="find-us-map__link"
+                      href={findUsMapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <EditableElement
+                        id="findUs.mapLabel"
+                        label="Modifier le libellé du lien Google Maps"
+                        onEdit={onEdit}
+                        className="inline-flex"
+                        buttonClassName="-right-3 -top-3"
+                        as="span"
+                      >
+                        {renderRichTextElement(
+                          'findUs.mapLabel',
+                          'span',
+                          {
+                            className: 'find-us-map__label',
+                            style: getElementBodyTextStyle('findUs.mapLabel'),
+                          },
+                          content.findUs.mapLabel,
+                        )}
+                      </EditableElement>
+                    </a>
+                  </div>
+                ) : (
+                  <div className="find-us-map__placeholder">
+                    <EditableElement
+                      id="findUs.mapLabel"
+                      label="Modifier le libellé du lien Google Maps"
+                      onEdit={onEdit}
+                      className="inline-flex"
+                      buttonClassName="-right-3 -top-3"
+                      as="span"
+                    >
+                      {renderRichTextElement(
+                        'findUs.mapLabel',
+                        'span',
+                        {
+                          className: 'find-us-map__label',
+                          style: getElementBodyTextStyle('findUs.mapLabel'),
+                        },
+                        content.findUs.mapLabel,
+                      )}
+                    </EditableElement>
+                  </div>
+                )}
               </div>
             </div>
           </section>

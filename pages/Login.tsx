@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
 import { EditableElementKey, Product, Order } from '../types';
-import { Mail, MapPin, Phone, Menu, X } from 'lucide-react';
+import { Clock, Mail, MapPin, Phone, Menu, X } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
@@ -147,7 +147,7 @@ const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { content: siteContent } = useSiteContent();
-  const { navigation, hero, about, menu: menuContent, contact, footer } = siteContent;
+  const { navigation, hero, about, menu: menuContent, contact, findUs, footer } = siteContent;
   useCustomFonts(siteContent.assets.library);
   const brandLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const staffLogo = navigation.staffLogo ?? DEFAULT_STAFF_LOGO;
@@ -166,6 +166,9 @@ const Login: React.FC = () => {
   const contactBackgroundStyle = createBackgroundStyle(contact.style);
   const contactTextStyle = createTextStyle(contact.style);
   const contactBodyTextStyle = createBodyTextStyle(contact.style);
+  const findUsBackgroundStyle = createBackgroundStyle(findUs.style);
+  const findUsTextStyle = createTextStyle(findUs.style);
+  const findUsBodyTextStyle = createBodyTextStyle(findUs.style);
   const footerBackgroundStyle = createBackgroundStyle(footer.style);
   const footerTextStyle = createBodyTextStyle(footer.style);
 
@@ -198,6 +201,14 @@ const Login: React.FC = () => {
   const [menuLoading, setMenuLoading] = useState(true);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
+  const findUsMapQuery = [findUs.address, findUs.city].filter(Boolean).join(', ').trim();
+  const encodedFindUsQuery = findUsMapQuery.length > 0 ? encodeURIComponent(findUsMapQuery) : '';
+  const findUsMapUrl = encodedFindUsQuery
+    ? `https://www.google.com/maps?q=${encodedFindUsQuery}`
+    : 'https://www.google.com/maps';
+  const findUsMapEmbedUrl = encodedFindUsQuery
+    ? `https://www.google.com/maps?q=${encodedFindUsQuery}&output=embed`
+    : 'about:blank';
   const activeOrderId = activeOrder?.orderId ?? null;
   const bestSellersToDisplay = bestSellers.slice(0, 6);
   const bestSellerCount = bestSellersToDisplay.length;
@@ -706,6 +717,138 @@ const Login: React.FC = () => {
                   contact.email,
                 )}
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="find-us"
+          className="section section-surface"
+          style={{ ...findUsBackgroundStyle, ...findUsTextStyle }}
+        >
+          <div className="section-inner section-inner--wide find-us-grid" style={findUsTextStyle}>
+            <div className="find-us-panel" style={findUsTextStyle}>
+              {renderRichTextElement(
+                'findUs.title',
+                'h2',
+                {
+                  className: 'section-title',
+                  style: findUsTextStyle,
+                },
+                findUs.title,
+              )}
+              <div className="find-us-details">
+                <div className="find-us-detail" style={findUsTextStyle}>
+                  <MapPin className="find-us-detail__icon" aria-hidden="true" />
+                  <div>
+                    {renderRichTextElement(
+                      'findUs.addressLabel',
+                      'h3',
+                      {
+                        className: 'find-us-detail__title',
+                        style: findUsTextStyle,
+                      },
+                      findUs.addressLabel,
+                    )}
+                    {renderRichTextElement(
+                      'findUs.address',
+                      'p',
+                      {
+                        className: 'find-us-detail__text',
+                        style: findUsBodyTextStyle,
+                      },
+                      findUs.address,
+                    )}
+                  </div>
+                </div>
+                <div className="find-us-detail" style={findUsTextStyle}>
+                  <MapPin className="find-us-detail__icon" aria-hidden="true" />
+                  <div>
+                    {renderRichTextElement(
+                      'findUs.cityLabel',
+                      'h3',
+                      {
+                        className: 'find-us-detail__title',
+                        style: findUsTextStyle,
+                      },
+                      findUs.cityLabel,
+                    )}
+                    {renderRichTextElement(
+                      'findUs.city',
+                      'p',
+                      {
+                        className: 'find-us-detail__text',
+                        style: findUsBodyTextStyle,
+                      },
+                      findUs.city,
+                    )}
+                  </div>
+                </div>
+                <div className="find-us-detail" style={findUsTextStyle}>
+                  <Clock className="find-us-detail__icon" aria-hidden="true" />
+                  <div>
+                    {renderRichTextElement(
+                      'findUs.hoursLabel',
+                      'h3',
+                      {
+                        className: 'find-us-detail__title',
+                        style: findUsTextStyle,
+                      },
+                      findUs.hoursLabel,
+                    )}
+                    {renderRichTextElement(
+                      'findUs.hours',
+                      'p',
+                      {
+                        className: 'find-us-detail__text',
+                        style: findUsBodyTextStyle,
+                      },
+                      findUs.hours,
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="find-us-map" style={findUsTextStyle}>
+              {encodedFindUsQuery ? (
+                <div className="find-us-map__frame">
+                  <iframe
+                    title={`Carte Google Maps pour ${findUsMapQuery}`}
+                    src={findUsMapEmbedUrl}
+                    loading="lazy"
+                    allowFullScreen
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                  <a
+                    className="find-us-map__link"
+                    href={findUsMapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {renderRichTextElement(
+                      'findUs.mapLabel',
+                      'span',
+                      {
+                        className: 'find-us-map__label',
+                        style: findUsBodyTextStyle,
+                      },
+                      findUs.mapLabel,
+                    )}
+                  </a>
+                </div>
+              ) : (
+                <div className="find-us-map__placeholder">
+                  {renderRichTextElement(
+                    'findUs.mapLabel',
+                    'span',
+                    {
+                      className: 'find-us-map__label',
+                      style: findUsBodyTextStyle,
+                    },
+                    findUs.mapLabel,
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </section>

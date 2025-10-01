@@ -295,6 +295,17 @@ const DEFAULT_CONTACT_STYLE: SectionStyle = {
   textColor: '#111827',
 };
 
+export const DEFAULT_FIND_US_STYLE: SectionStyle = {
+  background: {
+    type: 'color',
+    color: '#f8fafc',
+    image: null,
+  },
+  fontFamily: 'Inter',
+  fontSize: '16px',
+  textColor: '#0f172a',
+};
+
 const DEFAULT_FOOTER_STYLE: SectionStyle = {
   background: {
     type: 'color',
@@ -399,6 +410,17 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     image: null,
     style: DEFAULT_CONTACT_STYLE,
   },
+  findUs: {
+    title: 'Encuéntranos',
+    addressLabel: 'Dirección',
+    address: 'Cra 53 #75 - 98',
+    cityLabel: 'Ciudad',
+    city: 'Barranquilla, Colombie',
+    hoursLabel: 'Horarios',
+    hours: 'Lunes a domingo · 11h00 - 23h00',
+    mapLabel: 'Ver en Google Maps',
+    style: DEFAULT_FIND_US_STYLE,
+  },
   footer: {
     text: 'Tous droits réservés.',
     style: DEFAULT_FOOTER_STYLE,
@@ -457,6 +479,17 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
       image: resolveImage(content?.contact?.image, base.contact.image),
       style: resolveSectionStyle(content?.contact?.style, base.contact.style),
     },
+    findUs: {
+      title: resolveString(content?.findUs?.title, base.findUs.title),
+      addressLabel: resolveString(content?.findUs?.addressLabel, base.findUs.addressLabel),
+      address: resolveString(content?.findUs?.address, base.findUs.address),
+      cityLabel: resolveString(content?.findUs?.cityLabel, base.findUs.cityLabel),
+      city: resolveString(content?.findUs?.city, base.findUs.city),
+      hoursLabel: resolveString(content?.findUs?.hoursLabel, base.findUs.hoursLabel),
+      hours: resolveString(content?.findUs?.hours, base.findUs.hours),
+      mapLabel: resolveString(content?.findUs?.mapLabel, base.findUs.mapLabel),
+      style: resolveSectionStyle(content?.findUs?.style, base.findUs.style),
+    },
     footer: {
       text: resolveString(content?.footer?.text, base.footer.text),
       style: resolveSectionStyle(content?.footer?.style, base.footer.style),
@@ -513,6 +546,17 @@ export const sanitizeSiteContentInput = (content: SiteContent): SiteContent => (
     email: trimOrEmpty(content.contact.email),
     image: sanitizeImage(content.contact.image),
     style: sanitizeSectionStyle(content.contact.style, DEFAULT_CONTACT_STYLE),
+  },
+  findUs: {
+    title: trimOrEmpty(content.findUs.title),
+    addressLabel: trimOrEmpty(content.findUs.addressLabel),
+    address: trimOrEmpty(content.findUs.address),
+    cityLabel: trimOrEmpty(content.findUs.cityLabel),
+    city: trimOrEmpty(content.findUs.city),
+    hoursLabel: trimOrEmpty(content.findUs.hoursLabel),
+    hours: trimOrEmpty(content.findUs.hours),
+    mapLabel: trimOrEmpty(content.findUs.mapLabel),
+    style: sanitizeSectionStyle(content.findUs.style, DEFAULT_FIND_US_STYLE),
   },
   footer: {
     text: trimOrEmpty(content.footer.text),

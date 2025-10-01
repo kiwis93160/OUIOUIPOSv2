@@ -134,13 +134,30 @@ const CONTACT_ADDRESS_SUGGESTIONS = [
 const CONTACT_PHONE_SUGGESTIONS = ['+57 320 456 98 12', '+57 311 234 56 78', '+57 315 987 65 43'] as const;
 const CONTACT_EMAIL_SUGGESTIONS = ['hola@ouiouipos.co', 'contact@maison-gourmet.co', 'bonjour@cantinalatina.co'] as const;
 
+const FIND_US_TITLE_SUGGESTIONS = ['Encuéntranos', 'Visítanos hoy', 'Tu próxima parada foodie'] as const;
+const FIND_US_ADDRESS_LABEL_SUGGESTIONS = ['Dirección', 'Ubicación', 'Nos encuentras en'] as const;
+const FIND_US_ADDRESS_SUGGESTIONS = ['Cra 53 #75 - 98', 'Calle 84 #51B - 145', 'Av. Olaya Herrera #70 - 21'] as const;
+const FIND_US_CITY_LABEL_SUGGESTIONS = ['Ciudad', 'Estamos en', 'Localización'] as const;
+const FIND_US_CITY_SUGGESTIONS = [
+  'Barranquilla, Colombie',
+  'Medellín, Colombie',
+  'Cartagena, Colombie',
+] as const;
+const FIND_US_HOURS_LABEL_SUGGESTIONS = ['Horarios', 'Horario de atención', 'Abrimos'] as const;
+const FIND_US_HOURS_SUGGESTIONS = [
+  'Lunes a domingo · 11h00 - 23h00',
+  'Martes a domingo · 12h00 - 22h30',
+  'Jueves a sábado · 18h00 - 02h00',
+] as const;
+const FIND_US_MAP_LABEL_SUGGESTIONS = ['Ver en Google Maps', 'Abrir mapa', 'Cómo llegar'] as const;
+
 const FOOTER_TEXT_SUGGESTIONS = [
   '© 2024 Taqueria Sol — Toute la gourmandise du soleil en un clic.',
   'Avec amour depuis Bogotá. Merci de soutenir les artisans locaux.',
   'Cuisine responsable, service souriant. À très vite !',
 ] as const;
 
-const ZONE_ORDER: readonly EditableZoneKey[] = ['navigation', 'hero', 'about', 'menu', 'contact', 'footer'];
+const ZONE_ORDER: readonly EditableZoneKey[] = ['navigation', 'hero', 'about', 'menu', 'contact', 'findUs', 'footer'];
 
 const ZONE_STEPS: ReadonlyArray<{
   key: EditableZoneKey;
@@ -179,6 +196,13 @@ const ZONE_STEPS: ReadonlyArray<{
     helper: 'Adresse, téléphone et email permettent à vos clients de vous joindre facilement — pensez à vérifier leur exactitude.',
   },
   {
+    key: 'findUs',
+    label: 'Encuéntranos',
+    description: 'Mettez en avant votre localisation et facilitez la venue sur place.',
+    helper:
+      'Adresse précise, ville et horaires rassurent vos visiteurs. Ajoutez un lien Google Maps pour guider facilement le déplacement.',
+  },
+  {
     key: 'footer',
     label: 'Pied de page',
     description: 'Terminez avec un message de marque et vos mentions utiles.',
@@ -192,6 +216,7 @@ const STYLE_BACKGROUND_FIELD_KEYS: Record<EditableZoneKey, ImageFieldKey> = {
   about: 'about.style.background',
   menu: 'menu.style.background',
   contact: 'contact.style.background',
+  findUs: 'findUs.style.background',
   footer: 'footer.style.background',
 };
 
@@ -207,6 +232,7 @@ const IMAGE_FIELD_LABELS: Record<ImageFieldKey, string> = {
   'about.style.background': 'Fond personnalisé (À propos)',
   'menu.style.background': 'Fond personnalisé (menu)',
   'contact.style.background': 'Fond personnalisé (contact)',
+  'findUs.style.background': 'Fond personnalisé (Encuéntranos)',
   'footer.style.background': 'Fond personnalisé (pied de page)',
 };
 
@@ -234,6 +260,14 @@ const ELEMENT_STYLE_LABELS: Partial<Record<EditableElementKey, string>> = {
   'contact.phone': 'Téléphone',
   'contact.emailLabel': "Libellé de l'email",
   'contact.email': 'Email',
+  'findUs.title': 'Titre Encuéntranos',
+  'findUs.addressLabel': "Libellé de l'adresse (Encuéntranos)",
+  'findUs.address': 'Adresse (Encuéntranos)',
+  'findUs.cityLabel': 'Libellé de la ville',
+  'findUs.city': 'Ville',
+  'findUs.hoursLabel': 'Libellé des horaires',
+  'findUs.hours': 'Horaires',
+  'findUs.mapLabel': 'Libellé du lien carte',
   'footer.text': 'Texte du pied de page',
 };
 
@@ -249,6 +283,7 @@ const INITIAL_IMAGE_ERRORS: Record<ImageFieldKey, string | null> = {
   'about.style.background': null,
   'menu.style.background': null,
   'contact.style.background': null,
+  'findUs.style.background': null,
   'footer.style.background': null,
 };
 
@@ -284,6 +319,15 @@ const EDITABLE_ELEMENT_INPUT_IDS: Partial<Record<EditableElementKey, string>> = 
   'contact.email': 'contact-email',
   'contact.image': 'contact-image',
   'contact.style.background': 'contact-background-type',
+  'findUs.title': 'find-us-title',
+  'findUs.addressLabel': 'find-us-address-label',
+  'findUs.address': 'find-us-address',
+  'findUs.cityLabel': 'find-us-city-label',
+  'findUs.city': 'find-us-city',
+  'findUs.hoursLabel': 'find-us-hours-label',
+  'findUs.hours': 'find-us-hours',
+  'findUs.mapLabel': 'find-us-map-label',
+  'findUs.style.background': 'find-us-background-type',
   'footer.text': 'footer-text',
   'footer.style.background': 'footer-background-type',
 };
@@ -308,12 +352,14 @@ type ImageFieldKey =
   | 'about.style.background'
   | 'menu.style.background'
   | 'contact.style.background'
+  | 'findUs.style.background'
   | 'footer.style.background';
 
 type NavigationFieldKey = keyof SiteContent['navigation']['links'];
 type HeroFieldKey = Exclude<keyof SiteContent['hero'], 'backgroundImage' | 'style'>;
 type MenuFieldKey = Exclude<keyof SiteContent['menu'], 'image' | 'style'>;
 type ContactFieldKey = Exclude<keyof SiteContent['contact'], 'image' | 'style'>;
+type FindUsFieldKey = Exclude<keyof SiteContent['findUs'], 'style'>;
 
 type ElementStyleProperty = keyof ElementStyle;
 
@@ -418,6 +464,17 @@ const createZoneChecklist = (draft: SiteContent): ZoneChecklistRecord => ({
     { label: 'Adresse complète indiquée', done: draft.contact.address.trim().length > 0 },
     { label: 'Téléphone ou email actifs', done: draft.contact.phone.trim().length > 0 && draft.contact.email.trim().length > 0 },
   ],
+  findUs: [
+    { label: 'Titre Encuéntranos défini', done: draft.findUs.title.trim().length > 0 },
+    {
+      label: 'Adresse et ville renseignées',
+      done: draft.findUs.address.trim().length > 0 && draft.findUs.city.trim().length > 0,
+    },
+    {
+      label: 'Horaires et lien carte prêts',
+      done: draft.findUs.hours.trim().length > 0 && draft.findUs.mapLabel.trim().length > 0,
+    },
+  ],
   footer: [
     { label: 'Message de pied de page personnalisé', done: draft.footer.text.trim().length > 0 },
   ],
@@ -472,6 +529,7 @@ type EditorContext = {
     value: string,
     richText?: RichTextValue | null,
   ) => void;
+  setFindUsFieldValue: (key: FindUsFieldKey, value: string, richText?: RichTextValue | null) => void;
   setFooterTextValue: (value: string, richText?: RichTextValue | null) => void;
   bestSellerProducts: Product[];
   bestSellerLoading: boolean;
@@ -759,6 +817,18 @@ const SiteCustomization: React.FC = () => {
     }));
   };
 
+  const setFindUsFieldValue = (key: FindUsFieldKey, value: string, richText?: RichTextValue | null) => {
+    const elementKey = `findUs.${key}` as EditableElementKey;
+    mutateDraft(prev => ({
+      ...prev,
+      findUs: {
+        ...prev.findUs,
+        [key]: value,
+      },
+      elementRichText: resolveNextElementRichText(prev, elementKey, richText),
+    }));
+  };
+
   const setFooterTextValue = (value: string, richText?: RichTextValue | null) => {
     mutateDraft(prev => ({
       ...prev,
@@ -890,6 +960,21 @@ const SiteCustomization: React.FC = () => {
                 ...prev.contact.style,
                 background: {
                   ...prev.contact.style.background,
+                  type: 'image',
+                  image: value,
+                },
+              },
+            },
+          };
+        case 'findUs.style.background':
+          return {
+            ...prev,
+            findUs: {
+              ...prev.findUs,
+              style: {
+                ...prev.findUs.style,
+                background: {
+                  ...prev.findUs.style.background,
                   type: 'image',
                   image: value,
                 },
@@ -1205,6 +1290,7 @@ const SiteCustomization: React.FC = () => {
     setAboutDescriptionValue,
     setMenuFieldValue,
     setContactFieldValue,
+    setFindUsFieldValue,
     setFooterTextValue,
   };
 
@@ -2740,6 +2826,131 @@ const getElementEditorConfig = (
       return {
         title: IMAGE_FIELD_LABELS['contact.style.background'],
         content: renderBackgroundEditor('contact'),
+      };
+    case 'findUs.title':
+      return {
+        title: 'Titre',
+        content: (
+          <FieldCard label="Titre" htmlFor="find-us-title">
+            {renderRichTextField('findUs.title', draft.findUs.title, (text, rich) =>
+              context.setFindUsFieldValue('title', text, rich),
+            )}
+            <SuggestionChips
+              options={FIND_US_TITLE_SUGGESTIONS}
+              onSelect={value => context.setFindUsFieldValue('title', value, null)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'findUs.addressLabel':
+      return {
+        title: 'Label adresse',
+        content: (
+          <FieldCard label="Label adresse" htmlFor="find-us-address-label">
+            {renderRichTextField('findUs.addressLabel', draft.findUs.addressLabel, (text, rich) =>
+              context.setFindUsFieldValue('addressLabel', text, rich),
+            )}
+            <SuggestionChips
+              options={FIND_US_ADDRESS_LABEL_SUGGESTIONS}
+              onSelect={value => context.setFindUsFieldValue('addressLabel', value, null)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'findUs.address':
+      return {
+        title: 'Adresse',
+        content: (
+          <FieldCard label="Adresse" htmlFor="find-us-address">
+            {renderRichTextField('findUs.address', draft.findUs.address, (text, rich) =>
+              context.setFindUsFieldValue('address', text, rich),
+            )}
+            <SuggestionChips
+              options={FIND_US_ADDRESS_SUGGESTIONS}
+              onSelect={value => context.setFindUsFieldValue('address', value, null)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'findUs.cityLabel':
+      return {
+        title: 'Label ville',
+        content: (
+          <FieldCard label="Label ville" htmlFor="find-us-city-label">
+            {renderRichTextField('findUs.cityLabel', draft.findUs.cityLabel, (text, rich) =>
+              context.setFindUsFieldValue('cityLabel', text, rich),
+            )}
+            <SuggestionChips
+              options={FIND_US_CITY_LABEL_SUGGESTIONS}
+              onSelect={value => context.setFindUsFieldValue('cityLabel', value, null)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'findUs.city':
+      return {
+        title: 'Ville',
+        content: (
+          <FieldCard label="Ville" htmlFor="find-us-city">
+            {renderRichTextField('findUs.city', draft.findUs.city, (text, rich) =>
+              context.setFindUsFieldValue('city', text, rich),
+            )}
+            <SuggestionChips
+              options={FIND_US_CITY_SUGGESTIONS}
+              onSelect={value => context.setFindUsFieldValue('city', value, null)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'findUs.hoursLabel':
+      return {
+        title: 'Label horaires',
+        content: (
+          <FieldCard label="Label horaires" htmlFor="find-us-hours-label">
+            {renderRichTextField('findUs.hoursLabel', draft.findUs.hoursLabel, (text, rich) =>
+              context.setFindUsFieldValue('hoursLabel', text, rich),
+            )}
+            <SuggestionChips
+              options={FIND_US_HOURS_LABEL_SUGGESTIONS}
+              onSelect={value => context.setFindUsFieldValue('hoursLabel', value, null)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'findUs.hours':
+      return {
+        title: 'Horaires',
+        content: (
+          <FieldCard label="Horaires" htmlFor="find-us-hours">
+            {renderRichTextField('findUs.hours', draft.findUs.hours, (text, rich) =>
+              context.setFindUsFieldValue('hours', text, rich),
+            )}
+            <SuggestionChips
+              options={FIND_US_HOURS_SUGGESTIONS}
+              onSelect={value => context.setFindUsFieldValue('hours', value, null)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'findUs.mapLabel':
+      return {
+        title: 'Libellé du lien carte',
+        content: (
+          <FieldCard label="Libellé du lien carte" htmlFor="find-us-map-label">
+            {renderRichTextField('findUs.mapLabel', draft.findUs.mapLabel, (text, rich) =>
+              context.setFindUsFieldValue('mapLabel', text, rich),
+            )}
+            <SuggestionChips
+              options={FIND_US_MAP_LABEL_SUGGESTIONS}
+              onSelect={value => context.setFindUsFieldValue('mapLabel', value, null)}
+            />
+          </FieldCard>
+        ),
+      };
+    case 'findUs.style.background':
+      return {
+        title: IMAGE_FIELD_LABELS['findUs.style.background'],
+        content: renderBackgroundEditor('findUs'),
       };
     case 'footer.text':
       return {
