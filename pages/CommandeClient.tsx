@@ -531,7 +531,7 @@ const CommandeClient: React.FC = () => {
                         <span className="text-2xl font-bold">{navigation.brand}</span>
                     </div>
                     <button
-                        onClick={() => navigate('/login')}
+                        onClick={() => navigate('/')}
                         className="flex items-center gap-2 text-sm font-medium transition hover:opacity-80"
                         style={navigationTextStyle}
                     >
