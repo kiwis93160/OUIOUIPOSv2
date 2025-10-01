@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
 import { EditableElementKey, Product, Order } from '../types';
-import { Clock, Mail, MapPin, Phone, Menu, X, ChevronLeft, ChevronRight, Star, Quote, ShieldCheck } from 'lucide-react';
+import { Clock, Mail, MapPin, Menu, X, ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
@@ -18,7 +18,6 @@ import {
 } from '../utils/siteStyleHelpers';
 
 const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
-const DEFAULT_STAFF_LOGO = '/logo-staff.svg';
 
 const INSTAGRAM_REVIEWS = [
   {
@@ -189,10 +188,10 @@ const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { content: siteContent } = useSiteContent();
-  const { navigation, hero, about, menu: menuContent, contact, findUs, footer } = siteContent;
+  const { navigation, hero, about, menu: menuContent, findUs, footer } = siteContent;
   useCustomFonts(siteContent.assets.library);
   const brandLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
-  const staffLogo = navigation.staffLogo ?? DEFAULT_STAFF_LOGO;
+  const staffTriggerLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const navigationBackgroundStyle = createBackgroundStyle(navigation.style);
   const navigationTextStyle = createTextStyle(navigation.style);
   const navigationBodyStyle = createBodyTextStyle(navigation.style);
@@ -205,9 +204,6 @@ const Login: React.FC = () => {
   const menuBackgroundStyle = createBackgroundStyle(menuContent.style);
   const menuTextStyle = createTextStyle(menuContent.style);
   const menuBodyTextStyle = createBodyTextStyle(menuContent.style);
-  const contactBackgroundStyle = createBackgroundStyle(contact.style);
-  const contactTextStyle = createTextStyle(contact.style);
-  const contactBodyTextStyle = createBodyTextStyle(contact.style);
   const findUsBackgroundStyle = createBackgroundStyle(findUs.style);
   const findUsTextStyle = createTextStyle(findUs.style);
   const findUsBodyTextStyle = createBodyTextStyle(findUs.style);
@@ -244,7 +240,7 @@ const Login: React.FC = () => {
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
   const [activeReviewIndex, setActiveReviewIndex] = useState(0);
-  const findUsMapQuery = [findUs.address, findUs.city].filter(Boolean).join(', ').trim();
+  const findUsMapQuery = findUs.address.trim();
   const encodedFindUsQuery = findUsMapQuery.length > 0 ? encodeURIComponent(findUsMapQuery) : '';
   const findUsMapUrl = encodedFindUsQuery
     ? `https://www.google.com/maps?q=${encodedFindUsQuery}`
@@ -260,9 +256,6 @@ const Login: React.FC = () => {
   const instagramReviews = INSTAGRAM_REVIEWS;
   const reviewCount = instagramReviews.length;
   const isSingleReview = reviewCount <= 1;
-  const hasSupportContact = Boolean(contact.phone || contact.email);
-  const contactPhoneHref = contact.phone ? `tel:${contact.phone.replace(/[^+\d]/g, '')}` : null;
-  const contactEmailHref = contact.email ? `mailto:${contact.email}` : null;
 
   const handleNextReview = useCallback(() => {
     setActiveReviewIndex(index => (index + 1) % reviewCount);
@@ -407,24 +400,13 @@ const Login: React.FC = () => {
               },
               navigation.links.menu,
             )}
-            {renderRichTextElement(
-              'navigation.links.contact',
-              'a',
-              {
-                href: '#contact',
-                className: 'login-nav__link',
-                style: navigationBodyStyle,
-              },
-              navigation.links.contact,
-            )}
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
               className="login-nav__staff-btn"
               aria-label={navigation.links.loginCta}
-              style={{ fontFamily: navigation.style.fontFamily }}
             >
-              <img src={staffLogo} alt="" className="login-nav__staff-logo" aria-hidden="true" />
+              <img src={staffTriggerLogo} alt="" className="login-brand__logo" aria-hidden="true" />
             </button>
           </nav>
           <button
@@ -477,17 +459,6 @@ const Login: React.FC = () => {
               },
               navigation.links.menu,
             )}
-            {renderRichTextElement(
-              'navigation.links.contact',
-              'a',
-              {
-                href: '#contact',
-                onClick: () => setMobileMenuOpen(false),
-                className: 'login-menu-overlay__link',
-                style: navigationBodyStyle,
-              },
-              navigation.links.contact,
-            )}
             <button
               type="button"
               onClick={() => {
@@ -496,9 +467,8 @@ const Login: React.FC = () => {
               }}
               className="login-nav__staff-btn login-menu-overlay__staff-btn"
               aria-label={navigation.links.loginCta}
-              style={{ fontFamily: navigation.style.fontFamily }}
             >
-              <img src={staffLogo} alt="" className="login-nav__staff-logo" aria-hidden="true" />
+              <img src={staffTriggerLogo} alt="" className="login-brand__logo" aria-hidden="true" />
             </button>
           </nav>
         </div>
@@ -587,110 +557,6 @@ const Login: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section
-          aria-labelledby="instagram-reviews-title"
-          className="section section-reviews"
-        >
-          <div className="section-inner section-inner--wide">
-            <div className="reviews-heading">
-              <h2 id="instagram-reviews-title" className="section-title">
-                Ils nous adorent sur Instagram
-              </h2>
-              <p className="reviews-subtitle">
-                Des foodies de toute la Colombie partagent leur coup de cœur pour notre cuisine : ambiance solaire, service
-                attentionné et assiettes qui brillent autant que leurs stories.
-              </p>
-            </div>
-            <div className="reviews-carousel">
-              <div
-                className="reviews-track"
-                style={{ transform: `translateX(-${activeReviewIndex * 100}%)` }}
-              >
-                {instagramReviews.map((review, index) => (
-                  <article
-                    key={review.id}
-                    className="review-card"
-                    aria-hidden={index !== activeReviewIndex}
-                  >
-                    <div className="review-card__content">
-                      <header className="review-card__header">
-                        <span className="review-card__avatar" aria-hidden="true">
-                          <img src={review.avatarUrl} alt="" />
-                        </span>
-                        <div className="review-card__meta">
-                          <p className="review-card__name">{review.name}</p>
-                          <p className="review-card__handle">{review.handle} • {review.timeAgo}</p>
-                        </div>
-                        <span className="review-card__badge">Instagram</span>
-                      </header>
-                      <div className="review-card__stars" aria-label="Note 5 sur 5">
-                        {Array.from({ length: 5 }).map((_, starIndex) => (
-                          <Star key={starIndex} aria-hidden="true" />
-                        ))}
-                      </div>
-                      <blockquote className="review-card__quote">
-                        <Quote aria-hidden="true" className="review-card__quote-icon" />
-                        <p>{review.message}</p>
-                      </blockquote>
-                      <div className="review-card__footer">
-                        <div className="review-card__highlight">
-                          <span className="review-card__story-ring" aria-hidden="true">
-                            <img src={review.postImageUrl} alt="" />
-                          </span>
-                          <div>
-                            <p className="review-card__highlight-title">{review.highlight}</p>
-                            <p className="review-card__highlight-caption">5 étoiles assurées ✨</p>
-                          </div>
-                        </div>
-                        <p className="review-card__location">{review.location}</p>
-                      </div>
-                    </div>
-                    <div className="review-card__media">
-                      <span className="review-card__media-frame">
-                        <img src={review.postImageUrl} alt={review.postImageAlt} />
-                      </span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-              {!isSingleReview && (
-                <div className="reviews-controls">
-                  <button
-                    type="button"
-                    className="reviews-control"
-                    onClick={handlePreviousReview}
-                    aria-label="Voir l'avis précédent"
-                  >
-                    <ChevronLeft aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    className="reviews-control"
-                    onClick={handleNextReview}
-                    aria-label="Voir l'avis suivant"
-                  >
-                    <ChevronRight aria-hidden="true" />
-                  </button>
-                </div>
-              )}
-            </div>
-            {reviewCount > 1 && (
-              <div className="reviews-pagination" role="tablist" aria-label="Avis Instagram">
-                {instagramReviews.map((review, index) => (
-                  <button
-                    key={review.id}
-                    type="button"
-                    className={`reviews-dot${index === activeReviewIndex ? ' reviews-dot--active' : ''}`}
-                    onClick={() => setActiveReviewIndex(index)}
-                    aria-label={`Afficher l'avis de ${review.name}`}
-                    aria-current={index === activeReviewIndex}
-                  />
-                ))}
               </div>
             )}
           </div>
@@ -802,93 +668,97 @@ const Login: React.FC = () => {
           </div>
         </section>
 
-        <section
-          id="contact"
-          className="section section-surface"
-          style={{ ...contactBackgroundStyle, ...contactTextStyle }}
-        >
-          <div className="section-inner section-inner--wide section-inner--center" style={contactTextStyle}>
-            {renderRichTextElement(
-              'contact.title',
-              'h2',
-              {
-                className: 'section-title',
-                style: contactTextStyle,
-              },
-              contact.title,
-            )}
-            {contact.image && (
-              <img
-                src={contact.image}
-                alt={contact.title}
-                className="mb-8 h-64 w-full rounded-xl object-cover shadow-lg"
-              />
-            )}
-            <div className="contact-grid">
-              <div className="contact-card" style={contactTextStyle}>
-                <MapPin className="contact-card__icon" />
-                {renderRichTextElement(
-                  'contact.addressLabel',
-                  'h3',
-                  {
-                    className: 'contact-card__title',
-                    style: contactTextStyle,
-                  },
-                  contact.addressLabel,
-                )}
-                {renderRichTextElement(
-                  'contact.address',
-                  'p',
-                  {
-                    className: 'contact-card__text',
-                    style: contactBodyTextStyle,
-                  },
-                  contact.address,
-                )}
-              </div>
-              <div className="contact-card" style={contactTextStyle}>
-                <Phone className="contact-card__icon" />
-                {renderRichTextElement(
-                  'contact.phoneLabel',
-                  'h3',
-                  {
-                    className: 'contact-card__title',
-                    style: contactTextStyle,
-                  },
-                  contact.phoneLabel,
-                )}
-                {renderRichTextElement(
-                  'contact.phone',
-                  'p',
-                  {
-                    className: 'contact-card__text',
-                    style: contactBodyTextStyle,
-                  },
-                  contact.phone,
-                )}
-              </div>
-              <div className="contact-card" style={contactTextStyle}>
-                <Mail className="contact-card__icon" />
-                {renderRichTextElement(
-                  'contact.emailLabel',
-                  'h3',
-                  {
-                    className: 'contact-card__title',
-                    style: contactTextStyle,
-                  },
-                  contact.emailLabel,
-                )}
-                {renderRichTextElement(
-                  'contact.email',
-                  'p',
-                  {
-                    className: 'contact-card__text',
-                    style: contactBodyTextStyle,
-                  },
-                  contact.email,
-                )}
-              </div>
+        <section aria-labelledby="instagram-reviews-title" className="section section-reviews">
+          <div className="section-inner section-inner--wide">
+            <div className="reviews-heading">
+              <h2 id="instagram-reviews-title" className="section-title">
+                Ils nous adorent sur Instagram
+              </h2>
+              <p className="reviews-subtitle">
+                Des foodies de toute la Colombie partagent leur coup de cœur pour notre cuisine : ambiance solaire, service
+                attentionné et assiettes qui brillent autant que leurs stories.
+              </p>
             </div>
+            <div className="reviews-carousel">
+              <div className="reviews-track" style={{ transform: `translateX(-${activeReviewIndex * 100}%)` }}>
+                {instagramReviews.map((review, index) => (
+                  <article key={review.id} className="review-card" aria-hidden={index !== activeReviewIndex}>
+                    <div className="review-card__content">
+                      <header className="review-card__header">
+                        <span className="review-card__avatar" aria-hidden="true">
+                          <img src={review.avatarUrl} alt="" />
+                        </span>
+                        <div className="review-card__meta">
+                          <p className="review-card__name">{review.name}</p>
+                          <p className="review-card__handle">{review.handle} • {review.timeAgo}</p>
+                        </div>
+                        <span className="review-card__badge">Instagram</span>
+                      </header>
+                      <div className="review-card__stars" aria-label="Note 5 sur 5">
+                        {Array.from({ length: 5 }).map((_, starIndex) => (
+                          <Star key={starIndex} aria-hidden="true" />
+                        ))}
+                      </div>
+                      <blockquote className="review-card__quote">
+                        <Quote aria-hidden="true" className="review-card__quote-icon" />
+                        <p>{review.message}</p>
+                      </blockquote>
+                      <div className="review-card__footer">
+                        <div className="review-card__highlight">
+                          <span className="review-card__story-ring" aria-hidden="true">
+                            <img src={review.postImageUrl} alt="" />
+                          </span>
+                          <div>
+                            <p className="review-card__highlight-title">{review.highlight}</p>
+                            <p className="review-card__highlight-caption">5 étoiles assurées ✨</p>
+                          </div>
+                        </div>
+                        <p className="review-card__location">{review.location}</p>
+                      </div>
+                    </div>
+                    <div className="review-card__media">
+                      <span className="review-card__media-frame">
+                        <img src={review.postImageUrl} alt={review.postImageAlt} />
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              {!isSingleReview && (
+                <div className="reviews-controls">
+                  <button
+                    type="button"
+                    className="reviews-control"
+                    onClick={handlePreviousReview}
+                    aria-label="Voir l'avis précédent"
+                  >
+                    <ChevronLeft aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="reviews-control"
+                    onClick={handleNextReview}
+                    aria-label="Voir l'avis suivant"
+                  >
+                    <ChevronRight aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+            </div>
+            {reviewCount > 1 && (
+              <div className="reviews-pagination" role="tablist" aria-label="Avis Instagram">
+                {instagramReviews.map((review, index) => (
+                  <button
+                    key={review.id}
+                    type="button"
+                    className={`reviews-dot${index === activeReviewIndex ? ' reviews-dot--active' : ''}`}
+                    onClick={() => setActiveReviewIndex(index)}
+                    aria-label={`Afficher l'avis de ${review.name}`}
+                    aria-current={index === activeReviewIndex}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -933,29 +803,6 @@ const Login: React.FC = () => {
                   </div>
                 </div>
                 <div className="find-us-detail" style={findUsTextStyle}>
-                  <MapPin className="find-us-detail__icon" aria-hidden="true" />
-                  <div>
-                    {renderRichTextElement(
-                      'findUs.cityLabel',
-                      'h3',
-                      {
-                        className: 'find-us-detail__title',
-                        style: findUsTextStyle,
-                      },
-                      findUs.cityLabel,
-                    )}
-                    {renderRichTextElement(
-                      'findUs.city',
-                      'p',
-                      {
-                        className: 'find-us-detail__text',
-                        style: findUsBodyTextStyle,
-                      },
-                      findUs.city,
-                    )}
-                  </div>
-                </div>
-                <div className="find-us-detail" style={findUsTextStyle}>
                   <Clock className="find-us-detail__icon" aria-hidden="true" />
                   <div>
                     {renderRichTextElement(
@@ -975,6 +822,29 @@ const Login: React.FC = () => {
                         style: findUsBodyTextStyle,
                       },
                       findUs.hours,
+                    )}
+                  </div>
+                </div>
+                <div className="find-us-detail" style={findUsTextStyle}>
+                  <Mail className="find-us-detail__icon" aria-hidden="true" />
+                  <div>
+                    {renderRichTextElement(
+                      'findUs.cityLabel',
+                      'h3',
+                      {
+                        className: 'find-us-detail__title',
+                        style: findUsTextStyle,
+                      },
+                      findUs.cityLabel,
+                    )}
+                    {renderRichTextElement(
+                      'findUs.city',
+                      'p',
+                      {
+                        className: 'find-us-detail__text',
+                        style: findUsBodyTextStyle,
+                      },
+                      findUs.city,
                     )}
                   </div>
                 </div>
@@ -1052,96 +922,21 @@ const Login: React.FC = () => {
         size="lg"
       >
         <div className="login-modal">
-          <header className="login-modal__header">
-            <div className="login-modal__badge" aria-hidden="true">
-              <img
-                src={staffLogo}
-                alt={navigation.brand ? `Logo ${navigation.brand}` : 'Logo du personnel'}
-                loading="lazy"
-              />
-            </div>
-            <div className="login-modal__intro">
-              <span className="login-modal__eyebrow">
-                <ShieldCheck size={16} aria-hidden="true" />
-                Espace sécurisé
-              </span>
-              <p id="staff-pin-help" className="login-modal__subtitle">
-                Entrez votre code PIN à 6 chiffres pour accéder au tableau de bord du personnel.
-              </p>
-            </div>
-          </header>
-          <form
-            onSubmit={handleFormSubmit}
-            className="login-modal__form"
-            aria-describedby={`staff-pin-help${hasSupportContact ? ' login-support-hint' : ''}`}
-          >
+          <form onSubmit={handleFormSubmit} className="login-modal__form" aria-describedby={error ? 'staff-pin-error' : undefined}>
             <div className="login-modal__panel">
               <PinInput
                 ref={pinInputRef}
                 pin={pin}
                 onPinChange={setPin}
                 pinLength={6}
-                describedBy="staff-pin-help"
+                describedBy={error ? 'staff-pin-error' : undefined}
               />
-              <p className="login-modal__error" role="alert" aria-live="assertive">
-                {error}
-              </p>
-              <div className="login-modal__actions">
-                <button
-                  type="submit"
-                  disabled={loading || pin.length !== 6}
-                  className="ui-btn ui-btn-primary ui-btn--block"
-                  data-state={loading ? 'loading' : 'idle'}
-                >
-                  {loading ? 'Connexion...' : 'Valider'}
-                </button>
-                <button
-                  type="button"
-                  className="ui-btn ui-btn-secondary ui-btn--block"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setPin('');
-                    setError('');
-                  }}
-                >
-                  Annuler
-                </button>
-              </div>
+              {error && (
+                <p id="staff-pin-error" className="login-modal__error" role="alert" aria-live="assertive">
+                  {error}
+                </p>
+              )}
             </div>
-            {hasSupportContact && (
-              <div className="login-modal__support" id="login-support-hint">
-                <h4>Besoin d'aide ?</h4>
-                <p>Contactez un manager pour récupérer ou réinitialiser votre code.</p>
-                <ul className="login-modal__support-list">
-                  {contact.phone && (
-                    <li className="login-modal__support-item">
-                      <span className="login-modal__support-icon" aria-hidden="true">
-                        <Phone size={18} />
-                      </span>
-                      <div>
-                        <p className="login-modal__support-label">{contact.phoneLabel}</p>
-                        <a href={contactPhoneHref ?? undefined} className="login-modal__support-link">
-                          {contact.phone}
-                        </a>
-                      </div>
-                    </li>
-                  )}
-                  {contact.email && (
-                    <li className="login-modal__support-item">
-                      <span className="login-modal__support-icon" aria-hidden="true">
-                        <Mail size={18} />
-                      </span>
-                      <div>
-                        <p className="login-modal__support-label">{contact.emailLabel}</p>
-                        <a href={contactEmailHref ?? undefined} className="login-modal__support-link">
-                          {contact.email}
-                        </a>
-                      </div>
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
           </form>
         </div>
       </Modal>

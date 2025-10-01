@@ -137,12 +137,8 @@ const CONTACT_EMAIL_SUGGESTIONS = ['hola@ouiouipos.co', 'contact@maison-gourmet.
 const FIND_US_TITLE_SUGGESTIONS = ['Encuéntranos', 'Visítanos hoy', 'Tu próxima parada foodie'] as const;
 const FIND_US_ADDRESS_LABEL_SUGGESTIONS = ['Dirección', 'Ubicación', 'Nos encuentras en'] as const;
 const FIND_US_ADDRESS_SUGGESTIONS = ['Cra 53 #75 - 98', 'Calle 84 #51B - 145', 'Av. Olaya Herrera #70 - 21'] as const;
-const FIND_US_CITY_LABEL_SUGGESTIONS = ['Ciudad', 'Estamos en', 'Localización'] as const;
-const FIND_US_CITY_SUGGESTIONS = [
-  'Barranquilla, Colombie',
-  'Medellín, Colombie',
-  'Cartagena, Colombie',
-] as const;
+const FIND_US_CITY_LABEL_SUGGESTIONS = ['Email', 'Escríbenos', 'Contacto'] as const;
+const FIND_US_CITY_SUGGESTIONS = ['hola@ouiouipos.co', 'reservas@ouiouipos.co', 'eventos@ouiouipos.co'] as const;
 const FIND_US_HOURS_LABEL_SUGGESTIONS = ['Horarios', 'Horario de atención', 'Abrimos'] as const;
 const FIND_US_HOURS_SUGGESTIONS = [
   'Lunes a domingo · 11h00 - 23h00',
@@ -200,7 +196,7 @@ const ZONE_STEPS: ReadonlyArray<{
     label: 'Encuéntranos',
     description: 'Mettez en avant votre localisation et facilitez la venue sur place.',
     helper:
-      'Adresse précise, ville et horaires rassurent vos visiteurs. Ajoutez un lien Google Maps pour guider facilement le déplacement.',
+      'Adresse précise, horaires et email rassurent vos visiteurs. Ajoutez un lien Google Maps pour guider facilement le déplacement.',
   },
   {
     key: 'footer',
@@ -263,8 +259,8 @@ const ELEMENT_STYLE_LABELS: Partial<Record<EditableElementKey, string>> = {
   'findUs.title': 'Titre Encuéntranos',
   'findUs.addressLabel': "Libellé de l'adresse (Encuéntranos)",
   'findUs.address': 'Adresse (Encuéntranos)',
-  'findUs.cityLabel': 'Libellé de la ville',
-  'findUs.city': 'Ville',
+  'findUs.cityLabel': "Libellé de l'email",
+  'findUs.city': 'Email',
   'findUs.hoursLabel': 'Libellé des horaires',
   'findUs.hours': 'Horaires',
   'findUs.mapLabel': 'Libellé du lien carte',
@@ -467,7 +463,7 @@ const createZoneChecklist = (draft: SiteContent): ZoneChecklistRecord => ({
   findUs: [
     { label: 'Titre Encuéntranos défini', done: draft.findUs.title.trim().length > 0 },
     {
-      label: 'Adresse et ville renseignées',
+      label: 'Adresse et email renseignés',
       done: draft.findUs.address.trim().length > 0 && draft.findUs.city.trim().length > 0,
     },
     {
@@ -2874,9 +2870,9 @@ const getElementEditorConfig = (
       };
     case 'findUs.cityLabel':
       return {
-        title: 'Label ville',
+        title: 'Label email',
         content: (
-          <FieldCard label="Label ville" htmlFor="find-us-city-label">
+          <FieldCard label="Label email" htmlFor="find-us-city-label">
             {renderRichTextField('findUs.cityLabel', draft.findUs.cityLabel, (text, rich) =>
               context.setFindUsFieldValue('cityLabel', text, rich),
             )}
@@ -2889,9 +2885,9 @@ const getElementEditorConfig = (
       };
     case 'findUs.city':
       return {
-        title: 'Ville',
+        title: 'Email',
         content: (
-          <FieldCard label="Ville" htmlFor="find-us-city">
+          <FieldCard label="Email" htmlFor="find-us-city">
             {renderRichTextField('findUs.city', draft.findUs.city, (text, rich) =>
               context.setFindUsFieldValue('city', text, rich),
             )}

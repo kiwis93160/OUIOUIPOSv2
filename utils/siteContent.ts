@@ -413,9 +413,9 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   findUs: {
     title: 'Encuéntranos',
     addressLabel: 'Dirección',
-    address: 'Cra 53 #75 - 98',
-    cityLabel: 'Ciudad',
-    city: 'Barranquilla, Colombie',
+    address: 'Cra 53 #75 - 98\nBarranquilla\nEn el local y terraza del bar RedDoor',
+    cityLabel: 'Email',
+    city: 'hola@ouiouipos.co',
     hoursLabel: 'Horarios',
     hours: 'Lunes a domingo · 11h00 - 23h00',
     mapLabel: 'Ver en Google Maps',
