@@ -3,12 +3,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
-import { Product, Order } from '../types';
+import { EditableElementKey, Product, Order } from '../types';
 import { Mail, MapPin, Phone, Menu, X } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 import useSiteContent from '../hooks/useSiteContent';
+import useCustomFonts from '../hooks/useCustomFonts';
 import {
   createBackgroundStyle,
   createBodyTextStyle,
@@ -147,6 +148,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { content: siteContent } = useSiteContent();
   const { navigation, hero, about, menu: menuContent, contact, footer } = siteContent;
+  useCustomFonts(siteContent.assets.library);
   const brandLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const staffLogo = navigation.staffLogo ?? DEFAULT_STAFF_LOGO;
   const navigationBackgroundStyle = createBackgroundStyle(navigation.style);
@@ -166,6 +168,30 @@ const Login: React.FC = () => {
   const contactBodyTextStyle = createBodyTextStyle(contact.style);
   const footerBackgroundStyle = createBackgroundStyle(footer.style);
   const footerTextStyle = createBodyTextStyle(footer.style);
+
+  const elementRichText = siteContent.elementRichText ?? {};
+
+  const getRichTextHtml = (key: EditableElementKey): string | null => {
+    const entry = elementRichText[key];
+    const html = entry?.html?.trim();
+    return html && html.length > 0 ? html : null;
+  };
+
+  const renderRichTextElement = <T extends keyof JSX.IntrinsicElements>(
+    key: EditableElementKey,
+    Component: T,
+    props: React.ComponentPropsWithoutRef<T>,
+    fallback: string,
+  ) => {
+    const html = getRichTextHtml(key);
+    if (html) {
+      return React.createElement(Component, {
+        ...props,
+        dangerouslySetInnerHTML: { __html: html },
+      });
+    }
+    return React.createElement(Component, props, fallback);
+  };
 
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [orderHistory, setOrderHistory] = useState<Order[]>([]);
@@ -262,26 +288,62 @@ const Login: React.FC = () => {
               alt={`Logo ${navigation.brand}`}
               className="login-brand__logo"
             />
-            <span className="login-brand__name">{navigation.brand}</span>
+            {renderRichTextElement(
+              'navigation.brand',
+              'span',
+              {
+                className: 'login-brand__name',
+                style: navigationTextStyle,
+              },
+              navigation.brand,
+            )}
           </div>
           <nav className="login-nav" aria-label="Navigation principale">
-            <a href="#accueil" className="login-nav__link" style={navigationBodyStyle}>
-              {navigation.links.home}
-            </a>
-            <a href="#apropos" className="login-nav__link" style={navigationBodyStyle}>
-              {navigation.links.about}
-            </a>
-            <a href="#menu" className="login-nav__link" style={navigationBodyStyle}>
-              {navigation.links.menu}
-            </a>
-            <a href="#contact" className="login-nav__link" style={navigationBodyStyle}>
-              {navigation.links.contact}
-            </a>
+            {renderRichTextElement(
+              'navigation.links.home',
+              'a',
+              {
+                href: '#accueil',
+                className: 'login-nav__link',
+                style: navigationBodyStyle,
+              },
+              navigation.links.home,
+            )}
+            {renderRichTextElement(
+              'navigation.links.about',
+              'a',
+              {
+                href: '#apropos',
+                className: 'login-nav__link',
+                style: navigationBodyStyle,
+              },
+              navigation.links.about,
+            )}
+            {renderRichTextElement(
+              'navigation.links.menu',
+              'a',
+              {
+                href: '#menu',
+                className: 'login-nav__link',
+                style: navigationBodyStyle,
+              },
+              navigation.links.menu,
+            )}
+            {renderRichTextElement(
+              'navigation.links.contact',
+              'a',
+              {
+                href: '#contact',
+                className: 'login-nav__link',
+                style: navigationBodyStyle,
+              },
+              navigation.links.contact,
+            )}
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
               className="login-nav__staff-btn"
-              aria-label="Connexion staff"
+              aria-label={navigation.links.loginCta}
               style={{ fontFamily: navigation.style.fontFamily }}
             >
               <img src={staffLogo} alt="" className="login-nav__staff-logo" aria-hidden="true" />
@@ -304,38 +366,50 @@ const Login: React.FC = () => {
             <X size={28} />
           </button>
           <nav className="login-menu-overlay__nav" aria-label="Navigation mobile" style={navigationTextStyle}>
-            <a
-              href="#accueil"
-              onClick={() => setMobileMenuOpen(false)}
-              className="login-menu-overlay__link"
-              style={navigationBodyStyle}
-            >
-              {navigation.links.home}
-            </a>
-            <a
-              href="#apropos"
-              onClick={() => setMobileMenuOpen(false)}
-              className="login-menu-overlay__link"
-              style={navigationBodyStyle}
-            >
-              {navigation.links.about}
-            </a>
-            <a
-              href="#menu"
-              onClick={() => setMobileMenuOpen(false)}
-              className="login-menu-overlay__link"
-              style={navigationBodyStyle}
-            >
-              {navigation.links.menu}
-            </a>
-            <a
-              href="#contact"
-              onClick={() => setMobileMenuOpen(false)}
-              className="login-menu-overlay__link"
-              style={navigationBodyStyle}
-            >
-              {navigation.links.contact}
-            </a>
+            {renderRichTextElement(
+              'navigation.links.home',
+              'a',
+              {
+                href: '#accueil',
+                onClick: () => setMobileMenuOpen(false),
+                className: 'login-menu-overlay__link',
+                style: navigationBodyStyle,
+              },
+              navigation.links.home,
+            )}
+            {renderRichTextElement(
+              'navigation.links.about',
+              'a',
+              {
+                href: '#apropos',
+                onClick: () => setMobileMenuOpen(false),
+                className: 'login-menu-overlay__link',
+                style: navigationBodyStyle,
+              },
+              navigation.links.about,
+            )}
+            {renderRichTextElement(
+              'navigation.links.menu',
+              'a',
+              {
+                href: '#menu',
+                onClick: () => setMobileMenuOpen(false),
+                className: 'login-menu-overlay__link',
+                style: navigationBodyStyle,
+              },
+              navigation.links.menu,
+            )}
+            {renderRichTextElement(
+              'navigation.links.contact',
+              'a',
+              {
+                href: '#contact',
+                onClick: () => setMobileMenuOpen(false),
+                className: 'login-menu-overlay__link',
+                style: navigationBodyStyle,
+              },
+              navigation.links.contact,
+            )}
             <button
               type="button"
               onClick={() => {
@@ -343,7 +417,7 @@ const Login: React.FC = () => {
                 setMobileMenuOpen(false);
               }}
               className="login-nav__staff-btn login-menu-overlay__staff-btn"
-              aria-label="Connexion staff"
+              aria-label={navigation.links.loginCta}
               style={{ fontFamily: navigation.style.fontFamily }}
             >
               <img src={staffLogo} alt="" className="login-nav__staff-logo" aria-hidden="true" />
@@ -359,24 +433,50 @@ const Login: React.FC = () => {
               <CustomerOrderTracker orderId={activeOrderId} onNewOrderClick={handleNewOrder} variant="hero" />
             ) : (
               <div className="hero-content" style={heroTextStyle}>
-                <h2 className="hero-title" style={heroTextStyle}>
-                  {hero.title}
-                </h2>
-                <p className="hero-subtitle" style={heroBodyTextStyle}>
-                  {hero.subtitle}
-                </p>
+                {renderRichTextElement(
+                  'hero.title',
+                  'h2',
+                  {
+                    className: 'hero-title',
+                    style: heroTextStyle,
+                  },
+                  hero.title,
+                )}
+                {renderRichTextElement(
+                  'hero.subtitle',
+                  'p',
+                  {
+                    className: 'hero-subtitle',
+                    style: heroBodyTextStyle,
+                  },
+                  hero.subtitle,
+                )}
                 <button
                   onClick={() => navigate('/commande-client')}
                   className="ui-btn ui-btn-accent hero-cta"
                   style={{ fontFamily: hero.style.fontFamily }}
                 >
-                  {hero.ctaLabel}
+                  {renderRichTextElement(
+                    'hero.ctaLabel',
+                    'span',
+                    {
+                      className: 'inline-flex items-center justify-center',
+                      style: heroBodyTextStyle,
+                    },
+                    hero.ctaLabel,
+                  )}
                 </button>
                 {orderHistory.length > 0 && (
                   <div className="hero-history">
-                    <p className="hero-history__title" style={heroBodyTextStyle}>
-                      {hero.historyTitle}
-                    </p>
+                    {renderRichTextElement(
+                      'hero.historyTitle',
+                      'p',
+                      {
+                        className: 'hero-history__title',
+                        style: heroBodyTextStyle,
+                      },
+                      hero.historyTitle,
+                    )}
                     <div className="hero-history__list">
                       {orderHistory.slice(0, 3).map(order => (
                         <div key={order.id} className="hero-history__item">
@@ -394,7 +494,15 @@ const Login: React.FC = () => {
                             className="hero-history__cta"
                             style={{ fontFamily: hero.style.fontFamily }}
                           >
-                            {hero.reorderCtaLabel}
+                            {renderRichTextElement(
+                              'hero.reorderCtaLabel',
+                              'span',
+                              {
+                                className: 'inline-flex items-center justify-center',
+                                style: heroBodyTextStyle,
+                              },
+                              hero.reorderCtaLabel,
+                            )}
                           </button>
                         </div>
                       ))}
@@ -412,12 +520,24 @@ const Login: React.FC = () => {
           style={{ ...aboutBackgroundStyle, ...aboutTextStyle }}
         >
           <div className="section-inner section-inner--center" style={aboutTextStyle}>
-            <h2 className="section-title" style={aboutTextStyle}>
-              {about.title}
-            </h2>
-            <p className="section-text section-text--muted" style={aboutBodyTextStyle}>
-              {about.description}
-            </p>
+            {renderRichTextElement(
+              'about.title',
+              'h2',
+              {
+                className: 'section-title',
+                style: aboutTextStyle,
+              },
+              about.title,
+            )}
+            {renderRichTextElement(
+              'about.description',
+              'p',
+              {
+                className: 'section-text section-text--muted',
+                style: aboutBodyTextStyle,
+              },
+              about.description,
+            )}
             {about.image && (
               <img
                 src={about.image}
@@ -434,9 +554,15 @@ const Login: React.FC = () => {
           style={{ ...menuBackgroundStyle, ...menuTextStyle }}
         >
           <div className="section-inner section-inner--wide section-inner--center" style={menuTextStyle}>
-            <h2 className="section-title" style={menuTextStyle}>
-              {menuContent.title}
-            </h2>
+            {renderRichTextElement(
+              'menu.title',
+              'h2',
+              {
+                className: 'section-title',
+                style: menuTextStyle,
+              },
+              menuContent.title,
+            )}
             {menuContent.image && (
               <img
                 src={menuContent.image}
@@ -445,9 +571,15 @@ const Login: React.FC = () => {
               />
             )}
             {menuLoading ? (
-              <p className="section-text section-text--muted" style={menuBodyTextStyle}>
-                {menuContent.loadingLabel}
-              </p>
+              renderRichTextElement(
+                'menu.loadingLabel',
+                'p',
+                {
+                  className: 'section-text section-text--muted',
+                  style: menuBodyTextStyle,
+                },
+                menuContent.loadingLabel,
+              )
             ) : (
               <div className={menuGridClassName}>
                 {bestSellersToDisplay.map(product => (
@@ -474,7 +606,15 @@ const Login: React.FC = () => {
                 className="ui-btn ui-btn-primary hero-cta"
                 style={{ fontFamily: menuContent.style.fontFamily }}
               >
-                {menuContent.ctaLabel}
+                {renderRichTextElement(
+                  'menu.ctaLabel',
+                  'span',
+                  {
+                    className: 'inline-flex items-center justify-center',
+                    style: menuBodyTextStyle,
+                  },
+                  menuContent.ctaLabel,
+                )}
               </button>
             </div>
           </div>
@@ -486,9 +626,15 @@ const Login: React.FC = () => {
           style={{ ...contactBackgroundStyle, ...contactTextStyle }}
         >
           <div className="section-inner section-inner--wide section-inner--center" style={contactTextStyle}>
-            <h2 className="section-title" style={contactTextStyle}>
-              {contact.title}
-            </h2>
+            {renderRichTextElement(
+              'contact.title',
+              'h2',
+              {
+                className: 'section-title',
+                style: contactTextStyle,
+              },
+              contact.title,
+            )}
             {contact.image && (
               <img
                 src={contact.image}
@@ -499,30 +645,66 @@ const Login: React.FC = () => {
             <div className="contact-grid">
               <div className="contact-card" style={contactTextStyle}>
                 <MapPin className="contact-card__icon" />
-                <h3 className="contact-card__title" style={contactTextStyle}>
-                  {contact.addressLabel}
-                </h3>
-                <p className="contact-card__text" style={contactBodyTextStyle}>
-                  {contact.address}
-                </p>
+                {renderRichTextElement(
+                  'contact.addressLabel',
+                  'h3',
+                  {
+                    className: 'contact-card__title',
+                    style: contactTextStyle,
+                  },
+                  contact.addressLabel,
+                )}
+                {renderRichTextElement(
+                  'contact.address',
+                  'p',
+                  {
+                    className: 'contact-card__text',
+                    style: contactBodyTextStyle,
+                  },
+                  contact.address,
+                )}
               </div>
               <div className="contact-card" style={contactTextStyle}>
                 <Phone className="contact-card__icon" />
-                <h3 className="contact-card__title" style={contactTextStyle}>
-                  {contact.phoneLabel}
-                </h3>
-                <p className="contact-card__text" style={contactBodyTextStyle}>
-                  {contact.phone}
-                </p>
+                {renderRichTextElement(
+                  'contact.phoneLabel',
+                  'h3',
+                  {
+                    className: 'contact-card__title',
+                    style: contactTextStyle,
+                  },
+                  contact.phoneLabel,
+                )}
+                {renderRichTextElement(
+                  'contact.phone',
+                  'p',
+                  {
+                    className: 'contact-card__text',
+                    style: contactBodyTextStyle,
+                  },
+                  contact.phone,
+                )}
               </div>
               <div className="contact-card" style={contactTextStyle}>
                 <Mail className="contact-card__icon" />
-                <h3 className="contact-card__title" style={contactTextStyle}>
-                  {contact.emailLabel}
-                </h3>
-                <p className="contact-card__text" style={contactBodyTextStyle}>
-                  {contact.email}
-                </p>
+                {renderRichTextElement(
+                  'contact.emailLabel',
+                  'h3',
+                  {
+                    className: 'contact-card__title',
+                    style: contactTextStyle,
+                  },
+                  contact.emailLabel,
+                )}
+                {renderRichTextElement(
+                  'contact.email',
+                  'p',
+                  {
+                    className: 'contact-card__text',
+                    style: contactBodyTextStyle,
+                  },
+                  contact.email,
+                )}
               </div>
             </div>
           </div>
@@ -532,7 +714,15 @@ const Login: React.FC = () => {
       <footer className="site-footer" style={{ ...footerBackgroundStyle, ...footerTextStyle }}>
         <div className="layout-container site-footer__inner" style={footerTextStyle}>
           <p style={footerTextStyle}>
-            &copy; {new Date().getFullYear()} {navigation.brand}. {footer.text}
+            &copy; {new Date().getFullYear()} {navigation.brand}.{' '}
+            {renderRichTextElement(
+              'footer.text',
+              'span',
+              {
+                style: footerTextStyle,
+              },
+              footer.text,
+            )}
           </p>
         </div>
       </footer>

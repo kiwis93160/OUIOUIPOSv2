@@ -2,6 +2,7 @@ import {
   CustomizationAsset,
   CustomizationAssetType,
   EditableElementKey,
+  ElementRichText,
   ElementStyle,
   ElementStyles,
   SectionStyle,
@@ -10,6 +11,7 @@ import {
   EDITABLE_ELEMENT_KEYS,
 } from '../types';
 import { normalizeCloudinaryImageUrl } from '../services/cloudinary';
+import { sanitizeRichTextValue } from './richText';
 
 const trimOrEmpty = (value: string): string => value.trim();
 
@@ -114,6 +116,42 @@ const sanitizeElementStyles = (styles: ElementStyles | undefined, fallback: Elem
     const entry = sanitizeElementStyle(source[key] ?? null);
     if (entry) {
       sanitized[key as EditableElementKey] = entry;
+    }
+  });
+
+  return sanitized;
+};
+
+const resolveElementRichText = (
+  richText: ElementRichText | null | undefined,
+  fallback: ElementRichText,
+): ElementRichText => {
+  const source: ElementRichText = richText ?? fallback;
+  const resolved: ElementRichText = {};
+
+  EDITABLE_ELEMENT_KEYS.forEach(key => {
+    const entry = source[key as EditableElementKey];
+    const sanitized = sanitizeRichTextValue(entry ?? null);
+    if (sanitized) {
+      resolved[key as EditableElementKey] = sanitized;
+    }
+  });
+
+  return resolved;
+};
+
+const sanitizeElementRichText = (
+  richText: ElementRichText | undefined,
+  fallback: ElementRichText,
+): ElementRichText => {
+  const source: ElementRichText = richText ?? fallback;
+  const sanitized: ElementRichText = {};
+
+  EDITABLE_ELEMENT_KEYS.forEach(key => {
+    const entry = source[key as EditableElementKey];
+    const value = sanitizeRichTextValue(entry ?? null);
+    if (value) {
+      sanitized[key as EditableElementKey] = value;
     }
   });
 
@@ -273,6 +311,7 @@ const DEFAULT_SITE_ASSETS: SiteAssets = {
 };
 
 const DEFAULT_ELEMENT_STYLES: ElementStyles = {};
+const DEFAULT_ELEMENT_RICH_TEXT: ElementRichText = {};
 
 const resolveSectionStyle = (style: Partial<SectionStyle> | undefined, fallback: SectionStyle): SectionStyle => {
   const backgroundType = style?.background?.type === 'image' ? 'image' : 'color';
@@ -365,6 +404,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     style: DEFAULT_FOOTER_STYLE,
   },
   elementStyles: DEFAULT_ELEMENT_STYLES,
+  elementRichText: DEFAULT_ELEMENT_RICH_TEXT,
   assets: DEFAULT_SITE_ASSETS,
 };
 
@@ -422,6 +462,7 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
       style: resolveSectionStyle(content?.footer?.style, base.footer.style),
     },
     elementStyles: resolveElementStyles(content?.elementStyles ?? null, base.elementStyles),
+    elementRichText: resolveElementRichText(content?.elementRichText ?? null, base.elementRichText),
     assets: resolveSiteAssets(content?.assets ?? null, DEFAULT_SITE_ASSETS),
   };
 };
@@ -478,5 +519,6 @@ export const sanitizeSiteContentInput = (content: SiteContent): SiteContent => (
     style: sanitizeSectionStyle(content.footer.style, DEFAULT_FOOTER_STYLE),
   },
   elementStyles: sanitizeElementStyles(content.elementStyles, DEFAULT_ELEMENT_STYLES),
+  elementRichText: sanitizeElementRichText(content.elementRichText, DEFAULT_ELEMENT_RICH_TEXT),
   assets: sanitizeSiteAssets(content.assets, DEFAULT_SITE_ASSETS),
 });

@@ -7,6 +7,7 @@ import React, {
   useState,
 } from 'react';
 import useSiteContent, { DEFAULT_SITE_CONTENT } from '../hooks/useSiteContent';
+import RichTextEditor from '../components/RichTextEditor';
 import {
   CustomizationAsset,
   CustomizationAssetType,
@@ -14,6 +15,7 @@ import {
   EditableZoneKey,
   ElementStyle,
   Product,
+  RichTextValue,
   SectionStyle,
   SiteContent,
   STYLE_EDITABLE_ELEMENT_KEYS,
@@ -39,6 +41,8 @@ import {
   Video,
   X,
 } from 'lucide-react';
+import { sanitizeFontFamilyName } from '../utils/fonts';
+import { updateElementRichTextMap } from '../utils/richText';
 
 const imageWarning = "L'URL doit provenir de Cloudinary (https://*.cloudinary.com).";
 
@@ -313,19 +317,6 @@ type ContactFieldKey = Exclude<keyof SiteContent['contact'], 'image' | 'style'>;
 
 type ElementStyleProperty = keyof ElementStyle;
 
-type NavigationChangeHandler = (
-  key: NavigationFieldKey,
-) => (event: React.ChangeEvent<HTMLInputElement>) => void;
-type HeroChangeHandler = (
-  key: HeroFieldKey,
-) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-type MenuChangeHandler = (
-  key: MenuFieldKey,
-) => (event: React.ChangeEvent<HTMLInputElement>) => void;
-type ContactChangeHandler = (
-  key: ContactFieldKey,
-) => (event: React.ChangeEvent<HTMLInputElement>) => void;
-
 type ImageInputHandler = (
   field: ImageFieldKey,
 ) => (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -447,14 +438,6 @@ type EditorContext = {
   draft: SiteContent;
   imageErrors: Record<ImageFieldKey, string | null>;
   isUploading: (field: ImageFieldKey) => boolean;
-  handleBrandChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  handleNavigationChange: NavigationChangeHandler;
-  handleHeroFieldChange: HeroChangeHandler;
-  handleAboutChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  handleAboutTitleChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  handleMenuFieldChange: MenuChangeHandler;
-  handleContactFieldChange: ContactChangeHandler;
-  handleFooterTextChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleImageInputChange: ImageInputHandler;
   handleImageUpload: ImageUploadHandler;
   handleClearImage: ImageClearHandler;
@@ -474,14 +457,22 @@ type EditorContext = {
   handleElementStyleReset: (element: EditableElementKey, property?: ElementStyleProperty) => void;
   fontOptions: readonly string[];
   fontSizeOptions: readonly string[];
-  setBrandValue: (value: string) => void;
-  setNavigationLinkValue: (key: NavigationFieldKey, value: string) => void;
-  setHeroFieldValue: (key: HeroFieldKey, value: string) => void;
-  setAboutTitleValue: (value: string) => void;
-  setAboutDescriptionValue: (value: string) => void;
-  setMenuFieldValue: (key: MenuFieldKey, value: string) => void;
-  setContactFieldValue: (key: ContactFieldKey, value: string) => void;
-  setFooterTextValue: (value: string) => void;
+  setBrandValue: (value: string, richText?: RichTextValue | null) => void;
+  setNavigationLinkValue: (
+    key: NavigationFieldKey,
+    value: string,
+    richText?: RichTextValue | null,
+  ) => void;
+  setHeroFieldValue: (key: HeroFieldKey, value: string, richText?: RichTextValue | null) => void;
+  setAboutTitleValue: (value: string, richText?: RichTextValue | null) => void;
+  setAboutDescriptionValue: (value: string, richText?: RichTextValue | null) => void;
+  setMenuFieldValue: (key: MenuFieldKey, value: string, richText?: RichTextValue | null) => void;
+  setContactFieldValue: (
+    key: ContactFieldKey,
+    value: string,
+    richText?: RichTextValue | null,
+  ) => void;
+  setFooterTextValue: (value: string, richText?: RichTextValue | null) => void;
   bestSellerProducts: Product[];
   bestSellerLoading: boolean;
   bestSellerError: string | null;
@@ -581,12 +572,23 @@ const SiteCustomization: React.FC = () => {
   const fontOptions = useMemo(() => {
     const customFonts = draft.assets.library
       .filter(asset => asset.type === 'font')
-      .map(asset => `"${asset.name}"`)
+      .map(asset => `"${sanitizeFontFamilyName(asset.name)}"`)
       .filter((value, index, list) => list.indexOf(value) === index);
     return [...FONT_FAMILY_SUGGESTIONS, ...customFonts];
   }, [draft.assets.library]);
 
   const fontSizeOptions = useMemo(() => [...FONT_SIZE_SUGGESTIONS], []);
+
+  const resolveNextElementRichText = (
+    prev: SiteContent,
+    key: EditableElementKey,
+    value: RichTextValue | null | undefined,
+  ) => {
+    if (value === undefined) {
+      return prev.elementRichText;
+    }
+    return updateElementRichTextMap(prev.elementRichText, key, value);
+  };
 
   const cleanElementStyle = useCallback((style: ElementStyle | undefined): ElementStyle | null => {
     if (!style) {
@@ -665,17 +667,23 @@ const SiteCustomization: React.FC = () => {
     }));
   };
 
-  const setBrandValue = (value: string) => {
+  const setBrandValue = (value: string, richText?: RichTextValue | null) => {
     mutateDraft(prev => ({
       ...prev,
       navigation: {
         ...prev.navigation,
         brand: value,
       },
+      elementRichText: resolveNextElementRichText(prev, 'navigation.brand', richText),
     }));
   };
 
-  const setNavigationLinkValue = (key: NavigationFieldKey, value: string) => {
+  const setNavigationLinkValue = (
+    key: NavigationFieldKey,
+    value: string,
+    richText?: RichTextValue | null,
+  ) => {
+    const elementKey = `navigation.links.${key}` as EditableElementKey;
     mutateDraft(prev => ({
       ...prev,
       navigation: {
@@ -685,99 +693,81 @@ const SiteCustomization: React.FC = () => {
           [key]: value,
         },
       },
+      elementRichText: resolveNextElementRichText(prev, elementKey, richText),
     }));
   };
 
-  const setHeroFieldValue = (key: HeroFieldKey, value: string) => {
+  const setHeroFieldValue = (key: HeroFieldKey, value: string, richText?: RichTextValue | null) => {
+    const elementKey = `hero.${key}` as EditableElementKey;
     mutateDraft(prev => ({
       ...prev,
       hero: {
         ...prev.hero,
         [key]: value,
       },
+      elementRichText: resolveNextElementRichText(prev, elementKey, richText),
     }));
   };
 
-  const setAboutTitleValue = (value: string) => {
+  const setAboutTitleValue = (value: string, richText?: RichTextValue | null) => {
     mutateDraft(prev => ({
       ...prev,
       about: {
         ...prev.about,
         title: value,
       },
+      elementRichText: resolveNextElementRichText(prev, 'about.title', richText),
     }));
   };
 
-  const setAboutDescriptionValue = (value: string) => {
+  const setAboutDescriptionValue = (value: string, richText?: RichTextValue | null) => {
     mutateDraft(prev => ({
       ...prev,
       about: {
         ...prev.about,
         description: value,
       },
+      elementRichText: resolveNextElementRichText(prev, 'about.description', richText),
     }));
   };
 
-  const setMenuFieldValue = (key: MenuFieldKey, value: string) => {
+  const setMenuFieldValue = (key: MenuFieldKey, value: string, richText?: RichTextValue | null) => {
+    const elementKey = `menu.${key}` as EditableElementKey;
     mutateDraft(prev => ({
       ...prev,
       menu: {
         ...prev.menu,
         [key]: value,
       },
+      elementRichText: resolveNextElementRichText(prev, elementKey, richText),
     }));
   };
 
-  const setContactFieldValue = (key: ContactFieldKey, value: string) => {
+  const setContactFieldValue = (
+    key: ContactFieldKey,
+    value: string,
+    richText?: RichTextValue | null,
+  ) => {
+    const elementKey = `contact.${key}` as EditableElementKey;
     mutateDraft(prev => ({
       ...prev,
       contact: {
         ...prev.contact,
         [key]: value,
       },
+      elementRichText: resolveNextElementRichText(prev, elementKey, richText),
     }));
   };
 
-  const setFooterTextValue = (value: string) => {
+  const setFooterTextValue = (value: string, richText?: RichTextValue | null) => {
     mutateDraft(prev => ({
       ...prev,
       footer: {
         ...prev.footer,
         text: value,
       },
+      elementRichText: resolveNextElementRichText(prev, 'footer.text', richText),
     }));
-  };
-
-  const handleNavigationChange: NavigationChangeHandler = key => event => {
-    setNavigationLinkValue(key, event.target.value);
-  };
-
-  const handleBrandChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setBrandValue(event.target.value);
-  };
-
-  const handleHeroFieldChange: HeroChangeHandler = key => event => {
-    setHeroFieldValue(key, event.target.value);
-  };
-
-  const handleAboutTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setAboutTitleValue(event.target.value);
-  };
-
-  const handleAboutChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setAboutDescriptionValue(event.target.value);
-  };
-
-  const handleMenuFieldChange: MenuChangeHandler = key => event => {
-    setMenuFieldValue(key, event.target.value);
-  };
-
-  const handleContactFieldChange: ContactChangeHandler = key => event => {
-    setContactFieldValue(key, event.target.value);
-  };
-
-  const handleFooterTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFooterTextValue(event.target.value);
   };
 
   const setImageField = (field: ImageFieldKey, value: string | null) => {
@@ -1123,14 +1113,6 @@ const SiteCustomization: React.FC = () => {
     draft,
     imageErrors,
     isUploading,
-    handleBrandChange,
-    handleNavigationChange,
-    handleHeroFieldChange,
-    handleAboutChange,
-    handleAboutTitleChange,
-    handleMenuFieldChange,
-    handleContactFieldChange,
-    handleFooterTextChange,
     handleImageInputChange,
     handleImageUpload,
     handleClearImage,
@@ -2115,6 +2097,23 @@ const ZoneEditorContent: React.FC<{ zone: EditableZoneKey; context: EditorContex
     [context],
   );
 
+  const getRichTextValue = (key: EditableElementKey) => draft.elementRichText?.[key] ?? null;
+
+  const renderRichTextField = (
+    key: EditableElementKey,
+    fallback: string,
+    onValueChange: (plainText: string, richText?: RichTextValue | null) => void,
+    placeholder?: string,
+  ) => (
+    <RichTextEditor
+      id={`${key.replace(/\./g, '-')}-editor`}
+      value={getRichTextValue(key)}
+      fallback={fallback}
+      onChange={next => onValueChange(next?.plainText ?? '', next)}
+      placeholder={placeholder}
+    />
+  );
+
   if (zone !== 'menu') {
     return null;
   }
@@ -2332,13 +2331,11 @@ const getElementEditorConfig = (
         title: 'Nom de la marque',
         content: (
           <FieldCard label="Nom de la marque" htmlFor="brand-name">
-            <input
-              id="brand-name"
-              className="ui-input w-full"
-              value={draft.navigation.brand}
-              onChange={context.handleBrandChange}
+            {renderRichTextField('navigation.brand', draft.navigation.brand, context.setBrandValue)}
+            <SuggestionChips
+              options={NAVIGATION_BRAND_SUGGESTIONS}
+              onSelect={value => context.setBrandValue(value, null)}
             />
-            <SuggestionChips options={NAVIGATION_BRAND_SUGGESTIONS} onSelect={context.setBrandValue} />
           </FieldCard>
         ),
       };
@@ -2352,15 +2349,14 @@ const getElementEditorConfig = (
         title: label,
         content: (
           <FieldCard label={label} htmlFor={`nav-${key}`}>
-            <input
-              id={`nav-${key}`}
-              className="ui-input w-full"
-              value={draft.navigation.links[key]}
-              onChange={context.handleNavigationChange(key)}
-            />
+            {renderRichTextField(
+              element,
+              draft.navigation.links[key],
+              (text, rich) => context.setNavigationLinkValue(key, text, rich),
+            )}
             <SuggestionChips
               options={NAVIGATION_LINK_SUGGESTIONS[key]}
-              onSelect={value => context.setNavigationLinkValue(key, value)}
+              onSelect={value => context.setNavigationLinkValue(key, value, null)}
             />
           </FieldCard>
         ),
@@ -2371,15 +2367,14 @@ const getElementEditorConfig = (
         title: "Bouton d'accès équipe",
         content: (
           <FieldCard label="Bouton d'accès équipe" htmlFor="nav-login">
-            <input
-              id="nav-login"
-              className="ui-input w-full"
-              value={draft.navigation.links.loginCta}
-              onChange={context.handleNavigationChange('loginCta')}
-            />
+            {renderRichTextField(
+              'navigation.links.loginCta',
+              draft.navigation.links.loginCta,
+              (text, rich) => context.setNavigationLinkValue('loginCta', text, rich),
+            )}
             <SuggestionChips
               options={NAVIGATION_LINK_SUGGESTIONS.loginCta}
-              onSelect={value => context.setNavigationLinkValue('loginCta', value)}
+              onSelect={value => context.setNavigationLinkValue('loginCta', value, null)}
             />
           </FieldCard>
         ),
@@ -2428,15 +2423,12 @@ const getElementEditorConfig = (
         title: 'Titre principal',
         content: (
           <FieldCard label="Titre principal" htmlFor="hero-title">
-            <input
-              id="hero-title"
-              className="ui-input w-full"
-              value={draft.hero.title}
-              onChange={context.handleHeroFieldChange('title')}
-            />
+            {renderRichTextField('hero.title', draft.hero.title, (text, rich) =>
+              context.setHeroFieldValue('title', text, rich),
+            )}
             <SuggestionChips
               options={HERO_TITLE_SUGGESTIONS}
-              onSelect={value => context.setHeroFieldValue('title', value)}
+              onSelect={value => context.setHeroFieldValue('title', value, null)}
             />
           </FieldCard>
         ),
@@ -2446,16 +2438,12 @@ const getElementEditorConfig = (
         title: 'Sous-titre',
         content: (
           <FieldCard label="Sous-titre" htmlFor="hero-subtitle">
-            <textarea
-              id="hero-subtitle"
-              className="ui-textarea w-full"
-              rows={3}
-              value={draft.hero.subtitle}
-              onChange={context.handleHeroFieldChange('subtitle')}
-            />
+            {renderRichTextField('hero.subtitle', draft.hero.subtitle, (text, rich) =>
+              context.setHeroFieldValue('subtitle', text, rich),
+            )}
             <SuggestionChips
               options={HERO_SUBTITLE_SUGGESTIONS}
-              onSelect={value => context.setHeroFieldValue('subtitle', value)}
+              onSelect={value => context.setHeroFieldValue('subtitle', value, null)}
             />
           </FieldCard>
         ),
@@ -2465,15 +2453,12 @@ const getElementEditorConfig = (
         title: 'CTA principal',
         content: (
           <FieldCard label="CTA principal" htmlFor="hero-cta">
-            <input
-              id="hero-cta"
-              className="ui-input w-full"
-              value={draft.hero.ctaLabel}
-              onChange={context.handleHeroFieldChange('ctaLabel')}
-            />
+            {renderRichTextField('hero.ctaLabel', draft.hero.ctaLabel, (text, rich) =>
+              context.setHeroFieldValue('ctaLabel', text, rich),
+            )}
             <SuggestionChips
               options={HERO_CTA_SUGGESTIONS}
-              onSelect={value => context.setHeroFieldValue('ctaLabel', value)}
+              onSelect={value => context.setHeroFieldValue('ctaLabel', value, null)}
             />
           </FieldCard>
         ),
@@ -2483,15 +2468,12 @@ const getElementEditorConfig = (
         title: 'CTA historique',
         content: (
           <FieldCard label="CTA historique" htmlFor="hero-reorder">
-            <input
-              id="hero-reorder"
-              className="ui-input w-full"
-              value={draft.hero.reorderCtaLabel}
-              onChange={context.handleHeroFieldChange('reorderCtaLabel')}
-            />
+            {renderRichTextField('hero.reorderCtaLabel', draft.hero.reorderCtaLabel, (text, rich) =>
+              context.setHeroFieldValue('reorderCtaLabel', text, rich),
+            )}
             <SuggestionChips
               options={HERO_REORDER_SUGGESTIONS}
-              onSelect={value => context.setHeroFieldValue('reorderCtaLabel', value)}
+              onSelect={value => context.setHeroFieldValue('reorderCtaLabel', value, null)}
             />
           </FieldCard>
         ),
@@ -2501,15 +2483,12 @@ const getElementEditorConfig = (
         title: 'Titre du bloc historique',
         content: (
           <FieldCard label="Titre du bloc historique" htmlFor="hero-history">
-            <input
-              id="hero-history"
-              className="ui-input w-full"
-              value={draft.hero.historyTitle}
-              onChange={context.handleHeroFieldChange('historyTitle')}
-            />
+            {renderRichTextField('hero.historyTitle', draft.hero.historyTitle, (text, rich) =>
+              context.setHeroFieldValue('historyTitle', text, rich),
+            )}
             <SuggestionChips
               options={HERO_HISTORY_TITLE_SUGGESTIONS}
-              onSelect={value => context.setHeroFieldValue('historyTitle', value)}
+              onSelect={value => context.setHeroFieldValue('historyTitle', value, null)}
             />
           </FieldCard>
         ),
@@ -2541,13 +2520,13 @@ const getElementEditorConfig = (
         title: 'Titre',
         content: (
           <FieldCard label="Titre" htmlFor="about-title">
-            <input
-              id="about-title"
-              className="ui-input w-full"
-              value={draft.about.title}
-              onChange={context.handleAboutTitleChange}
+            {renderRichTextField('about.title', draft.about.title, (text, rich) =>
+              context.setAboutTitleValue(text, rich),
+            )}
+            <SuggestionChips
+              options={ABOUT_TITLE_SUGGESTIONS}
+              onSelect={value => context.setAboutTitleValue(value, null)}
             />
-            <SuggestionChips options={ABOUT_TITLE_SUGGESTIONS} onSelect={context.setAboutTitleValue} />
           </FieldCard>
         ),
       };
@@ -2556,14 +2535,13 @@ const getElementEditorConfig = (
         title: 'Description',
         content: (
           <FieldCard label="Description" htmlFor="about-description">
-            <textarea
-              id="about-description"
-              className="ui-textarea w-full"
-              rows={4}
-              value={draft.about.description}
-              onChange={context.handleAboutChange}
+            {renderRichTextField('about.description', draft.about.description, (text, rich) =>
+              context.setAboutDescriptionValue(text, rich),
+            )}
+            <SuggestionChips
+              options={ABOUT_DESCRIPTION_SUGGESTIONS}
+              onSelect={value => context.setAboutDescriptionValue(value, null)}
             />
-            <SuggestionChips options={ABOUT_DESCRIPTION_SUGGESTIONS} onSelect={context.setAboutDescriptionValue} />
           </FieldCard>
         ),
       };
@@ -2594,12 +2572,9 @@ const getElementEditorConfig = (
         title: 'Titre',
         content: (
           <FieldCard label="Titre" htmlFor="menu-title">
-            <input
-              id="menu-title"
-              className="ui-input w-full"
-              value={draft.menu.title}
-              onChange={context.handleMenuFieldChange('title')}
-            />
+            {renderRichTextField('menu.title', draft.menu.title, (text, rich) =>
+              context.setMenuFieldValue('title', text, rich),
+            )}
           </FieldCard>
         ),
       };
@@ -2608,13 +2583,13 @@ const getElementEditorConfig = (
         title: 'CTA',
         content: (
           <FieldCard label="CTA" htmlFor="menu-cta">
-            <input
-              id="menu-cta"
-              className="ui-input w-full"
-              value={draft.menu.ctaLabel}
-              onChange={context.handleMenuFieldChange('ctaLabel')}
+            {renderRichTextField('menu.ctaLabel', draft.menu.ctaLabel, (text, rich) =>
+              context.setMenuFieldValue('ctaLabel', text, rich),
+            )}
+            <SuggestionChips
+              options={MENU_CTA_SUGGESTIONS}
+              onSelect={value => context.setMenuFieldValue('ctaLabel', value, null)}
             />
-            <SuggestionChips options={MENU_CTA_SUGGESTIONS} onSelect={value => context.setMenuFieldValue('ctaLabel', value)} />
           </FieldCard>
         ),
       };
@@ -2623,15 +2598,12 @@ const getElementEditorConfig = (
         title: 'Message de chargement',
         content: (
           <FieldCard label="Message de chargement" htmlFor="menu-loading">
-            <input
-              id="menu-loading"
-              className="ui-input w-full"
-              value={draft.menu.loadingLabel}
-              onChange={context.handleMenuFieldChange('loadingLabel')}
-            />
+            {renderRichTextField('menu.loadingLabel', draft.menu.loadingLabel, (text, rich) =>
+              context.setMenuFieldValue('loadingLabel', text, rich),
+            )}
             <SuggestionChips
               options={MENU_LOADING_SUGGESTIONS}
-              onSelect={value => context.setMenuFieldValue('loadingLabel', value)}
+              onSelect={value => context.setMenuFieldValue('loadingLabel', value, null)}
             />
           </FieldCard>
         ),
@@ -2663,12 +2635,9 @@ const getElementEditorConfig = (
         title: 'Titre',
         content: (
           <FieldCard label="Titre" htmlFor="contact-title">
-            <input
-              id="contact-title"
-              className="ui-input w-full"
-              value={draft.contact.title}
-              onChange={context.handleContactFieldChange('title')}
-            />
+            {renderRichTextField('contact.title', draft.contact.title, (text, rich) =>
+              context.setContactFieldValue('title', text, rich),
+            )}
           </FieldCard>
         ),
       };
@@ -2677,12 +2646,9 @@ const getElementEditorConfig = (
         title: 'Label adresse',
         content: (
           <FieldCard label="Label adresse" htmlFor="contact-address-label">
-            <input
-              id="contact-address-label"
-              className="ui-input w-full"
-              value={draft.contact.addressLabel}
-              onChange={context.handleContactFieldChange('addressLabel')}
-            />
+            {renderRichTextField('contact.addressLabel', draft.contact.addressLabel, (text, rich) =>
+              context.setContactFieldValue('addressLabel', text, rich),
+            )}
           </FieldCard>
         ),
       };
@@ -2691,15 +2657,12 @@ const getElementEditorConfig = (
         title: 'Adresse',
         content: (
           <FieldCard label="Adresse" htmlFor="contact-address">
-            <input
-              id="contact-address"
-              className="ui-input w-full"
-              value={draft.contact.address}
-              onChange={context.handleContactFieldChange('address')}
-            />
+            {renderRichTextField('contact.address', draft.contact.address, (text, rich) =>
+              context.setContactFieldValue('address', text, rich),
+            )}
             <SuggestionChips
               options={CONTACT_ADDRESS_SUGGESTIONS}
-              onSelect={value => context.setContactFieldValue('address', value)}
+              onSelect={value => context.setContactFieldValue('address', value, null)}
             />
           </FieldCard>
         ),
@@ -2709,12 +2672,9 @@ const getElementEditorConfig = (
         title: 'Label téléphone',
         content: (
           <FieldCard label="Label téléphone" htmlFor="contact-phone-label">
-            <input
-              id="contact-phone-label"
-              className="ui-input w-full"
-              value={draft.contact.phoneLabel}
-              onChange={context.handleContactFieldChange('phoneLabel')}
-            />
+            {renderRichTextField('contact.phoneLabel', draft.contact.phoneLabel, (text, rich) =>
+              context.setContactFieldValue('phoneLabel', text, rich),
+            )}
           </FieldCard>
         ),
       };
@@ -2723,15 +2683,12 @@ const getElementEditorConfig = (
         title: 'Téléphone',
         content: (
           <FieldCard label="Téléphone" htmlFor="contact-phone">
-            <input
-              id="contact-phone"
-              className="ui-input w-full"
-              value={draft.contact.phone}
-              onChange={context.handleContactFieldChange('phone')}
-            />
+            {renderRichTextField('contact.phone', draft.contact.phone, (text, rich) =>
+              context.setContactFieldValue('phone', text, rich),
+            )}
             <SuggestionChips
               options={CONTACT_PHONE_SUGGESTIONS}
-              onSelect={value => context.setContactFieldValue('phone', value)}
+              onSelect={value => context.setContactFieldValue('phone', value, null)}
             />
           </FieldCard>
         ),
@@ -2741,12 +2698,9 @@ const getElementEditorConfig = (
         title: 'Label email',
         content: (
           <FieldCard label="Label email" htmlFor="contact-email-label">
-            <input
-              id="contact-email-label"
-              className="ui-input w-full"
-              value={draft.contact.emailLabel}
-              onChange={context.handleContactFieldChange('emailLabel')}
-            />
+            {renderRichTextField('contact.emailLabel', draft.contact.emailLabel, (text, rich) =>
+              context.setContactFieldValue('emailLabel', text, rich),
+            )}
           </FieldCard>
         ),
       };
@@ -2755,15 +2709,12 @@ const getElementEditorConfig = (
         title: 'Email',
         content: (
           <FieldCard label="Email" htmlFor="contact-email">
-            <input
-              id="contact-email"
-              className="ui-input w-full"
-              value={draft.contact.email}
-              onChange={context.handleContactFieldChange('email')}
-            />
+            {renderRichTextField('contact.email', draft.contact.email, (text, rich) =>
+              context.setContactFieldValue('email', text, rich),
+            )}
             <SuggestionChips
               options={CONTACT_EMAIL_SUGGESTIONS}
-              onSelect={value => context.setContactFieldValue('email', value)}
+              onSelect={value => context.setContactFieldValue('email', value, null)}
             />
           </FieldCard>
         ),
@@ -2795,13 +2746,13 @@ const getElementEditorConfig = (
         title: 'Texte de pied de page',
         content: (
           <FieldCard label="Texte" htmlFor="footer-text">
-            <input
-              id="footer-text"
-              className="ui-input w-full"
-              value={draft.footer.text}
-              onChange={context.handleFooterTextChange}
+            {renderRichTextField('footer.text', draft.footer.text, (text, rich) =>
+              context.setFooterTextValue(text, rich),
+            )}
+            <SuggestionChips
+              options={FOOTER_TEXT_SUGGESTIONS}
+              onSelect={value => context.setFooterTextValue(value, null)}
             />
-            <SuggestionChips options={FOOTER_TEXT_SUGGESTIONS} onSelect={context.setFooterTextValue} />
           </FieldCard>
         ),
       };
