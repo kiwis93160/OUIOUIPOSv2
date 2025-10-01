@@ -81,6 +81,15 @@ export interface ElementStyle {
 
 export type ElementStyles = Partial<Record<EditableElementKey, ElementStyle>>;
 
+export type RichTextMark = 'bold' | 'italic' | 'strikethrough';
+
+export interface RichTextValue {
+  html: string;
+  plainText: string;
+}
+
+export type ElementRichText = Partial<Record<EditableElementKey, RichTextValue>>;
+
 export type CustomizationAssetType = 'image' | 'video' | 'audio' | 'font' | 'raw';
 
 export interface CustomizationAsset {
@@ -149,6 +158,7 @@ export interface SiteContent {
     style: SectionStyle;
   };
   elementStyles: ElementStyles;
+  elementRichText: ElementRichText;
   assets: SiteAssets;
 }
 

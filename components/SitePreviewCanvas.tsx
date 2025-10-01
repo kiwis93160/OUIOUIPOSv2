@@ -1,6 +1,7 @@
 import React from 'react';
 import { Edit2, Mail, MapPin, Phone } from 'lucide-react';
 import { EditableElementKey, EditableZoneKey, Product, SiteContent } from '../types';
+import useCustomFonts from '../hooks/useCustomFonts';
 import {
   createBackgroundStyle,
   createBodyTextStyle,
@@ -151,7 +152,32 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
   const footerBackgroundStyle = createBackgroundStyle(content.footer.style);
   const footerTextStyle = createBodyTextStyle(content.footer.style);
 
+  useCustomFonts(content.assets.library);
+
   const elementStyles = content.elementStyles ?? {};
+  const elementRichText = content.elementRichText ?? {};
+
+  const getRichTextHtml = (key: EditableElementKey): string | null => {
+    const entry = elementRichText[key];
+    const html = entry?.html?.trim();
+    return html && html.length > 0 ? html : null;
+  };
+
+  const renderRichTextElement = <T extends keyof JSX.IntrinsicElements>(
+    key: EditableElementKey,
+    Component: T,
+    props: React.ComponentPropsWithoutRef<T>,
+    fallback: string,
+  ) => {
+    const html = getRichTextHtml(key);
+    if (html) {
+      return React.createElement(Component, {
+        ...props,
+        dangerouslySetInnerHTML: { __html: html },
+      });
+    }
+    return React.createElement(Component, props, fallback);
+  };
 
   const zoneStyleMap: Record<EditableZoneKey, typeof content.navigation.style> = {
     navigation: content.navigation.style,
@@ -205,12 +231,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="ml-3 inline-flex items-center"
                   buttonClassName="-right-3 -top-3"
                 >
-                  <span
-                    className="login-brand__name"
-                    style={getElementTextStyle('navigation.brand')}
-                  >
-                    {content.navigation.brand}
-                  </span>
+                  {renderRichTextElement(
+                    'navigation.brand',
+                    'span',
+                    {
+                      className: 'login-brand__name',
+                      style: getElementTextStyle('navigation.brand'),
+                    },
+                    content.navigation.brand,
+                  )}
                 </EditableElement>
               </div>
               <nav className="login-nav" aria-label="Navigation principale">
@@ -222,12 +251,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="inline-flex"
                   buttonClassName="-right-2 -top-2"
                 >
-                  <span
-                    className="login-nav__link"
-                    style={getElementBodyTextStyle('navigation.links.home')}
-                  >
-                    {content.navigation.links.home}
-                  </span>
+                  {renderRichTextElement(
+                    'navigation.links.home',
+                    'span',
+                    {
+                      className: 'login-nav__link',
+                      style: getElementBodyTextStyle('navigation.links.home'),
+                    },
+                    content.navigation.links.home,
+                  )}
                 </EditableElement>
                 <EditableElement
                   id="navigation.links.about"
@@ -237,12 +269,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="inline-flex"
                   buttonClassName="-right-2 -top-2"
                 >
-                  <span
-                    className="login-nav__link"
-                    style={getElementBodyTextStyle('navigation.links.about')}
-                  >
-                    {content.navigation.links.about}
-                  </span>
+                  {renderRichTextElement(
+                    'navigation.links.about',
+                    'span',
+                    {
+                      className: 'login-nav__link',
+                      style: getElementBodyTextStyle('navigation.links.about'),
+                    },
+                    content.navigation.links.about,
+                  )}
                 </EditableElement>
                 <EditableElement
                   id="navigation.links.menu"
@@ -252,12 +287,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="inline-flex"
                   buttonClassName="-right-2 -top-2"
                 >
-                  <span
-                    className="login-nav__link"
-                    style={getElementBodyTextStyle('navigation.links.menu')}
-                  >
-                    {content.navigation.links.menu}
-                  </span>
+                  {renderRichTextElement(
+                    'navigation.links.menu',
+                    'span',
+                    {
+                      className: 'login-nav__link',
+                      style: getElementBodyTextStyle('navigation.links.menu'),
+                    },
+                    content.navigation.links.menu,
+                  )}
                 </EditableElement>
                 <EditableElement
                   id="navigation.links.contact"
@@ -267,12 +305,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="inline-flex"
                   buttonClassName="-right-2 -top-2"
                 >
-                  <span
-                    className="login-nav__link"
-                    style={getElementBodyTextStyle('navigation.links.contact')}
-                  >
-                    {content.navigation.links.contact}
-                  </span>
+                  {renderRichTextElement(
+                    'navigation.links.contact',
+                    'span',
+                    {
+                      className: 'login-nav__link',
+                      style: getElementBodyTextStyle('navigation.links.contact'),
+                    },
+                    content.navigation.links.contact,
+                  )}
                 </EditableElement>
                 <EditableElement
                   id="navigation.links.loginCta"
@@ -319,9 +360,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="block"
                   buttonClassName="right-0 -top-3"
                 >
-                  <h2 className="hero-title" style={getElementTextStyle('hero.title')}>
-                    {content.hero.title}
-                  </h2>
+                  {renderRichTextElement(
+                    'hero.title',
+                    'h2',
+                    {
+                      className: 'hero-title',
+                      style: getElementTextStyle('hero.title'),
+                    },
+                    content.hero.title,
+                  )}
                 </EditableElement>
                 <EditableElement
                   id="hero.subtitle"
@@ -330,9 +377,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   className="mt-4 block"
                   buttonClassName="right-0 -top-3"
                 >
-                  <p className="hero-subtitle" style={getElementBodyTextStyle('hero.subtitle')}>
-                    {content.hero.subtitle}
-                  </p>
+                  {renderRichTextElement(
+                    'hero.subtitle',
+                    'p',
+                    {
+                      className: 'hero-subtitle',
+                      style: getElementBodyTextStyle('hero.subtitle'),
+                    },
+                    content.hero.subtitle,
+                  )}
                 </EditableElement>
                 <EditableElement
                   id="hero.ctaLabel"
@@ -350,54 +403,76 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     }}
                     disabled
                   >
-                    {content.hero.ctaLabel}
+                    {renderRichTextElement(
+                      'hero.ctaLabel',
+                      'span',
+                      {
+                        className: 'inline-flex items-center justify-center',
+                        style: getElementBodyTextStyle('hero.ctaLabel'),
+                      },
+                      content.hero.ctaLabel,
+                    )}
                   </button>
                 </EditableElement>
                 <div className="hero-history mt-6">
-                  <EditableElement
-                    id="hero.historyTitle"
-                    label="Modifier le titre de l'historique"
+                <EditableElement
+                  id="hero.historyTitle"
+                  label="Modifier le titre de l'historique"
                   onEdit={onEdit}
                   className="block"
                   buttonClassName="right-0 -top-3"
                 >
-                  <p className="hero-history__title" style={getElementBodyTextStyle('hero.historyTitle')}>
-                    {content.hero.historyTitle}
-                  </p>
+                  {renderRichTextElement(
+                    'hero.historyTitle',
+                    'p',
+                    {
+                      className: 'hero-history__title',
+                      style: getElementBodyTextStyle('hero.historyTitle'),
+                    },
+                    content.hero.historyTitle,
+                  )}
                 </EditableElement>
                 <EditableElement
                   id="hero.reorderCtaLabel"
-                    label="Modifier le bouton de réassort"
-                    onEdit={onEdit}
-                    className="hero-history__list"
-                    buttonClassName="right-2 top-2"
-                  >
-                    <>
-                      {[0, 1, 2].map(index => (
-                        <div key={index} className="hero-history__item">
-                          <div className="hero-history__meta">
-                            <p className="hero-history__date" style={heroBodyTextStyle}>
-                              Pedido del 12/03/2024
-                            </p>
-                            <p className="hero-history__details" style={heroBodyTextStyle}>
-                              2 article(s) • {formatCurrencyCOP(32000)}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            className="hero-history__cta"
-                            style={{
-                              ...getElementBodyTextStyle('hero.reorderCtaLabel'),
-                              ...getElementBackgroundStyle('hero.reorderCtaLabel'),
-                            }}
-                            disabled
-                          >
-                            {content.hero.reorderCtaLabel}
-                          </button>
+                  label="Modifier le bouton de réassort"
+                  onEdit={onEdit}
+                  className="hero-history__list"
+                  buttonClassName="right-2 top-2"
+                >
+                  <>
+                    {[0, 1, 2].map(index => (
+                      <div key={index} className="hero-history__item">
+                        <div className="hero-history__meta">
+                          <p className="hero-history__date" style={heroBodyTextStyle}>
+                            Pedido del 12/03/2024
+                          </p>
+                          <p className="hero-history__details" style={heroBodyTextStyle}>
+                            2 article(s) • {formatCurrencyCOP(32000)}
+                          </p>
                         </div>
-                      ))}
-                    </>
-                  </EditableElement>
+                        <button
+                          type="button"
+                          className="hero-history__cta"
+                          style={{
+                            ...getElementBodyTextStyle('hero.reorderCtaLabel'),
+                            ...getElementBackgroundStyle('hero.reorderCtaLabel'),
+                          }}
+                          disabled
+                        >
+                          {renderRichTextElement(
+                            'hero.reorderCtaLabel',
+                            'span',
+                            {
+                              className: 'inline-flex items-center justify-center',
+                              style: getElementBodyTextStyle('hero.reorderCtaLabel'),
+                            },
+                            content.hero.reorderCtaLabel,
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </>
+                </EditableElement>
                 </div>
               </div>
             </div>
@@ -422,9 +497,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 className="block"
                 buttonClassName="right-0 -top-3"
               >
-                <h2 className="section-title" style={getElementTextStyle('about.title')}>
-                  {content.about.title}
-                </h2>
+                {renderRichTextElement(
+                  'about.title',
+                  'h2',
+                  {
+                    className: 'section-title',
+                    style: getElementTextStyle('about.title'),
+                  },
+                  content.about.title,
+                )}
               </EditableElement>
               <EditableElement
                 id="about.description"
@@ -433,12 +514,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 className="mt-4 block"
                 buttonClassName="right-0 -top-3"
               >
-                <p
-                  className="section-text section-text--muted"
-                  style={getElementBodyTextStyle('about.description')}
-                >
-                  {content.about.description}
-                </p>
+                {renderRichTextElement(
+                  'about.description',
+                  'p',
+                  {
+                    className: 'section-text section-text--muted',
+                    style: getElementBodyTextStyle('about.description'),
+                  },
+                  content.about.description,
+                )}
               </EditableElement>
               {content.about.image && (
                 <EditableElement
@@ -477,9 +561,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 className="block"
                 buttonClassName="right-0 -top-3"
               >
-                <h2 className="section-title" style={getElementTextStyle('menu.title')}>
-                  {content.menu.title}
-                </h2>
+                {renderRichTextElement(
+                  'menu.title',
+                  'h2',
+                  {
+                    className: 'section-title',
+                    style: getElementTextStyle('menu.title'),
+                  },
+                  content.menu.title,
+                )}
               </EditableElement>
               {content.menu.image && (
                 <EditableElement
@@ -552,7 +642,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     }}
                     disabled
                   >
-                    {content.menu.ctaLabel}
+                    {renderRichTextElement(
+                      'menu.ctaLabel',
+                      'span',
+                      {
+                        className: 'inline-flex items-center justify-center',
+                        style: getElementBodyTextStyle('menu.ctaLabel'),
+                      },
+                      content.menu.ctaLabel,
+                    )}
                   </button>
                   <EditableElement
                     id="menu.loadingLabel"
@@ -562,12 +660,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     buttonClassName="-right-3 -top-3"
                     as="span"
                   >
-                    <p
-                      className="section-text section-text--muted"
-                      style={getElementBodyTextStyle('menu.loadingLabel')}
-                    >
-                      {content.menu.loadingLabel}
-                    </p>
+                    {renderRichTextElement(
+                      'menu.loadingLabel',
+                      'p',
+                      {
+                        className: 'section-text section-text--muted',
+                        style: getElementBodyTextStyle('menu.loadingLabel'),
+                      },
+                      content.menu.loadingLabel,
+                    )}
                   </EditableElement>
                 </div>
               </EditableElement>
@@ -593,9 +694,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 className="block"
                 buttonClassName="right-0 -top-3"
               >
-                <h2 className="section-title" style={getElementTextStyle('contact.title')}>
-                  {content.contact.title}
-                </h2>
+                {renderRichTextElement(
+                  'contact.title',
+                  'h2',
+                  {
+                    className: 'section-title',
+                    style: getElementTextStyle('contact.title'),
+                  },
+                  content.contact.title,
+                )}
               </EditableElement>
               {content.contact.image && (
                 <EditableElement
@@ -622,9 +729,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <h3 className="contact-card__title" style={getElementTextStyle('contact.addressLabel')}>
-                      {content.contact.addressLabel}
-                    </h3>
+                    {renderRichTextElement(
+                      'contact.addressLabel',
+                      'h3',
+                      {
+                        className: 'contact-card__title',
+                        style: getElementTextStyle('contact.addressLabel'),
+                      },
+                      content.contact.addressLabel,
+                    )}
                   </EditableElement>
                   <EditableElement
                     id="contact.address"
@@ -633,9 +746,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="mt-1 block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <p className="contact-card__text" style={getElementBodyTextStyle('contact.address')}>
-                      {content.contact.address}
-                    </p>
+                    {renderRichTextElement(
+                      'contact.address',
+                      'p',
+                      {
+                        className: 'contact-card__text',
+                        style: getElementBodyTextStyle('contact.address'),
+                      },
+                      content.contact.address,
+                    )}
                   </EditableElement>
                 </div>
                 <div className="contact-card" style={contactTextStyle}>
@@ -647,9 +766,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <h3 className="contact-card__title" style={getElementTextStyle('contact.phoneLabel')}>
-                      {content.contact.phoneLabel}
-                    </h3>
+                    {renderRichTextElement(
+                      'contact.phoneLabel',
+                      'h3',
+                      {
+                        className: 'contact-card__title',
+                        style: getElementTextStyle('contact.phoneLabel'),
+                      },
+                      content.contact.phoneLabel,
+                    )}
                   </EditableElement>
                   <EditableElement
                     id="contact.phone"
@@ -658,9 +783,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="mt-1 block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <p className="contact-card__text" style={getElementBodyTextStyle('contact.phone')}>
-                      {content.contact.phone}
-                    </p>
+                    {renderRichTextElement(
+                      'contact.phone',
+                      'p',
+                      {
+                        className: 'contact-card__text',
+                        style: getElementBodyTextStyle('contact.phone'),
+                      },
+                      content.contact.phone,
+                    )}
                   </EditableElement>
                 </div>
                 <div className="contact-card" style={contactTextStyle}>
@@ -672,9 +803,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <h3 className="contact-card__title" style={getElementTextStyle('contact.emailLabel')}>
-                      {content.contact.emailLabel}
-                    </h3>
+                    {renderRichTextElement(
+                      'contact.emailLabel',
+                      'h3',
+                      {
+                        className: 'contact-card__title',
+                        style: getElementTextStyle('contact.emailLabel'),
+                      },
+                      content.contact.emailLabel,
+                    )}
                   </EditableElement>
                   <EditableElement
                     id="contact.email"
@@ -683,9 +820,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     className="mt-1 block"
                     buttonClassName="right-0 -top-3"
                   >
-                    <p className="contact-card__text" style={getElementBodyTextStyle('contact.email')}>
-                      {content.contact.email}
-                    </p>
+                    {renderRichTextElement(
+                      'contact.email',
+                      'p',
+                      {
+                        className: 'contact-card__text',
+                        style: getElementBodyTextStyle('contact.email'),
+                      },
+                      content.contact.email,
+                    )}
                   </EditableElement>
                 </div>
               </div>
@@ -712,7 +855,15 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 buttonClassName="right-0 -top-3"
               >
                 <p style={getElementBodyTextStyle('footer.text')}>
-                  &copy; {new Date().getFullYear()} {content.navigation.brand}. {content.footer.text}
+                  &copy; {new Date().getFullYear()} {content.navigation.brand}.{' '}
+                  {renderRichTextElement(
+                    'footer.text',
+                    'span',
+                    {
+                      style: getElementBodyTextStyle('footer.text'),
+                    },
+                    content.footer.text,
+                  )}
                 </p>
               </EditableElement>
             </div>
