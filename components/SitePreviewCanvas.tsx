@@ -44,7 +44,10 @@ export const resolveZoneFromElement = (element: EditableElementKey): EditableZon
 interface SitePreviewCanvasProps {
   content: SiteContent;
   bestSellerProducts: Product[];
-  onEdit: (element: EditableElementKey, meta: { zone: EditableZoneKey; anchor: DOMRect | null }) => void;
+  onEdit: (
+    element: EditableElementKey,
+    meta: { zone: EditableZoneKey; anchor: DOMRect | DOMRectReadOnly | null },
+  ) => void;
   activeZone?: EditableZoneKey | null;
   showEditButtons?: boolean;
 }
@@ -111,6 +114,7 @@ const EditableElement: React.FC<EditableElementProps> = ({
         onClick={handleEdit}
         className={buttonClasses}
         aria-label={label}
+        data-element-id={id}
       >
         <Edit2 className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
