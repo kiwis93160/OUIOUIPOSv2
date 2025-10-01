@@ -15,6 +15,7 @@ import {
   createBodyTextStyle,
   createElementBackgroundStyle,
   createElementBodyTextStyle,
+  createElementTextStyle,
   createHeroBackgroundStyle,
   createTextStyle,
 } from '../utils/siteStyleHelpers';
@@ -197,19 +198,16 @@ const Login: React.FC = () => {
   const staffTriggerLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const navigationBackgroundStyle = createBackgroundStyle(navigation.style);
   const navigationTextStyle = createTextStyle(navigation.style);
-  const navigationBodyStyle = createBodyTextStyle(navigation.style);
   const heroBackgroundStyle = createHeroBackgroundStyle(hero.style, hero.backgroundImage);
   const heroTextStyle = createTextStyle(hero.style);
   const heroBodyTextStyle = createBodyTextStyle(hero.style);
   const aboutBackgroundStyle = createBackgroundStyle(about.style);
   const aboutTextStyle = createTextStyle(about.style);
-  const aboutBodyTextStyle = createBodyTextStyle(about.style);
   const menuBackgroundStyle = createBackgroundStyle(menuContent.style);
   const menuTextStyle = createTextStyle(menuContent.style);
   const menuBodyTextStyle = createBodyTextStyle(menuContent.style);
   const findUsBackgroundStyle = createBackgroundStyle(findUs.style);
   const findUsTextStyle = createTextStyle(findUs.style);
-  const findUsBodyTextStyle = createBodyTextStyle(findUs.style);
   const footerBackgroundStyle = createBackgroundStyle(footer.style);
   const footerTextStyle = createBodyTextStyle(footer.style);
 
@@ -225,6 +223,11 @@ const Login: React.FC = () => {
   };
 
   const getElementStyle = (key: EditableElementKey) => elementStyles[key];
+
+  const getElementTextStyle = (key: EditableElementKey) => {
+    const zone = resolveZoneFromElement(key);
+    return createElementTextStyle(zoneStyleMap[zone], getElementStyle(key));
+  };
 
   const getElementBodyTextStyle = (key: EditableElementKey) => {
     const zone = resolveZoneFromElement(key);
@@ -390,7 +393,7 @@ const Login: React.FC = () => {
               'span',
               {
                 className: 'login-brand__name',
-                style: navigationTextStyle,
+                style: getElementTextStyle('navigation.brand'),
               },
               navigation.brand,
             )}
@@ -402,7 +405,7 @@ const Login: React.FC = () => {
               {
                 href: '#accueil',
                 className: 'login-nav__link',
-                style: navigationBodyStyle,
+                style: getElementBodyTextStyle('navigation.links.home'),
               },
               navigation.links.home,
             )}
@@ -412,7 +415,7 @@ const Login: React.FC = () => {
               {
                 href: '#apropos',
                 className: 'login-nav__link',
-                style: navigationBodyStyle,
+                style: getElementBodyTextStyle('navigation.links.about'),
               },
               navigation.links.about,
             )}
@@ -422,7 +425,7 @@ const Login: React.FC = () => {
               {
                 href: '#menu',
                 className: 'login-nav__link',
-                style: navigationBodyStyle,
+                style: getElementBodyTextStyle('navigation.links.menu'),
               },
               navigation.links.menu,
             )}
@@ -459,7 +462,7 @@ const Login: React.FC = () => {
                 href: '#accueil',
                 onClick: () => setMobileMenuOpen(false),
                 className: 'login-menu-overlay__link',
-                style: navigationBodyStyle,
+                style: getElementBodyTextStyle('navigation.links.home'),
               },
               navigation.links.home,
             )}
@@ -470,7 +473,7 @@ const Login: React.FC = () => {
                 href: '#apropos',
                 onClick: () => setMobileMenuOpen(false),
                 className: 'login-menu-overlay__link',
-                style: navigationBodyStyle,
+                style: getElementBodyTextStyle('navigation.links.about'),
               },
               navigation.links.about,
             )}
@@ -481,7 +484,7 @@ const Login: React.FC = () => {
                 href: '#menu',
                 onClick: () => setMobileMenuOpen(false),
                 className: 'login-menu-overlay__link',
-                style: navigationBodyStyle,
+                style: getElementBodyTextStyle('navigation.links.menu'),
               },
               navigation.links.menu,
             )}
@@ -512,7 +515,7 @@ const Login: React.FC = () => {
                   'h2',
                   {
                     className: 'hero-title',
-                    style: heroTextStyle,
+                    style: getElementTextStyle('hero.title'),
                   },
                   hero.title,
                 )}
@@ -521,7 +524,7 @@ const Login: React.FC = () => {
                   'p',
                   {
                     className: 'hero-subtitle',
-                    style: heroBodyTextStyle,
+                    style: getElementBodyTextStyle('hero.subtitle'),
                   },
                   hero.subtitle,
                 )}
@@ -550,7 +553,7 @@ const Login: React.FC = () => {
                       'p',
                       {
                         className: 'hero-history__title',
-                        style: heroBodyTextStyle,
+                        style: getElementBodyTextStyle('hero.historyTitle'),
                       },
                       hero.historyTitle,
                     )}
@@ -605,7 +608,7 @@ const Login: React.FC = () => {
               'h2',
               {
                 className: 'section-title',
-                style: aboutTextStyle,
+                style: getElementTextStyle('about.title'),
               },
               about.title,
             )}
@@ -614,7 +617,7 @@ const Login: React.FC = () => {
               'p',
               {
                 className: 'section-text section-text--muted',
-                style: aboutBodyTextStyle,
+                style: getElementBodyTextStyle('about.description'),
               },
               about.description,
             )}
@@ -639,7 +642,7 @@ const Login: React.FC = () => {
               'h2',
               {
                 className: 'section-title',
-                style: menuTextStyle,
+                style: getElementTextStyle('menu.title'),
               },
               menuContent.title,
             )}
@@ -656,7 +659,7 @@ const Login: React.FC = () => {
                 'p',
                 {
                   className: 'section-text section-text--muted',
-                  style: menuBodyTextStyle,
+                  style: getElementBodyTextStyle('menu.loadingLabel'),
                 },
                 menuContent.loadingLabel,
               )
@@ -809,7 +812,7 @@ const Login: React.FC = () => {
                 'h2',
                 {
                   className: 'section-title',
-                  style: findUsTextStyle,
+                  style: getElementTextStyle('findUs.title'),
                 },
                 findUs.title,
               )}
@@ -822,7 +825,7 @@ const Login: React.FC = () => {
                       'h3',
                       {
                         className: 'find-us-detail__title',
-                        style: findUsTextStyle,
+                        style: getElementTextStyle('findUs.addressLabel'),
                       },
                       findUs.addressLabel,
                     )}
@@ -831,7 +834,7 @@ const Login: React.FC = () => {
                       'p',
                       {
                         className: 'find-us-detail__text',
-                        style: findUsBodyTextStyle,
+                        style: getElementBodyTextStyle('findUs.address'),
                       },
                       findUs.address,
                     )}
@@ -845,7 +848,7 @@ const Login: React.FC = () => {
                       'h3',
                       {
                         className: 'find-us-detail__title',
-                        style: findUsTextStyle,
+                        style: getElementTextStyle('findUs.hoursLabel'),
                       },
                       findUs.hoursLabel,
                     )}
@@ -854,7 +857,7 @@ const Login: React.FC = () => {
                       'p',
                       {
                         className: 'find-us-detail__text',
-                        style: findUsBodyTextStyle,
+                        style: getElementBodyTextStyle('findUs.hours'),
                       },
                       findUs.hours,
                     )}
@@ -868,7 +871,7 @@ const Login: React.FC = () => {
                       'h3',
                       {
                         className: 'find-us-detail__title',
-                        style: findUsTextStyle,
+                        style: getElementTextStyle('findUs.cityLabel'),
                       },
                       findUs.cityLabel,
                     )}
@@ -877,7 +880,7 @@ const Login: React.FC = () => {
                       'p',
                       {
                         className: 'find-us-detail__text',
-                        style: findUsBodyTextStyle,
+                        style: getElementBodyTextStyle('findUs.city'),
                       },
                       findUs.city,
                     )}
@@ -906,7 +909,7 @@ const Login: React.FC = () => {
                       'span',
                       {
                         className: 'find-us-map__label',
-                        style: findUsBodyTextStyle,
+                        style: getElementBodyTextStyle('findUs.mapLabel'),
                       },
                       findUs.mapLabel,
                     )}
@@ -919,7 +922,7 @@ const Login: React.FC = () => {
                     'span',
                     {
                       className: 'find-us-map__label',
-                      style: findUsBodyTextStyle,
+                      style: getElementBodyTextStyle('findUs.mapLabel'),
                     },
                     findUs.mapLabel,
                   )}
@@ -932,13 +935,13 @@ const Login: React.FC = () => {
 
       <footer className="site-footer" style={{ ...footerBackgroundStyle, ...footerTextStyle }}>
         <div className="layout-container site-footer__inner" style={footerTextStyle}>
-          <p style={footerTextStyle}>
+          <p style={getElementBodyTextStyle('footer.text')}>
             &copy; {new Date().getFullYear()} {navigation.brand}.{' '}
             {renderRichTextElement(
               'footer.text',
               'span',
               {
-                style: footerTextStyle,
+                style: getElementBodyTextStyle('footer.text'),
               },
               footer.text,
             )}
