@@ -72,7 +72,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   };
 
   const applyCommand = (command: string) => {
-    document.execCommand('styleWithCSS', false, 'true');
+    document.execCommand('styleWithCSS', false, 'false');
     document.execCommand(command);
     editorRef.current?.focus();
     emitChange();
