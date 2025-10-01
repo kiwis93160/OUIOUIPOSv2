@@ -61,10 +61,18 @@ export const createBodyTextStyle = (style: SectionStyle): CSSProperties => ({
 export const createElementTextStyle = (
   sectionStyle: SectionStyle,
   elementStyle?: ElementStyle | null,
-): CSSProperties => ({
-  color: elementStyle?.textColor ?? sectionStyle.textColor,
-  fontFamily: elementStyle?.fontFamily ?? sectionStyle.fontFamily,
-});
+): CSSProperties => {
+  const style: CSSProperties = {
+    color: elementStyle?.textColor ?? sectionStyle.textColor,
+    fontFamily: elementStyle?.fontFamily ?? sectionStyle.fontFamily,
+  };
+
+  if (elementStyle?.backgroundColor && elementStyle.backgroundColor.trim().length > 0) {
+    style.backgroundColor = elementStyle.backgroundColor;
+  }
+
+  return style;
+};
 
 export const createElementBodyTextStyle = (
   sectionStyle: SectionStyle,
