@@ -10,16 +10,17 @@ import useSiteContent, { DEFAULT_SITE_CONTENT } from '../hooks/useSiteContent';
 import {
   CustomizationAsset,
   CustomizationAssetType,
+  EditableElementKey,
+  EditableZoneKey,
+  ElementStyle,
   Product,
   SectionStyle,
   SiteContent,
+  STYLE_EDITABLE_ELEMENT_KEYS,
 } from '../types';
 import { normalizeCloudinaryImageUrl, uploadCustomizationAsset } from '../services/cloudinary';
 import { resolveSiteContent } from '../utils/siteContent';
-import SitePreviewCanvas, {
-  EditableElementKey,
-  EditableZoneKey,
-} from '../components/SitePreviewCanvas';
+import SitePreviewCanvas, { resolveZoneFromElement } from '../components/SitePreviewCanvas';
 import { api } from '../services/api';
 import {
   Archive,
@@ -205,6 +206,33 @@ const IMAGE_FIELD_LABELS: Record<ImageFieldKey, string> = {
   'footer.style.background': 'Fond personnalisé (pied de page)',
 };
 
+const ELEMENT_STYLE_LABELS: Partial<Record<EditableElementKey, string>> = {
+  'navigation.brand': 'Nom de la marque',
+  'navigation.links.home': 'Lien Accueil',
+  'navigation.links.about': 'Lien À propos',
+  'navigation.links.menu': 'Lien Menu',
+  'navigation.links.contact': 'Lien Contact',
+  'navigation.links.loginCta': "Bouton d'accès staff",
+  'hero.title': 'Titre du hero',
+  'hero.subtitle': 'Sous-titre du hero',
+  'hero.ctaLabel': 'Bouton principal du hero',
+  'hero.historyTitle': "Titre de l'historique",
+  'hero.reorderCtaLabel': 'Bouton de réassort',
+  'about.title': 'Titre À propos',
+  'about.description': 'Texte À propos',
+  'menu.title': 'Titre du menu',
+  'menu.ctaLabel': 'Bouton du menu',
+  'menu.loadingLabel': 'Texte de chargement du menu',
+  'contact.title': 'Titre de contact',
+  'contact.addressLabel': "Libellé de l'adresse",
+  'contact.address': 'Adresse',
+  'contact.phoneLabel': 'Libellé du téléphone',
+  'contact.phone': 'Téléphone',
+  'contact.emailLabel': "Libellé de l'email",
+  'contact.email': 'Email',
+  'footer.text': 'Texte du pied de page',
+};
+
 const INITIAL_IMAGE_ERRORS: Record<ImageFieldKey, string | null> = {
   'hero.backgroundImage': null,
   'about.image': null,
@@ -282,6 +310,8 @@ type NavigationFieldKey = keyof SiteContent['navigation']['links'];
 type HeroFieldKey = Exclude<keyof SiteContent['hero'], 'backgroundImage' | 'style'>;
 type MenuFieldKey = Exclude<keyof SiteContent['menu'], 'image' | 'style'>;
 type ContactFieldKey = Exclude<keyof SiteContent['contact'], 'image' | 'style'>;
+
+type ElementStyleProperty = keyof ElementStyle;
 
 type NavigationChangeHandler = (
   key: NavigationFieldKey,
@@ -436,6 +466,12 @@ type EditorContext = {
     zone: EditableZoneKey,
     value: SectionStyle['background']['type'],
   ) => void;
+  handleElementStyleChange: (
+    element: EditableElementKey,
+    property: ElementStyleProperty,
+    value: string,
+  ) => void;
+  handleElementStyleReset: (element: EditableElementKey, property?: ElementStyleProperty) => void;
   fontOptions: readonly string[];
   fontSizeOptions: readonly string[];
   setBrandValue: (value: string) => void;
@@ -552,12 +588,62 @@ const SiteCustomization: React.FC = () => {
 
   const fontSizeOptions = useMemo(() => [...FONT_SIZE_SUGGESTIONS], []);
 
+  const cleanElementStyle = useCallback((style: ElementStyle | undefined): ElementStyle | null => {
+    if (!style) {
+      return null;
+    }
+
+    const next: ElementStyle = {};
+
+    const assignIfValid = (key: ElementStyleProperty, value: string | undefined) => {
+      if (typeof value !== 'string') {
+        return;
+      }
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        next[key] = trimmed;
+      }
+    };
+
+    assignIfValid('fontFamily', style.fontFamily);
+    assignIfValid('fontSize', style.fontSize);
+    assignIfValid('textColor', style.textColor);
+    assignIfValid('backgroundColor', style.backgroundColor);
+
+    return Object.keys(next).length > 0 ? next : null;
+  }, []);
+
+
   const mutateDraft = (updater: (prev: SiteContent) => SiteContent) => {
     setDraft(prev => updater(prev));
     setIsDirty(true);
     setStatusMessage(null);
     setFormError(null);
   };
+
+  const updateElementStyleEntry = useCallback(
+    (
+      element: EditableElementKey,
+      updater: (previous: ElementStyle | undefined) => ElementStyle | null,
+    ) => {
+      mutateDraft(prev => {
+        const nextElementStyles = { ...prev.elementStyles };
+        const nextValue = updater(prev.elementStyles[element]);
+
+        if (!nextValue) {
+          delete nextElementStyles[element];
+        } else {
+          nextElementStyles[element] = nextValue;
+        }
+
+        return {
+          ...prev,
+          elementStyles: nextElementStyles,
+        };
+      });
+    },
+    [mutateDraft],
+  );
 
   const updateZone = <K extends EditableZoneKey>(
     zone: K,
@@ -1100,6 +1186,34 @@ const SiteCustomization: React.FC = () => {
         }));
       }
     },
+    handleElementStyleChange: (element, property, rawValue) => {
+      updateElementStyleEntry(element, previous => {
+        const next: ElementStyle = { ...(previous ?? {}) };
+        const trimmed = rawValue.trim();
+
+        if (trimmed.length === 0) {
+          delete next[property];
+        } else {
+          next[property] = trimmed;
+        }
+
+        return cleanElementStyle(next);
+      });
+    },
+    handleElementStyleReset: (element, property) => {
+      if (property) {
+        updateElementStyleEntry(element, previous => {
+          if (!previous) {
+            return null;
+          }
+          const next: ElementStyle = { ...previous };
+          delete next[property];
+          return cleanElementStyle(next);
+        });
+      } else {
+        updateElementStyleEntry(element, () => null);
+      }
+    },
     fontOptions,
     fontSizeOptions,
     setBrandValue,
@@ -1190,6 +1304,11 @@ const SiteCustomization: React.FC = () => {
             />
             <FloatingZoneEditor
               zone={activeZone}
+              activeElement={
+                activeElementState && resolveZoneFromElement(activeElementState.element) === activeZone
+                  ? activeElementState.element
+                  : null
+              }
               guidedMode={guidedMode}
               containerRef={previewContainerRef}
               checklist={zoneChecklist[activeZone]}
@@ -1481,6 +1600,8 @@ const MediaInputField: React.FC<{
 const ZoneStyleEditor: React.FC<{
   zone: EditableZoneKey;
   style: SectionStyle;
+  activeElement: EditableElementKey | null;
+  elementStyle?: ElementStyle;
   fontOptions: readonly string[];
   fontSizeOptions: readonly string[];
   handleStyleFontFamilyChange: (zone: EditableZoneKey, value: string) => void;
@@ -1491,15 +1612,24 @@ const ZoneStyleEditor: React.FC<{
     zone: EditableZoneKey,
     value: SectionStyle['background']['type'],
   ) => void;
+  handleElementStyleChange: (
+    element: EditableElementKey,
+    property: ElementStyleProperty,
+    value: string,
+  ) => void;
+  handleElementStyleReset: (element: EditableElementKey, property?: ElementStyleProperty) => void;
   handleImageInputChange: ImageInputHandler;
   handleImageUpload: ImageUploadHandler;
   handleClearImage: ImageClearHandler;
   imageErrors: Record<ImageFieldKey, string | null>;
   isUploading: (field: ImageFieldKey) => boolean;
   onOpenAssets: (field: ImageFieldKey) => void;
+  showZoneControls?: boolean;
 }> = ({
   zone,
   style,
+  activeElement,
+  elementStyle,
   fontOptions,
   fontSizeOptions,
   handleStyleFontFamilyChange,
@@ -1507,12 +1637,15 @@ const ZoneStyleEditor: React.FC<{
   handleStyleTextColorChange,
   handleStyleBackgroundColorChange,
   handleStyleBackgroundTypeChange,
+  handleElementStyleChange,
+  handleElementStyleReset,
   handleImageInputChange,
   handleImageUpload,
   handleClearImage,
   imageErrors,
   isUploading,
   onOpenAssets,
+  showZoneControls = true,
 }) => {
   const backgroundField = STYLE_BACKGROUND_FIELD_KEYS[zone];
   const isBackgroundImage = style.background.type === 'image';
@@ -1538,133 +1671,396 @@ const ZoneStyleEditor: React.FC<{
       ? validateCssValue('background-color', style.background.color)
       : { valid: true, message: null };
 
+  const supportsElementStyle =
+    Boolean(activeElement && STYLE_EDITABLE_ELEMENT_KEYS.includes(activeElement));
+  const elementLabel = activeElement ? ELEMENT_STYLE_LABELS[activeElement] ?? activeElement : null;
+  const elementOverrides = elementStyle ?? {};
+  const hasElementOverrides = Object.keys(elementOverrides).length > 0;
+
+  const elementFontFamilyValidation =
+    supportsElementStyle && elementOverrides.fontFamily
+      ? validateCssValue('font-family', elementOverrides.fontFamily)
+      : { valid: true, message: null };
+  const elementFontSizeValidation =
+    supportsElementStyle && elementOverrides.fontSize
+      ? validateCssValue('font-size', elementOverrides.fontSize)
+      : { valid: true, message: null };
+  const elementTextColorValidation =
+    supportsElementStyle && elementOverrides.textColor
+      ? validateCssValue('color', elementOverrides.textColor)
+      : { valid: true, message: null };
+  const elementBackgroundColorValidation =
+    supportsElementStyle && elementOverrides.backgroundColor
+      ? validateCssValue('background-color', elementOverrides.backgroundColor)
+      : { valid: true, message: null };
+
+  const handleElementInput = (property: ElementStyleProperty) => (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    if (!activeElement) {
+      return;
+    }
+    handleElementStyleChange(activeElement, property, event.target.value);
+  };
+
+  const applyElementSuggestion = (property: ElementStyleProperty, value: string) => {
+    if (!activeElement) {
+      return;
+    }
+    handleElementStyleChange(activeElement, property, value);
+  };
+
+  const resetElementStyle = (property?: ElementStyleProperty) => {
+    if (!activeElement) {
+      return;
+    }
+    handleElementStyleReset(activeElement, property);
+  };
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Styles</h3>
-      <FieldCard label="Police" htmlFor={`${zone}-font-family`} active={!fontFamilyValidation.valid}>
-        <input
-          id={`${zone}-font-family`}
-          className={`ui-input w-full ${
-            fontFamilyValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-          }`}
-          value={style.fontFamily}
-          onChange={event => handleStyleFontFamilyChange(zone, event.target.value)}
-          list={`${zone}-font-family-options`}
-          placeholder="Ex: 'Open Sans', sans-serif"
-        />
-        <datalist id={`${zone}-font-family-options`}>
-          {fontOptions.map(font => (
-            <option key={font} value={font} />
-          ))}
-        </datalist>
-        {!fontFamilyValidation.valid && (
-          <p className="text-xs text-red-600">{fontFamilyValidation.message}</p>
-        )}
-        <SuggestionChips options={FONT_FAMILY_SUGGESTIONS} onSelect={value => handleStyleFontFamilyChange(zone, value)} />
-      </FieldCard>
-
-      <FieldCard label="Taille du texte" htmlFor={`${zone}-font-size`} active={!fontSizeValidation.valid}>
-        <input
-          id={`${zone}-font-size`}
-          className={`ui-input w-full ${
-            fontSizeValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-          }`}
-          value={style.fontSize}
-          onChange={event => handleStyleFontSizeChange(zone, event.target.value)}
-          list={`${zone}-font-size-options`}
-          placeholder="Ex: 1.125rem"
-        />
-        <datalist id={`${zone}-font-size-options`}>
-          {fontSizeOptions.map(size => (
-            <option key={size} value={size} />
-          ))}
-        </datalist>
-        {!fontSizeValidation.valid && (
-          <p className="text-xs text-red-600">{fontSizeValidation.message}</p>
-        )}
-        <SuggestionChips options={FONT_SIZE_SUGGESTIONS} onSelect={value => handleStyleFontSizeChange(zone, value)} />
-      </FieldCard>
-
-      <FieldCard label="Couleur du texte" htmlFor={`${zone}-text-color`} active={!textColorValidation.valid}>
-        <input
-          id={`${zone}-text-color`}
-          className={`ui-input w-full ${
-            textColorValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-          }`}
-          value={style.textColor}
-          onChange={event => handleStyleTextColorChange(zone, event.target.value)}
-          placeholder="Ex: #0f172a"
-        />
-        {!textColorValidation.valid && (
-          <p className="text-xs text-red-600">{textColorValidation.message}</p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {COLOR_SUGGESTIONS.map(color => (
-            <ColorChip key={color} value={color} onSelect={value => handleStyleTextColorChange(zone, value)} />
-          ))}
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Styles de l'élément
+          </h3>
+          {supportsElementStyle && (
+            <button
+              type="button"
+              className="text-xs font-medium text-brand-primary hover:text-brand-primary/80 disabled:opacity-50"
+              onClick={() => resetElementStyle()}
+              disabled={!hasElementOverrides}
+            >
+              Réinitialiser l'élément
+            </button>
+          )}
         </div>
-      </FieldCard>
+        {supportsElementStyle ? (
+          <>
+            <p className="text-xs text-slate-500">
+              {elementLabel ? (
+                <>
+                  Personnalisez <strong>{elementLabel}</strong>.{' '}
+                </>
+              ) : null}
+              Laissez un champ vide pour hériter du style de la zone.
+            </p>
+            <FieldCard
+              label="Police personnalisée"
+              htmlFor={`${zone}-element-font-family`}
+              active={!elementFontFamilyValidation.valid}
+            >
+              <input
+                id={`${zone}-element-font-family`}
+                className={`ui-input w-full ${
+                  elementFontFamilyValidation.valid
+                    ? ''
+                    : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                }`}
+                value={elementOverrides.fontFamily ?? ''}
+                onChange={handleElementInput('fontFamily')}
+                list={`${zone}-element-font-family-options`}
+                placeholder={style.fontFamily}
+              />
+              <datalist id={`${zone}-element-font-family-options`}>
+                {fontOptions.map(font => (
+                  <option key={font} value={font} />
+                ))}
+              </datalist>
+              {!elementFontFamilyValidation.valid && (
+                <p className="text-xs text-red-600">{elementFontFamilyValidation.message}</p>
+              )}
+              <SuggestionChips
+                options={fontOptions}
+                onSelect={value => applyElementSuggestion('fontFamily', value)}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <span>Valeur héritée : {style.fontFamily}</span>
+                <button
+                  type="button"
+                  className="text-brand-primary hover:text-brand-primary/80 disabled:opacity-50"
+                  onClick={() => resetElementStyle('fontFamily')}
+                  disabled={!elementOverrides.fontFamily}
+                >
+                  Réinitialiser
+                </button>
+              </div>
+            </FieldCard>
 
-      <FieldCard label="Fond" htmlFor={`${zone}-background-type`}>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            id={`${zone}-background-type`}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-              style.background.type === 'color'
-                ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
-                : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
-            }`}
-            onClick={() => handleStyleBackgroundTypeChange(zone, 'color')}
-          >
-            Couleur
-          </button>
-          <button
-            type="button"
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-              style.background.type === 'image'
-                ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
-                : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
-            }`}
-            onClick={() => handleStyleBackgroundTypeChange(zone, 'image')}
-          >
-            Image
-          </button>
-        </div>
-        {style.background.type === 'color' ? (
-          <div className="mt-3 space-y-2">
-            <input
-              id={`${zone}-background-color`}
-              className={`ui-input w-full ${
-                backgroundColorValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
-              }`}
-              value={style.background.color}
-              onChange={event => handleStyleBackgroundColorChange(zone, event.target.value)}
-              placeholder="Ex: rgba(255, 255, 255, 0.85)"
-            />
-            {!backgroundColorValidation.valid && (
-              <p className="text-xs text-red-600">{backgroundColorValidation.message}</p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              {COLOR_SUGGESTIONS.map(color => (
-                <ColorChip key={color} value={color} onSelect={value => handleStyleBackgroundColorChange(zone, value)} />
-              ))}
-            </div>
-          </div>
+            <FieldCard
+              label="Taille spécifique"
+              htmlFor={`${zone}-element-font-size`}
+              active={!elementFontSizeValidation.valid}
+            >
+              <input
+                id={`${zone}-element-font-size`}
+                className={`ui-input w-full ${
+                  elementFontSizeValidation.valid
+                    ? ''
+                    : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                }`}
+                value={elementOverrides.fontSize ?? ''}
+                onChange={handleElementInput('fontSize')}
+                list={`${zone}-element-font-size-options`}
+                placeholder={style.fontSize}
+              />
+              <datalist id={`${zone}-element-font-size-options`}>
+                {fontSizeOptions.map(size => (
+                  <option key={size} value={size} />
+                ))}
+              </datalist>
+              {!elementFontSizeValidation.valid && (
+                <p className="text-xs text-red-600">{elementFontSizeValidation.message}</p>
+              )}
+              <SuggestionChips
+                options={fontSizeOptions}
+                onSelect={value => applyElementSuggestion('fontSize', value)}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <span>Valeur héritée : {style.fontSize}</span>
+                <button
+                  type="button"
+                  className="text-brand-primary hover:text-brand-primary/80 disabled:opacity-50"
+                  onClick={() => resetElementStyle('fontSize')}
+                  disabled={!elementOverrides.fontSize}
+                >
+                  Réinitialiser
+                </button>
+              </div>
+            </FieldCard>
+
+            <FieldCard
+              label="Couleur du texte"
+              htmlFor={`${zone}-element-text-color`}
+              active={!elementTextColorValidation.valid}
+            >
+              <input
+                id={`${zone}-element-text-color`}
+                className={`ui-input w-full ${
+                  elementTextColorValidation.valid
+                    ? ''
+                    : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                }`}
+                value={elementOverrides.textColor ?? ''}
+                onChange={handleElementInput('textColor')}
+                placeholder={style.textColor}
+              />
+              {!elementTextColorValidation.valid && (
+                <p className="text-xs text-red-600">{elementTextColorValidation.message}</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {COLOR_SUGGESTIONS.map(color => (
+                  <ColorChip
+                    key={color}
+                    value={color}
+                    onSelect={value => applyElementSuggestion('textColor', value)}
+                  />
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <span>Valeur héritée : {style.textColor}</span>
+                <button
+                  type="button"
+                  className="text-brand-primary hover:text-brand-primary/80 disabled:opacity-50"
+                  onClick={() => resetElementStyle('textColor')}
+                  disabled={!elementOverrides.textColor}
+                >
+                  Réinitialiser
+                </button>
+              </div>
+            </FieldCard>
+
+            <FieldCard
+              label="Couleur de fond"
+              htmlFor={`${zone}-element-background-color`}
+              active={!elementBackgroundColorValidation.valid}
+            >
+              <input
+                id={`${zone}-element-background-color`}
+                className={`ui-input w-full ${
+                  elementBackgroundColorValidation.valid
+                    ? ''
+                    : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                }`}
+                value={elementOverrides.backgroundColor ?? ''}
+                onChange={handleElementInput('backgroundColor')}
+                placeholder={style.background.color}
+              />
+              {!elementBackgroundColorValidation.valid && (
+                <p className="text-xs text-red-600">{elementBackgroundColorValidation.message}</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {COLOR_SUGGESTIONS.map(color => (
+                  <ColorChip
+                    key={color}
+                    value={color}
+                    onSelect={value => applyElementSuggestion('backgroundColor', value)}
+                  />
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <span>Valeur héritée : {style.background.color}</span>
+                <button
+                  type="button"
+                  className="text-brand-primary hover:text-brand-primary/80 disabled:opacity-50"
+                  onClick={() => resetElementStyle('backgroundColor')}
+                  disabled={!elementOverrides.backgroundColor}
+                >
+                  Réinitialiser
+                </button>
+              </div>
+            </FieldCard>
+          </>
         ) : (
-          <MediaInputField
-            field={backgroundField}
-            label={IMAGE_FIELD_LABELS[backgroundField]}
-            value={style.background.image}
-            imageErrors={imageErrors}
-            handleImageInputChange={handleImageInputChange}
-            handleImageUpload={handleImageUpload}
-            handleClearImage={handleClearImage}
-            isUploading={isUploading}
-            onOpenAssets={onOpenAssets}
-          />
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
+            Sélectionnez un texte ou un bouton dans la prévisualisation pour ajuster son style individuel.
+          </div>
         )}
-      </FieldCard>
+      </div>
+
+      {showZoneControls && (
+        <div className="space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Style de la zone
+          </h3>
+          <FieldCard label="Police" htmlFor={`${zone}-font-family`} active={!fontFamilyValidation.valid}>
+          <input
+            id={`${zone}-font-family`}
+            className={`ui-input w-full ${
+              fontFamilyValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+            }`}
+            value={style.fontFamily}
+            onChange={event => handleStyleFontFamilyChange(zone, event.target.value)}
+            list={`${zone}-font-family-options`}
+            placeholder="Ex: 'Open Sans', sans-serif"
+          />
+          <datalist id={`${zone}-font-family-options`}>
+            {fontOptions.map(font => (
+              <option key={font} value={font} />
+            ))}
+          </datalist>
+          {!fontFamilyValidation.valid && (
+            <p className="text-xs text-red-600">{fontFamilyValidation.message}</p>
+          )}
+          <SuggestionChips
+            options={FONT_FAMILY_SUGGESTIONS}
+            onSelect={value => handleStyleFontFamilyChange(zone, value)}
+          />
+        </FieldCard>
+
+          <FieldCard label="Taille du texte" htmlFor={`${zone}-font-size`} active={!fontSizeValidation.valid}>
+          <input
+            id={`${zone}-font-size`}
+            className={`ui-input w-full ${
+              fontSizeValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+            }`}
+            value={style.fontSize}
+            onChange={event => handleStyleFontSizeChange(zone, event.target.value)}
+            list={`${zone}-font-size-options`}
+            placeholder="Ex: 1.125rem"
+          />
+          <datalist id={`${zone}-font-size-options`}>
+            {fontSizeOptions.map(size => (
+              <option key={size} value={size} />
+            ))}
+          </datalist>
+          {!fontSizeValidation.valid && (
+            <p className="text-xs text-red-600">{fontSizeValidation.message}</p>
+          )}
+          <SuggestionChips
+            options={FONT_SIZE_SUGGESTIONS}
+            onSelect={value => handleStyleFontSizeChange(zone, value)}
+          />
+        </FieldCard>
+
+          <FieldCard label="Couleur du texte" htmlFor={`${zone}-text-color`} active={!textColorValidation.valid}>
+          <input
+            id={`${zone}-text-color`}
+            className={`ui-input w-full ${
+              textColorValidation.valid ? '' : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+            }`}
+            value={style.textColor}
+            onChange={event => handleStyleTextColorChange(zone, event.target.value)}
+            placeholder="Ex: #0f172a"
+          />
+          {!textColorValidation.valid && (
+            <p className="text-xs text-red-600">{textColorValidation.message}</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {COLOR_SUGGESTIONS.map(color => (
+              <ColorChip key={color} value={color} onSelect={value => handleStyleTextColorChange(zone, value)} />
+            ))}
+          </div>
+        </FieldCard>
+
+          <FieldCard label="Fond" htmlFor={`${zone}-background-type`}>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              id={`${zone}-background-type`}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                style.background.type === 'color'
+                  ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
+                  : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
+              }`}
+              onClick={() => handleStyleBackgroundTypeChange(zone, 'color')}
+            >
+              Couleur
+            </button>
+            <button
+              type="button"
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                style.background.type === 'image'
+                  ? 'border-brand-primary/60 bg-brand-primary/10 text-brand-primary'
+                  : 'border-slate-200 text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary'
+              }`}
+              onClick={() => handleStyleBackgroundTypeChange(zone, 'image')}
+            >
+              Image
+            </button>
+          </div>
+          {style.background.type === 'color' ? (
+            <div className="mt-3 space-y-2">
+              <input
+                id={`${zone}-background-color`}
+                className={`ui-input w-full ${
+                  backgroundColorValidation.valid
+                    ? ''
+                    : 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                }`}
+                value={style.background.color}
+                onChange={event => handleStyleBackgroundColorChange(zone, event.target.value)}
+                placeholder="Ex: rgba(255, 255, 255, 0.85)"
+              />
+              {!backgroundColorValidation.valid && (
+                <p className="text-xs text-red-600">{backgroundColorValidation.message}</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {COLOR_SUGGESTIONS.map(color => (
+                  <ColorChip
+                    key={color}
+                    value={color}
+                    onSelect={value => handleStyleBackgroundColorChange(zone, value)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <MediaInputField
+              field={backgroundField}
+              label={IMAGE_FIELD_LABELS[backgroundField]}
+              value={style.background.image}
+              imageErrors={imageErrors}
+              handleImageInputChange={handleImageInputChange}
+              handleImageUpload={handleImageUpload}
+              handleClearImage={handleClearImage}
+              isUploading={isUploading}
+              onOpenAssets={onOpenAssets}
+            />
+          )}
+        </FieldCard>
+        </div>
+      )}
     </div>
   );
 };
@@ -2592,7 +2988,31 @@ const ElementEditorModal: React.FC<{
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </header>
-          <div className="mt-4 space-y-4">{config.content}</div>
+          <div className="mt-4 space-y-4">
+            {config.content}
+            <ZoneStyleEditor
+              zone={zone}
+              style={context.draft[zone].style}
+              activeElement={active.element}
+              elementStyle={context.draft.elementStyles[active.element]}
+              fontOptions={context.fontOptions}
+              fontSizeOptions={context.fontSizeOptions}
+              handleStyleFontFamilyChange={context.handleStyleFontFamilyChange}
+              handleStyleFontSizeChange={context.handleStyleFontSizeChange}
+              handleStyleTextColorChange={context.handleStyleTextColorChange}
+              handleStyleBackgroundColorChange={context.handleStyleBackgroundColorChange}
+              handleStyleBackgroundTypeChange={context.handleStyleBackgroundTypeChange}
+              handleElementStyleChange={context.handleElementStyleChange}
+              handleElementStyleReset={context.handleElementStyleReset}
+              handleImageInputChange={context.handleImageInputChange}
+              handleImageUpload={context.handleImageUpload}
+              handleClearImage={context.handleClearImage}
+              imageErrors={context.imageErrors}
+              isUploading={context.isUploading}
+              onOpenAssets={field => onOpenAssets(field)}
+              showZoneControls={false}
+            />
+          </div>
           <footer className="mt-6 flex justify-end">
             <button type="button" className="ui-btn ui-btn-secondary" onClick={onClose}>
               Fermer
@@ -2606,6 +3026,7 @@ const ElementEditorModal: React.FC<{
 
 const FloatingZoneEditor: React.FC<{
   zone: EditableZoneKey;
+  activeElement: EditableElementKey | null;
   guidedMode: boolean;
   containerRef: React.RefObject<HTMLDivElement>;
   checklist: ChecklistItem[];
@@ -2616,6 +3037,7 @@ const FloatingZoneEditor: React.FC<{
   context: EditorContext;
 }> = ({
   zone,
+  activeElement,
   guidedMode,
   containerRef,
   checklist,
@@ -2725,6 +3147,8 @@ const FloatingZoneEditor: React.FC<{
             <ZoneStyleEditor
               zone={zone}
               style={context.draft[zone].style}
+              activeElement={activeElement}
+              elementStyle={activeElement ? context.draft.elementStyles[activeElement] : undefined}
               fontOptions={context.fontOptions}
               fontSizeOptions={context.fontSizeOptions}
               handleStyleFontFamilyChange={context.handleStyleFontFamilyChange}
@@ -2732,6 +3156,8 @@ const FloatingZoneEditor: React.FC<{
               handleStyleTextColorChange={context.handleStyleTextColorChange}
               handleStyleBackgroundColorChange={context.handleStyleBackgroundColorChange}
               handleStyleBackgroundTypeChange={context.handleStyleBackgroundTypeChange}
+              handleElementStyleChange={context.handleElementStyleChange}
+              handleElementStyleReset={context.handleElementStyleReset}
               handleImageInputChange={context.handleImageInputChange}
               handleImageUpload={context.handleImageUpload}
               handleClearImage={context.handleClearImage}

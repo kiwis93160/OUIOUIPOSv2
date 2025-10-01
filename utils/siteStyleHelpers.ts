@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { SectionStyle } from '../types';
+import { ElementStyle, SectionStyle } from '../types';
 
 export const createBackgroundStyle = (style: SectionStyle): CSSProperties => {
   if (style.background.type === 'image' && style.background.image) {
@@ -57,3 +57,29 @@ export const createBodyTextStyle = (style: SectionStyle): CSSProperties => ({
   ...createTextStyle(style),
   fontSize: style.fontSize,
 });
+
+export const createElementTextStyle = (
+  sectionStyle: SectionStyle,
+  elementStyle?: ElementStyle | null,
+): CSSProperties => ({
+  color: elementStyle?.textColor ?? sectionStyle.textColor,
+  fontFamily: elementStyle?.fontFamily ?? sectionStyle.fontFamily,
+});
+
+export const createElementBodyTextStyle = (
+  sectionStyle: SectionStyle,
+  elementStyle?: ElementStyle | null,
+): CSSProperties => ({
+  ...createElementTextStyle(sectionStyle, elementStyle),
+  fontSize: elementStyle?.fontSize ?? sectionStyle.fontSize,
+});
+
+export const createElementBackgroundStyle = (
+  _sectionStyle: SectionStyle,
+  elementStyle?: ElementStyle | null,
+): CSSProperties => {
+  if (elementStyle?.backgroundColor) {
+    return { backgroundColor: elementStyle.backgroundColor };
+  }
+  return {};
+};

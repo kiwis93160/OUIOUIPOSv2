@@ -23,6 +23,64 @@ export interface SectionStyle {
   textColor: string;
 }
 
+export const EDITABLE_ZONE_KEYS = ['navigation', 'hero', 'about', 'menu', 'contact', 'footer'] as const;
+
+export type EditableZoneKey = (typeof EDITABLE_ZONE_KEYS)[number];
+
+export const EDITABLE_ELEMENT_KEYS = [
+  'navigation.brand',
+  'navigation.links.home',
+  'navigation.links.about',
+  'navigation.links.menu',
+  'navigation.links.contact',
+  'navigation.links.loginCta',
+  'navigation.style.background',
+  'hero.title',
+  'hero.subtitle',
+  'hero.ctaLabel',
+  'hero.historyTitle',
+  'hero.reorderCtaLabel',
+  'hero.backgroundImage',
+  'about.title',
+  'about.description',
+  'about.image',
+  'about.style.background',
+  'menu.title',
+  'menu.ctaLabel',
+  'menu.loadingLabel',
+  'menu.image',
+  'menu.style.background',
+  'contact.title',
+  'contact.addressLabel',
+  'contact.address',
+  'contact.phoneLabel',
+  'contact.phone',
+  'contact.emailLabel',
+  'contact.email',
+  'contact.image',
+  'contact.style.background',
+  'footer.text',
+  'footer.style.background',
+] as const;
+
+export type EditableElementKey = (typeof EDITABLE_ELEMENT_KEYS)[number];
+
+export const STYLE_EDITABLE_ELEMENT_KEYS = EDITABLE_ELEMENT_KEYS.filter(
+  key =>
+    !key.endsWith('.style.background') &&
+    !key.endsWith('.image') &&
+    key !== 'hero.backgroundImage',
+) as EditableElementKey[];
+
+export interface ElementStyle {
+  fontFamily?: string;
+  fontSize?: string;
+  textColor?: string;
+  backgroundColor?: string;
+}
+
+export type ElementStyles = Partial<Record<EditableElementKey, ElementStyle>>;
+
 export type CustomizationAssetType = 'image' | 'video' | 'audio' | 'font' | 'raw';
 
 export interface CustomizationAsset {
@@ -90,6 +148,7 @@ export interface SiteContent {
     text: string;
     style: SectionStyle;
   };
+  elementStyles: ElementStyles;
   assets: SiteAssets;
 }
 

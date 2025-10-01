@@ -1,9 +1,13 @@
 import {
   CustomizationAsset,
   CustomizationAssetType,
+  EditableElementKey,
+  ElementStyle,
+  ElementStyles,
   SectionStyle,
   SiteAssets,
   SiteContent,
+  EDITABLE_ELEMENT_KEYS,
 } from '../types';
 import { normalizeCloudinaryImageUrl } from '../services/cloudinary';
 
@@ -46,6 +50,74 @@ const resolveImage = (value: string | null | undefined, fallback: string | null)
 const sanitizeImage = (value: string | null | undefined): string | null => {
   const normalized = normalizeCloudinaryImageUrl(value);
   return normalized ?? null;
+};
+
+const sanitizeElementStyleValue = (value: string | null | undefined): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const sanitizeElementStyle = (style: ElementStyle | undefined | null): ElementStyle | null => {
+  if (!style) {
+    return null;
+  }
+
+  const textColor = sanitizeElementStyleValue(style.textColor ?? null);
+  const fontFamily = sanitizeElementStyleValue(style.fontFamily ?? null);
+  const fontSize = sanitizeElementStyleValue(style.fontSize ?? null);
+  const backgroundColor = sanitizeElementStyleValue(style.backgroundColor ?? null);
+
+  const sanitized: ElementStyle = {};
+
+  if (textColor) {
+    sanitized.textColor = textColor;
+  }
+  if (fontFamily) {
+    sanitized.fontFamily = fontFamily;
+  }
+  if (fontSize) {
+    sanitized.fontSize = fontSize;
+  }
+  if (backgroundColor) {
+    sanitized.backgroundColor = backgroundColor;
+  }
+
+  return Object.keys(sanitized).length > 0 ? sanitized : null;
+};
+
+const resolveElementStyles = (
+  styles: ElementStyles | null | undefined,
+  fallback: ElementStyles,
+): ElementStyles => {
+  const source = styles ?? fallback;
+  const resolved: ElementStyles = {};
+
+  EDITABLE_ELEMENT_KEYS.forEach(key => {
+    const sanitized = sanitizeElementStyle(source[key] ?? null);
+    if (sanitized) {
+      resolved[key as EditableElementKey] = sanitized;
+    }
+  });
+
+  return resolved;
+};
+
+const sanitizeElementStyles = (styles: ElementStyles | undefined, fallback: ElementStyles): ElementStyles => {
+  const source = styles ?? fallback;
+  const sanitized: ElementStyles = {};
+
+  EDITABLE_ELEMENT_KEYS.forEach(key => {
+    const entry = sanitizeElementStyle(source[key] ?? null);
+    if (entry) {
+      sanitized[key as EditableElementKey] = entry;
+    }
+  });
+
+  return sanitized;
 };
 
 const ASSET_TYPES: CustomizationAssetType[] = ['image', 'video', 'audio', 'font', 'raw'];
@@ -200,6 +272,8 @@ const DEFAULT_SITE_ASSETS: SiteAssets = {
   library: [],
 };
 
+const DEFAULT_ELEMENT_STYLES: ElementStyles = {};
+
 const resolveSectionStyle = (style: Partial<SectionStyle> | undefined, fallback: SectionStyle): SectionStyle => {
   const backgroundType = style?.background?.type === 'image' ? 'image' : 'color';
   const backgroundColor = resolveColor(style?.background?.color, fallback.background.color);
@@ -290,6 +364,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     text: 'Tous droits réservés.',
     style: DEFAULT_FOOTER_STYLE,
   },
+  elementStyles: DEFAULT_ELEMENT_STYLES,
   assets: DEFAULT_SITE_ASSETS,
 };
 
@@ -346,6 +421,7 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
       text: resolveString(content?.footer?.text, base.footer.text),
       style: resolveSectionStyle(content?.footer?.style, base.footer.style),
     },
+    elementStyles: resolveElementStyles(content?.elementStyles ?? null, base.elementStyles),
     assets: resolveSiteAssets(content?.assets ?? null, DEFAULT_SITE_ASSETS),
   };
 };
@@ -401,5 +477,6 @@ export const sanitizeSiteContentInput = (content: SiteContent): SiteContent => (
     text: trimOrEmpty(content.footer.text),
     style: sanitizeSectionStyle(content.footer.style, DEFAULT_FOOTER_STYLE),
   },
+  elementStyles: sanitizeElementStyles(content.elementStyles, DEFAULT_ELEMENT_STYLES),
   assets: sanitizeSiteAssets(content.assets, DEFAULT_SITE_ASSETS),
 });
