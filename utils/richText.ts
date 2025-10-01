@@ -4,6 +4,7 @@ const ALLOWED_TAGS = new Set([
   'STRONG',
   'EM',
   'S',
+  'STRIKE',
   'SPAN',
   'BR',
   'DIV',
@@ -49,23 +50,24 @@ const unwrapElement = (element: Element) => {
 };
 
 const normalizeElementTag = (element: HTMLElement): HTMLElement => {
-  if (element.tagName === 'B') {
-    const replacement = document.createElement('strong');
-    while (element.firstChild) {
-      replacement.appendChild(element.firstChild);
-    }
-    element.replaceWith(replacement);
-    return replacement;
+  const tagMap: Record<string, string> = {
+    B: 'strong',
+    I: 'em',
+    STRIKE: 's',
+  };
+
+  const replacementTag = tagMap[element.tagName];
+
+  if (!replacementTag) {
+    return element;
   }
-  if (element.tagName === 'I') {
-    const replacement = document.createElement('em');
-    while (element.firstChild) {
-      replacement.appendChild(element.firstChild);
-    }
-    element.replaceWith(replacement);
-    return replacement;
+
+  const replacement = document.createElement(replacementTag);
+  while (element.firstChild) {
+    replacement.appendChild(element.firstChild);
   }
-  return element;
+  element.replaceWith(replacement);
+  return replacement;
 };
 
 const sanitizeElement = (element: HTMLElement) => {
