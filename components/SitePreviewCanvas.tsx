@@ -14,7 +14,6 @@ import {
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
 const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
-const DEFAULT_STAFF_LOGO = '/logo-staff.svg';
 
 export const resolveZoneFromElement = (element: EditableElementKey): EditableZoneKey => {
   if (element.startsWith('navigation.')) {
@@ -139,7 +138,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
   const navigationTextStyle = createTextStyle(content.navigation.style);
   const navigationBodyStyle = createBodyTextStyle(content.navigation.style);
   const brandLogo = content.navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
-  const staffLogo = content.navigation.staffLogo ?? DEFAULT_STAFF_LOGO;
+  const staffTriggerLogo = content.navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const heroBackgroundStyle = createHeroBackgroundStyle(content.hero.style, content.hero.backgroundImage);
   const heroTextStyle = createTextStyle(content.hero.style);
   const heroBodyTextStyle = createBodyTextStyle(content.hero.style);
@@ -211,7 +210,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
     return createElementBackgroundStyle(zoneStyleMap[zone], getElementStyle(key));
   };
 
-  const findUsMapQuery = [content.findUs.address, content.findUs.city].filter(Boolean).join(', ').trim();
+  const findUsMapQuery = content.findUs.address.trim();
   const encodedFindUsQuery = findUsMapQuery.length > 0 ? encodeURIComponent(findUsMapQuery) : '';
   const findUsMapUrl = encodedFindUsQuery
     ? `https://www.google.com/maps?q=${encodedFindUsQuery}`
@@ -313,24 +312,6 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   )}
                 </EditableElement>
                 <EditableElement
-                  id="navigation.links.contact"
-                  label="Modifier le lien Contact"
-                  onEdit={onEdit}
-                  as="span"
-                  className="inline-flex"
-                  buttonClassName="-right-2 -top-2"
-                >
-                  {renderRichTextElement(
-                    'navigation.links.contact',
-                    'span',
-                    {
-                      className: 'login-nav__link',
-                      style: getElementBodyTextStyle('navigation.links.contact'),
-                    },
-                    content.navigation.links.contact,
-                  )}
-                </EditableElement>
-                <EditableElement
                   id="navigation.links.loginCta"
                   label="Modifier le bouton personnel"
                   onEdit={onEdit}
@@ -341,14 +322,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   <button
                     type="button"
                     className="login-nav__staff-btn"
-                    style={{
-                      ...getElementBodyTextStyle('navigation.links.loginCta'),
-                      ...getElementBackgroundStyle('navigation.links.loginCta'),
-                    }}
                     aria-label={content.navigation.links.loginCta}
                     disabled
                   >
-                    <img src={staffLogo} alt="" className="login-nav__staff-logo" aria-hidden="true" />
+                    <img src={staffTriggerLogo} alt="" className="login-brand__logo" aria-hidden="true" />
                   </button>
                 </EditableElement>
               </nav>
@@ -920,84 +897,84 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                       </EditableElement>
                     </div>
                   </div>
-                  <div className="find-us-detail" style={findUsTextStyle}>
-                    <MapPin className="find-us-detail__icon" aria-hidden="true" />
-                    <div>
-                      <EditableElement
-                        id="findUs.cityLabel"
-                        label="Modifier le libellé de la ville"
-                        onEdit={onEdit}
-                        className="block"
-                        buttonClassName="right-0 -top-3"
-                      >
-                        {renderRichTextElement(
-                          'findUs.cityLabel',
-                          'h3',
-                          {
-                            className: 'find-us-detail__title',
-                            style: getElementTextStyle('findUs.cityLabel'),
-                          },
-                          content.findUs.cityLabel,
-                        )}
-                      </EditableElement>
-                      <EditableElement
-                        id="findUs.city"
-                        label="Modifier la ville"
-                        onEdit={onEdit}
-                        className="mt-1 block"
-                        buttonClassName="right-0 -top-3"
-                      >
-                        {renderRichTextElement(
-                          'findUs.city',
-                          'p',
-                          {
-                            className: 'find-us-detail__text',
-                            style: getElementBodyTextStyle('findUs.city'),
-                          },
-                          content.findUs.city,
-                        )}
-                      </EditableElement>
-                    </div>
+                <div className="find-us-detail" style={findUsTextStyle}>
+                  <Clock className="find-us-detail__icon" aria-hidden="true" />
+                  <div>
+                    <EditableElement
+                      id="findUs.hoursLabel"
+                      label="Modifier le libellé des horaires"
+                      onEdit={onEdit}
+                      className="block"
+                      buttonClassName="right-0 -top-3"
+                    >
+                      {renderRichTextElement(
+                        'findUs.hoursLabel',
+                        'h3',
+                        {
+                          className: 'find-us-detail__title',
+                          style: getElementTextStyle('findUs.hoursLabel'),
+                        },
+                        content.findUs.hoursLabel,
+                      )}
+                    </EditableElement>
+                    <EditableElement
+                      id="findUs.hours"
+                      label="Modifier les horaires"
+                      onEdit={onEdit}
+                      className="mt-1 block"
+                      buttonClassName="right-0 -top-3"
+                    >
+                      {renderRichTextElement(
+                        'findUs.hours',
+                        'p',
+                        {
+                          className: 'find-us-detail__text',
+                          style: getElementBodyTextStyle('findUs.hours'),
+                        },
+                        content.findUs.hours,
+                      )}
+                    </EditableElement>
                   </div>
-                  <div className="find-us-detail" style={findUsTextStyle}>
-                    <Clock className="find-us-detail__icon" aria-hidden="true" />
-                    <div>
-                      <EditableElement
-                        id="findUs.hoursLabel"
-                        label="Modifier le libellé des horaires"
-                        onEdit={onEdit}
-                        className="block"
-                        buttonClassName="right-0 -top-3"
-                      >
-                        {renderRichTextElement(
-                          'findUs.hoursLabel',
-                          'h3',
-                          {
-                            className: 'find-us-detail__title',
-                            style: getElementTextStyle('findUs.hoursLabel'),
-                          },
-                          content.findUs.hoursLabel,
-                        )}
-                      </EditableElement>
-                      <EditableElement
-                        id="findUs.hours"
-                        label="Modifier les horaires"
-                        onEdit={onEdit}
-                        className="mt-1 block"
-                        buttonClassName="right-0 -top-3"
-                      >
-                        {renderRichTextElement(
-                          'findUs.hours',
-                          'p',
-                          {
-                            className: 'find-us-detail__text',
-                            style: getElementBodyTextStyle('findUs.hours'),
-                          },
-                          content.findUs.hours,
-                        )}
-                      </EditableElement>
-                    </div>
+                </div>
+                <div className="find-us-detail" style={findUsTextStyle}>
+                  <Mail className="find-us-detail__icon" aria-hidden="true" />
+                  <div>
+                    <EditableElement
+                      id="findUs.cityLabel"
+                      label="Modifier le libellé de l'email"
+                      onEdit={onEdit}
+                      className="block"
+                      buttonClassName="right-0 -top-3"
+                    >
+                      {renderRichTextElement(
+                        'findUs.cityLabel',
+                        'h3',
+                        {
+                          className: 'find-us-detail__title',
+                          style: getElementTextStyle('findUs.cityLabel'),
+                        },
+                        content.findUs.cityLabel,
+                      )}
+                    </EditableElement>
+                    <EditableElement
+                      id="findUs.city"
+                      label="Modifier l'email"
+                      onEdit={onEdit}
+                      className="mt-1 block"
+                      buttonClassName="right-0 -top-3"
+                    >
+                      {renderRichTextElement(
+                        'findUs.city',
+                        'p',
+                        {
+                          className: 'find-us-detail__text',
+                          style: getElementBodyTextStyle('findUs.city'),
+                        },
+                        content.findUs.city,
+                      )}
+                    </EditableElement>
                   </div>
+                </div>
                 </div>
               </div>
               <div className="find-us-map" style={findUsTextStyle}>
