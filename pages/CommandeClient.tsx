@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { uploadPaymentReceipt } from '../services/cloudinary';
-import { Product, Category, OrderItem, Order } from '../types';
+import { Product, Category, OrderItem, Order, SiteContent } from '../types';
 import Modal from '../components/Modal';
 import { ArrowLeft, ShoppingCart, Plus, Minus, X, Upload, MessageCircle, CheckCircle, History } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
@@ -477,11 +477,29 @@ const CommandeClient: React.FC = () => {
     const navigate = useNavigate();
     const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
     const activeOrderId = activeOrder?.orderId ?? null;
-    const { content: siteContent } = useSiteContent();
-    const { hero, navigation, assets } = siteContent;
+    const { content: siteContent, loading: siteContentLoading } = useSiteContent();
+    const [content, setContent] = useState<SiteContent | null>(() => siteContent);
+
+    useEffect(() => {
+        if (siteContent) {
+            setContent(siteContent);
+        }
+    }, [siteContent]);
+
+    if (!content) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-50">
+                <p className="text-sm text-slate-500">
+                    {siteContentLoading ? 'Chargement du contenu du site…' : 'Initialisation du contenu du site…'}
+                </p>
+            </div>
+        );
+    }
+
+    const { hero, navigation, assets } = content;
     const brandLogo = navigation.brandLogo ?? '/logo-brand.svg';
 
-    useCustomFonts(assets.library);
+    useCustomFonts(assets.library ?? []);
 
     const heroBackgroundStyle = createHeroBackgroundStyle(hero.style, hero.backgroundImage);
     const navigationBackgroundStyle = createBackgroundStyle(navigation.style);

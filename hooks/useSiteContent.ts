@@ -3,8 +3,10 @@ import { SiteContent } from '../types';
 import { api } from '../services/api';
 import { DEFAULT_SITE_CONTENT, resolveSiteContent } from '../utils/siteContent';
 
+let lastResolvedContent: SiteContent | null = null;
+
 interface UseSiteContentResult {
-  content: SiteContent;
+  content: SiteContent | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -12,7 +14,7 @@ interface UseSiteContentResult {
 }
 
 const useSiteContent = (): UseSiteContentResult => {
-  const [content, setContent] = useState<SiteContent>(DEFAULT_SITE_CONTENT);
+  const [content, setContent] = useState<SiteContent | null>(lastResolvedContent);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,10 +22,13 @@ const useSiteContent = (): UseSiteContentResult => {
     setLoading(true);
     try {
       const remote = await api.getSiteContent();
-      setContent(resolveSiteContent(remote ?? undefined));
+      const resolved = resolveSiteContent(remote ?? undefined);
+      lastResolvedContent = resolved;
+      setContent(resolved);
       setError(null);
     } catch (err) {
       console.error('Failed to fetch site content', err);
+      lastResolvedContent = DEFAULT_SITE_CONTENT;
       setContent(DEFAULT_SITE_CONTENT);
       setError(err instanceof Error ? err.message : 'Impossible de charger le contenu du site.');
     } finally {
@@ -35,6 +40,7 @@ const useSiteContent = (): UseSiteContentResult => {
     const updated = await api.updateSiteContent(next);
     const resolved = resolveSiteContent(updated);
     setContent(resolved);
+    lastResolvedContent = resolved;
     return resolved;
   }, []);
 
