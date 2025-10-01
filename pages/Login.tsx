@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
-import { EditableElementKey, Product, Order } from '../types';
+import { EditableElementKey, EditableZoneKey, Product, Order } from '../types';
 import { Clock, Mail, MapPin, Menu, X, ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
@@ -13,9 +13,12 @@ import useCustomFonts from '../hooks/useCustomFonts';
 import {
   createBackgroundStyle,
   createBodyTextStyle,
+  createElementBackgroundStyle,
+  createElementBodyTextStyle,
   createHeroBackgroundStyle,
   createTextStyle,
 } from '../utils/siteStyleHelpers';
+import { resolveZoneFromElement } from '../components/SitePreviewCanvas';
 
 const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
 
@@ -188,7 +191,7 @@ const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { content: siteContent } = useSiteContent();
-  const { navigation, hero, about, menu: menuContent, findUs, footer } = siteContent;
+  const { navigation, hero, about, menu: menuContent, contact, findUs, footer } = siteContent;
   useCustomFonts(siteContent.assets.library);
   const brandLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const staffTriggerLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
@@ -209,6 +212,29 @@ const Login: React.FC = () => {
   const findUsBodyTextStyle = createBodyTextStyle(findUs.style);
   const footerBackgroundStyle = createBackgroundStyle(footer.style);
   const footerTextStyle = createBodyTextStyle(footer.style);
+
+  const elementStyles = siteContent.elementStyles ?? {};
+  const zoneStyleMap: Record<EditableZoneKey, typeof navigation.style> = {
+    navigation: navigation.style,
+    hero: hero.style,
+    about: about.style,
+    menu: menuContent.style,
+    contact: contact.style,
+    findUs: findUs.style,
+    footer: footer.style,
+  };
+
+  const getElementStyle = (key: EditableElementKey) => elementStyles[key];
+
+  const getElementBodyTextStyle = (key: EditableElementKey) => {
+    const zone = resolveZoneFromElement(key);
+    return createElementBodyTextStyle(zoneStyleMap[zone], getElementStyle(key));
+  };
+
+  const getElementBackgroundStyle = (key: EditableElementKey) => {
+    const zone = resolveZoneFromElement(key);
+    return createElementBackgroundStyle(zoneStyleMap[zone], getElementStyle(key));
+  };
 
   const elementRichText = siteContent.elementRichText ?? {};
 
@@ -502,14 +528,17 @@ const Login: React.FC = () => {
                 <button
                   onClick={() => navigate('/commande-client')}
                   className="ui-btn ui-btn-accent hero-cta"
-                  style={{ fontFamily: hero.style.fontFamily }}
+                  style={{
+                    ...getElementBodyTextStyle('hero.ctaLabel'),
+                    ...getElementBackgroundStyle('hero.ctaLabel'),
+                  }}
                 >
                   {renderRichTextElement(
                     'hero.ctaLabel',
                     'span',
                     {
                       className: 'inline-flex items-center justify-center',
-                      style: heroBodyTextStyle,
+                      style: getElementBodyTextStyle('hero.ctaLabel'),
                     },
                     hero.ctaLabel,
                   )}
@@ -540,14 +569,17 @@ const Login: React.FC = () => {
                             type="button"
                             onClick={() => handleQuickReorder(order.id)}
                             className="hero-history__cta"
-                            style={{ fontFamily: hero.style.fontFamily }}
+                            style={{
+                              ...getElementBodyTextStyle('hero.reorderCtaLabel'),
+                              ...getElementBackgroundStyle('hero.reorderCtaLabel'),
+                            }}
                           >
                             {renderRichTextElement(
                               'hero.reorderCtaLabel',
                               'span',
                               {
                                 className: 'inline-flex items-center justify-center',
-                                style: heroBodyTextStyle,
+                                style: getElementBodyTextStyle('hero.reorderCtaLabel'),
                               },
                               hero.reorderCtaLabel,
                             )}
@@ -652,14 +684,17 @@ const Login: React.FC = () => {
               <button
                 onClick={() => navigate('/commande-client')}
                 className="ui-btn ui-btn-primary hero-cta"
-                style={{ fontFamily: menuContent.style.fontFamily }}
+                style={{
+                  ...getElementBodyTextStyle('menu.ctaLabel'),
+                  ...getElementBackgroundStyle('menu.ctaLabel'),
+                }}
               >
                 {renderRichTextElement(
                   'menu.ctaLabel',
                   'span',
                   {
                     className: 'inline-flex items-center justify-center',
-                    style: menuBodyTextStyle,
+                    style: getElementBodyTextStyle('menu.ctaLabel'),
                   },
                   menuContent.ctaLabel,
                 )}
