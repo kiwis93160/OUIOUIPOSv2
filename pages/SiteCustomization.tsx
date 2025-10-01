@@ -1162,7 +1162,9 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
 
 const SiteCustomization: React.FC = () => {
   const { content, loading, error, updateContent } = useSiteContent();
-  const [draft, setDraft] = useState<SiteContent>(content);
+  const [draft, setDraft] = useState<SiteContent | null>(() =>
+    content ? cloneSiteContent(content) : null,
+  );
   const [activeElement, setActiveElement] = useState<EditableElementKey | null>(null);
   const [activeZone, setActiveZone] = useState<EditableZoneKey | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('custom');
@@ -1175,7 +1177,9 @@ const SiteCustomization: React.FC = () => {
   const [bestSellerError, setBestSellerError] = useState<string | null>(null);
 
   useEffect(() => {
-    setDraft(content);
+    if (content) {
+      setDraft(cloneSiteContent(content));
+    }
   }, [content]);
 
   useEffect(() => {
@@ -1220,6 +1224,9 @@ const SiteCustomization: React.FC = () => {
   const applyDraftUpdate = useCallback(
     (updater: DraftUpdater) => {
       setDraft(prev => {
+        if (!prev) {
+          return prev;
+        }
         const clone = cloneSiteContent(prev);
         return updater(clone);
       });
@@ -1229,6 +1236,9 @@ const SiteCustomization: React.FC = () => {
 
   const appendAssetToDraft = useCallback((asset: CustomizationAsset) => {
     setDraft(prev => {
+      if (!prev) {
+        return prev;
+      }
       const clone = cloneSiteContent(prev);
       appendAsset(clone, asset);
       return clone;
@@ -1258,6 +1268,9 @@ const SiteCustomization: React.FC = () => {
     setSaveError(null);
     setSaveSuccess(null);
     try {
+      if (!draft) {
+        throw new Error('Le brouillon est indisponible.');
+      }
       const updated = await updateContent(draft);
       setDraft(updated);
       setSaveSuccess('Modifications enregistrées avec succès.');
@@ -1272,11 +1285,14 @@ const SiteCustomization: React.FC = () => {
 
   const fontOptions = useMemo(() => {
     const base = Array.from(FONT_FAMILY_SUGGESTIONS);
+    if (!draft) {
+      return base;
+    }
     const custom = draft.assets.library
       .filter(asset => asset.type === 'font')
       .map(asset => sanitizeFontFamilyName(asset.name));
     return Array.from(new Set([...base, ...custom]));
-  }, [draft.assets.library]);
+  }, [draft]);
 
   const activeLabel = activeElement ? ELEMENT_LABELS[activeElement] ?? activeElement : null;
   const elementType = activeElement
@@ -1294,6 +1310,15 @@ const SiteCustomization: React.FC = () => {
       <div className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-3">
         <Loader2 className="h-10 w-10 animate-spin text-brand-primary" aria-hidden="true" />
         <p className="text-sm text-slate-500">Chargement du contenu du site…</p>
+      </div>
+    );
+  }
+
+  if (!content || !draft) {
+    return (
+      <div className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-3">
+        <AlertTriangle className="h-6 w-6 text-amber-500" aria-hidden="true" />
+        <p className="text-sm text-slate-500">Le contenu du site est en cours d'initialisation…</p>
       </div>
     );
   }

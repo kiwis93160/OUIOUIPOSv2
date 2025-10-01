@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
-import { EditableElementKey, EditableZoneKey, Product, Order } from '../types';
+import { EditableElementKey, EditableZoneKey, Product, Order, SiteContent } from '../types';
 import { Clock, Mail, MapPin, Menu, X, ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
@@ -191,7 +191,25 @@ const Login: React.FC = () => {
   const pinInputRef = useRef<HTMLInputElement>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
-  const { content: siteContent } = useSiteContent();
+  const { content: siteContent, loading: siteContentLoading } = useSiteContent();
+  const [content, setContent] = useState<SiteContent | null>(() => siteContent);
+  useEffect(() => {
+    if (siteContent) {
+      setContent(siteContent);
+    }
+  }, [siteContent]);
+  useCustomFonts(content?.assets.library ?? []);
+
+  if (!content) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="text-sm text-slate-500">
+          {siteContentLoading ? 'Chargement du contenu du site…' : 'Initialisation du contenu du site…'}
+        </p>
+      </div>
+    );
+  }
+
   const {
     navigation,
     hero,
@@ -200,8 +218,7 @@ const Login: React.FC = () => {
     instagramReviews: instagramReviewContent,
     findUs,
     footer,
-  } = siteContent;
-  useCustomFonts(siteContent.assets.library);
+  } = content;
   const brandLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const staffTriggerLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const navigationBackgroundStyle = createBackgroundStyle(navigation.style);
@@ -221,7 +238,7 @@ const Login: React.FC = () => {
   const footerBackgroundStyle = createBackgroundStyle(footer.style);
   const footerTextStyle = createBodyTextStyle(footer.style);
 
-  const elementStyles = siteContent.elementStyles ?? {};
+  const elementStyles = content.elementStyles ?? {};
   const zoneStyleMap: Record<EditableZoneKey, typeof navigation.style> = {
     navigation: navigation.style,
     hero: hero.style,
@@ -249,7 +266,7 @@ const Login: React.FC = () => {
     return createElementBackgroundStyle(zoneStyleMap[zone], getElementStyle(key));
   };
 
-  const elementRichText = siteContent.elementRichText ?? {};
+  const elementRichText = content.elementRichText ?? {};
 
   const getRichTextHtml = (key: EditableElementKey): string | null => {
     const entry = elementRichText[key];
