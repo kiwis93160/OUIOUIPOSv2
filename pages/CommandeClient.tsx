@@ -8,6 +8,9 @@ import { ArrowLeft, ShoppingCart, Plus, Minus, X, Upload, MessageCircle, CheckCi
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder, storeActiveCustomerOrder } from '../services/customerOrderStorage';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
+import useSiteContent from '../hooks/useSiteContent';
+import useCustomFonts from '../hooks/useCustomFonts';
+import { createBackgroundStyle, createHeroBackgroundStyle, createTextStyle } from '../utils/siteStyleHelpers';
 
 // ==================================================================================
 // 2. Item Customization Modal
@@ -327,8 +330,11 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                             <p className="font-semibold text-gray-700">Pedido del {new Date(order.date_creation).toLocaleDateString('es-CO')}</p>
                                             <p className="text-sm text-gray-500">{order.items.length} artículo(s) - {formatCurrencyCOP(order.total)}</p>
                                         </div>
-                                        <button onClick={() => handleReorder(order)} className="bg-brand-primary text-brand-secondary font-bold py-1 px-3 rounded-lg text-sm hover:bg-yellow-400">
-                                            Volver a pedir
+                                        <button
+                                            onClick={() => handleReorder(order)}
+                                            className="bg-brand-accent text-white font-semibold py-2 px-4 rounded-lg text-base hover:bg-red-700 transition"
+                                        >
+                                            Pedir de nuevo
                                         </button>
                                     </div>
                                 ))}
@@ -348,14 +354,14 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                 </button>
                             ))}
                         </div>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             {filteredProducts.map(product => (
                                 <div key={product.id} onClick={() => product.estado === 'disponible' && handleProductClick(product)}
-                                    className={`border rounded-lg p-3 flex flex-col items-center text-center transition-shadow ${product.estado === 'disponible' ? 'cursor-pointer hover:shadow-lg' : 'opacity-50'}`}>
-                                    <img src={product.image} alt={product.nom_produit} className="w-28 h-28 object-cover rounded-md mb-2" />
-                                    <p className="font-semibold text-sm flex-grow text-gray-700">{product.nom_produit}</p>
-                                    <p className="text-xs text-gray-500 mt-1 px-1 h-10 overflow-hidden">{product.description}</p>
-                                    <p className="font-bold text-gray-700 mt-1">{formatCurrencyCOP(product.prix_vente)}</p>
+                                    className={`border rounded-2xl p-6 flex flex-col items-center text-center transition-shadow bg-white/90 shadow-md ${product.estado === 'disponible' ? 'cursor-pointer hover:shadow-xl' : 'opacity-50'}`}>
+                                    <img src={product.image} alt={product.nom_produit} className="w-36 h-36 md:w-40 md:h-40 object-cover rounded-xl mb-4" />
+                                    <p className="font-semibold text-lg flex-grow text-gray-800">{product.nom_produit}</p>
+                                    <p className="text-base text-gray-600 mt-2 px-1 max-h-20 overflow-hidden">{product.description}</p>
+                                    <p className="font-bold text-2xl text-gray-800 mt-3">{formatCurrencyCOP(product.prix_vente)}</p>
                                     {product.estado !== 'disponible' && <span className="text-xs text-red-500 font-bold mt-1">Agotado</span>}
                                 </div>
                             ))}
@@ -463,6 +469,14 @@ const CommandeClient: React.FC = () => {
     const navigate = useNavigate();
     const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
     const activeOrderId = activeOrder?.orderId ?? null;
+    const { content: siteContent } = useSiteContent();
+    const { hero, navigation, assets } = siteContent;
+
+    useCustomFonts(assets.library);
+
+    const heroBackgroundStyle = createHeroBackgroundStyle(hero.style, hero.backgroundImage);
+    const navigationBackgroundStyle = createBackgroundStyle(navigation.style);
+    const navigationTextStyle = createTextStyle(navigation.style);
 
     const handleOrderSubmitted = (order: Order) => {
         storeActiveCustomerOrder(order.id);
@@ -475,21 +489,30 @@ const CommandeClient: React.FC = () => {
     };
 
     return (
-        <div className="bg-slate-950 text-slate-100 min-h-screen">
-            <header className="bg-white/95 shadow-md backdrop-blur p-4 sticky top-0 z-40 border-b border-white/40">
-                <div className="container mx-auto flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-brand-primary">OUIOUITACOS</h1>
-                    <button onClick={() => navigate('/login')} className="flex items-center gap-2 text-sm text-gray-600 hover:text-brand-primary transition">
-                        <ArrowLeft size={16}/> Volver al inicio
-                    </button>
-                </div>
-            </header>
+        <div style={heroBackgroundStyle} className="min-h-screen">
+            <div className="bg-slate-950/85 text-slate-100 min-h-screen">
+                <header
+                    className="shadow-md backdrop-blur p-4 sticky top-0 z-40 border-b border-white/40"
+                    style={navigationBackgroundStyle}
+                >
+                    <div className="container mx-auto flex justify-between items-center">
+                        <h1 className="text-2xl font-bold" style={navigationTextStyle}>OUIOUITACOS</h1>
+                        <button
+                            onClick={() => navigate('/login')}
+                            className="flex items-center gap-2 text-sm font-medium transition hover:opacity-80"
+                            style={navigationTextStyle}
+                        >
+                            <ArrowLeft size={16}/> Volver al inicio
+                        </button>
+                    </div>
+                </header>
 
-            {activeOrderId ? (
-                <CustomerOrderTracker orderId={activeOrderId} onNewOrderClick={handleNewOrder} variant="page" />
-            ) : (
-                <OrderMenuView onOrderSubmitted={handleOrderSubmitted} />
-            )}
+                {activeOrderId ? (
+                    <CustomerOrderTracker orderId={activeOrderId} onNewOrderClick={handleNewOrder} variant="page" />
+                ) : (
+                    <OrderMenuView onOrderSubmitted={handleOrderSubmitted} />
+                )}
+            </div>
         </div>
     );
 };
