@@ -284,7 +284,7 @@ const DEFAULT_MENU_STYLE: SectionStyle = {
   textColor: '#111827',
 };
 
-const DEFAULT_CONTACT_STYLE: SectionStyle = {
+const DEFAULT_INSTAGRAM_REVIEWS_STYLE: SectionStyle = {
   background: {
     type: 'color',
     color: '#ffffff',
@@ -399,16 +399,12 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     image: null,
     style: DEFAULT_MENU_STYLE,
   },
-  contact: {
-    title: 'Contactez-nous',
-    addressLabel: 'Adresse',
-    address: '123 Rue du Taco, 75000 Paris',
-    phoneLabel: 'Téléphone',
-    phone: '01 23 45 67 89',
-    emailLabel: 'Email',
-    email: 'contact@ouiouitacos.fr',
-    image: null,
-    style: DEFAULT_CONTACT_STYLE,
+  instagramReviews: {
+    title: 'Ils nous adorent sur Instagram',
+    subtitle:
+      'Des foodies de toute la Colombie partagent leur coup de cœur pour notre cuisine : ambiance solaire, service attentionné et assiettes qui brillent autant que leurs stories.',
+    image: 'https://picsum.photos/seed/instagramreviews/600/600',
+    style: DEFAULT_INSTAGRAM_REVIEWS_STYLE,
   },
   findUs: {
     title: 'Encuéntranos',
@@ -468,16 +464,11 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
       image: resolveImage(content?.menu?.image, base.menu.image),
       style: resolveSectionStyle(content?.menu?.style, base.menu.style),
     },
-    contact: {
-      title: resolveString(content?.contact?.title, base.contact.title),
-      addressLabel: resolveString(content?.contact?.addressLabel, base.contact.addressLabel),
-      address: resolveString(content?.contact?.address, base.contact.address),
-      phoneLabel: resolveString(content?.contact?.phoneLabel, base.contact.phoneLabel),
-      phone: resolveString(content?.contact?.phone, base.contact.phone),
-      emailLabel: resolveString(content?.contact?.emailLabel, base.contact.emailLabel),
-      email: resolveString(content?.contact?.email, base.contact.email),
-      image: resolveImage(content?.contact?.image, base.contact.image),
-      style: resolveSectionStyle(content?.contact?.style, base.contact.style),
+    instagramReviews: {
+      title: resolveString(content?.instagramReviews?.title, base.instagramReviews.title),
+      subtitle: resolveString(content?.instagramReviews?.subtitle, base.instagramReviews.subtitle),
+      image: resolveImage(content?.instagramReviews?.image, base.instagramReviews.image),
+      style: resolveSectionStyle(content?.instagramReviews?.style, base.instagramReviews.style),
     },
     findUs: {
       title: resolveString(content?.findUs?.title, base.findUs.title),
@@ -536,16 +527,11 @@ export const sanitizeSiteContentInput = (content: SiteContent): SiteContent => (
     image: sanitizeImage(content.menu.image),
     style: sanitizeSectionStyle(content.menu.style, DEFAULT_MENU_STYLE),
   },
-  contact: {
-    title: trimOrEmpty(content.contact.title),
-    addressLabel: trimOrEmpty(content.contact.addressLabel),
-    address: trimOrEmpty(content.contact.address),
-    phoneLabel: trimOrEmpty(content.contact.phoneLabel),
-    phone: trimOrEmpty(content.contact.phone),
-    emailLabel: trimOrEmpty(content.contact.emailLabel),
-    email: trimOrEmpty(content.contact.email),
-    image: sanitizeImage(content.contact.image),
-    style: sanitizeSectionStyle(content.contact.style, DEFAULT_CONTACT_STYLE),
+  instagramReviews: {
+    title: trimOrEmpty(content.instagramReviews.title),
+    subtitle: trimOrEmpty(content.instagramReviews.subtitle),
+    image: sanitizeImage(content.instagramReviews.image),
+    style: sanitizeSectionStyle(content.instagramReviews.style, DEFAULT_INSTAGRAM_REVIEWS_STYLE),
   },
   findUs: {
     title: trimOrEmpty(content.findUs.title),

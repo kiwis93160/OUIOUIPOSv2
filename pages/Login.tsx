@@ -192,7 +192,15 @@ const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { content: siteContent } = useSiteContent();
-  const { navigation, hero, about, menu: menuContent, contact, findUs, footer } = siteContent;
+  const {
+    navigation,
+    hero,
+    about,
+    menu: menuContent,
+    instagramReviews: instagramReviewContent,
+    findUs,
+    footer,
+  } = siteContent;
   useCustomFonts(siteContent.assets.library);
   const brandLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const staffTriggerLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
@@ -206,6 +214,8 @@ const Login: React.FC = () => {
   const menuBackgroundStyle = createBackgroundStyle(menuContent.style);
   const menuTextStyle = createTextStyle(menuContent.style);
   const menuBodyTextStyle = createBodyTextStyle(menuContent.style);
+  const instagramReviewsBackgroundStyle = createBackgroundStyle(instagramReviewContent.style);
+  const instagramReviewsTextStyle = createTextStyle(instagramReviewContent.style);
   const findUsBackgroundStyle = createBackgroundStyle(findUs.style);
   const findUsTextStyle = createTextStyle(findUs.style);
   const footerBackgroundStyle = createBackgroundStyle(footer.style);
@@ -217,7 +227,7 @@ const Login: React.FC = () => {
     hero: hero.style,
     about: about.style,
     menu: menuContent.style,
-    contact: contact.style,
+    instagramReviews: instagramReviewContent.style,
     findUs: findUs.style,
     footer: footer.style,
   };
@@ -282,8 +292,16 @@ const Login: React.FC = () => {
   const bestSellerCount = bestSellersToDisplay.length;
   const menuGridClassName = computeMenuGridClassName(bestSellerCount);
   const menuCardClassName = computeMenuCardClassName(bestSellerCount);
-  const instagramReviews = INSTAGRAM_REVIEWS;
-  const reviewCount = instagramReviews.length;
+  const instagramReviewSlides = INSTAGRAM_REVIEWS.map(review => {
+    const postImageUrl = instagramReviewContent.image ?? review.postImageUrl;
+    const postImageAlt = instagramReviewContent.image ? instagramReviewContent.title : review.postImageAlt;
+    return {
+      ...review,
+      postImageUrl,
+      postImageAlt,
+    };
+  });
+  const reviewCount = instagramReviewSlides.length;
   const isSingleReview = reviewCount <= 1;
 
   const handleNextReview = useCallback(() => {
@@ -706,20 +724,37 @@ const Login: React.FC = () => {
           </div>
         </section>
 
-        <section aria-labelledby="instagram-reviews-title" className="section section-reviews">
-          <div className="section-inner section-inner--wide">
+        <section
+          id="instagram-reviews"
+          aria-labelledby="instagram-reviews-title"
+          className="section section-reviews"
+          style={{ ...instagramReviewsBackgroundStyle, ...instagramReviewsTextStyle }}
+        >
+          <div className="section-inner section-inner--wide" style={instagramReviewsTextStyle}>
             <div className="reviews-heading">
-              <h2 id="instagram-reviews-title" className="section-title">
-                Ils nous adorent sur Instagram
-              </h2>
-              <p className="reviews-subtitle">
-                Des foodies de toute la Colombie partagent leur coup de cœur pour notre cuisine : ambiance solaire, service
-                attentionné et assiettes qui brillent autant que leurs stories.
-              </p>
+              {renderRichTextElement(
+                'instagramReviews.title',
+                'h2',
+                {
+                  id: 'instagram-reviews-title',
+                  className: 'section-title',
+                  style: getElementTextStyle('instagramReviews.title'),
+                },
+                instagramReviewContent.title,
+              )}
+              {renderRichTextElement(
+                'instagramReviews.subtitle',
+                'p',
+                {
+                  className: 'reviews-subtitle',
+                  style: getElementBodyTextStyle('instagramReviews.subtitle'),
+                },
+                instagramReviewContent.subtitle,
+              )}
             </div>
             <div className="reviews-carousel">
               <div className="reviews-track" style={{ transform: `translateX(-${activeReviewIndex * 100}%)` }}>
-                {instagramReviews.map((review, index) => (
+                {instagramReviewSlides.map((review, index) => (
                   <article key={review.id} className="review-card" aria-hidden={index !== activeReviewIndex}>
                     <div className="review-card__content">
                       <header className="review-card__header">
@@ -744,7 +779,7 @@ const Login: React.FC = () => {
                       <div className="review-card__footer">
                         <div className="review-card__highlight">
                           <span className="review-card__story-ring" aria-hidden="true">
-                            <img src={review.postImageUrl} alt="" />
+                            <img src={review.postImageUrl} alt={review.postImageAlt} />
                           </span>
                           <div>
                             <p className="review-card__highlight-title">{review.highlight}</p>
@@ -785,7 +820,7 @@ const Login: React.FC = () => {
             </div>
             {reviewCount > 1 && (
               <div className="reviews-pagination" role="tablist" aria-label="Avis Instagram">
-                {instagramReviews.map((review, index) => (
+                {instagramReviewSlides.map((review, index) => (
                   <button
                     key={review.id}
                     type="button"
