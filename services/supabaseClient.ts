@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createFallbackClient } from '../stubs/supabase-js';
 
 type SupabaseEnv = {
   url: string;
@@ -39,10 +40,30 @@ const getSupabaseEnv = (): SupabaseEnv => {
   return { url: normalizeSupabaseUrl(url), anonKey };
 };
 
-const { url, anonKey } = getSupabaseEnv();
+type SupabaseClient = ReturnType<typeof createClient>;
 
-export const supabase = createClient(url, anonKey, {
-  auth: {
-    persistSession: false,
-  },
-});
+const createDisabledClient = (): SupabaseClient => {
+  return createFallbackClient() as SupabaseClient;
+};
+
+let supabaseClient: SupabaseClient;
+let supabaseConfigured = true;
+
+try {
+  const { url, anonKey } = getSupabaseEnv();
+  supabaseClient = createClient(url, anonKey, {
+    auth: {
+      persistSession: false,
+    },
+  });
+} catch (error) {
+  supabaseConfigured = false;
+  console.warn(
+    'Supabase environment variables are not configured. Falling back to a disabled client. Operations depending on Supabase will fail until the environment is configured.',
+    error,
+  );
+  supabaseClient = createDisabledClient();
+}
+
+export const supabase = supabaseClient;
+export const isSupabaseReady = supabaseConfigured;
