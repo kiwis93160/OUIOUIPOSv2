@@ -6,7 +6,7 @@ import { api } from '../services/api';
 interface AuthContextType {
   role: Role | null;
   loading: boolean;
-  login: (pin: string) => Promise<void>;
+  login: (pin: string) => Promise<Role>;
   logout: () => void;
   refreshRole: () => Promise<void>;
 }
@@ -65,17 +65,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadRoleFromStorage();
   }, []);
 
-  const login = useCallback(async (pin: string) => {
+  const login = useCallback(async (pin: string): Promise<Role> => {
     setLoading(true);
     try {
       const userRole = await api.loginWithPin(pin);
-      if (userRole) {
-        setRole(userRole);
-        localStorage.setItem('oui-oui-tacos-role', JSON.stringify(userRole));
-        localStorage.setItem('oui-oui-tacos-session', JSON.stringify({ roleId: userRole.id, authenticatedAt: Date.now() }));
-      } else {
-        throw new Error("PIN invalide");
+      if (!userRole) {
+        throw new Error('PIN invalide');
       }
+
+      setRole(userRole);
+      localStorage.setItem('oui-oui-tacos-role', JSON.stringify(userRole));
+      localStorage.setItem('oui-oui-tacos-session', JSON.stringify({ roleId: userRole.id, authenticatedAt: Date.now() }));
+
+      return userRole;
     } finally {
       setLoading(false);
     }

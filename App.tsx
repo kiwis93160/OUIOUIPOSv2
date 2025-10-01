@@ -14,71 +14,143 @@ import CommandeClient from './pages/CommandeClient';
 import NotFound from './pages/NotFound';
 import ResumeVentes from './pages/ResumeVentes';
 import SiteCustomization from './pages/SiteCustomization';
-import { NAV_LINKS, SITE_CUSTOMIZER_PERMISSION_KEY } from './constants';
+import { SITE_CUSTOMIZER_PERMISSION_KEY } from './constants';
+import { getHomeRedirectPath, isPermissionGranted } from './utils/navigation';
 
-const isPermissionGranted = (permission?: string) =>
-  permission === 'editor' || permission === 'readonly';
+const LoadingScreen: React.FC = () => (
+  <div className="flex items-center justify-center h-screen">
+    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-primary" />
+  </div>
+);
 
-const PrivateRoute: React.FC<{ children: React.ReactElement; permissionKey?: string }> = ({ children, permissionKey }) => {
+const PrivateRoute: React.FC<{ children: React.ReactElement; permissionKey?: string }> = ({
+  children,
+  permissionKey,
+}) => {
   const { role, loading } = useAuth();
+
   if (loading) {
-    return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-primary"></div></div>;
+    return <LoadingScreen />;
   }
-  const permission = permissionKey ? role?.permissions[permissionKey] : undefined;
+
+  if (!role) {
+    return <Navigate to="/" replace />;
+  }
+
+  const permission = permissionKey ? role.permissions?.[permissionKey] : undefined;
   const hasPermission = permissionKey ? isPermissionGranted(permission) : true;
-  return role && hasPermission ? children : <Navigate to="/login" replace />;
+
+  if (!hasPermission) {
+    return <Navigate to={getHomeRedirectPath(role)} replace />;
+  }
+
+  return children;
 };
 
-const AppRoutes: React.FC = () => {
-    const { role } = useAuth();
+const RootRoute: React.FC = () => {
+  const { role, loading } = useAuth();
 
-    const getHomeRedirect = () => {
-        if (!role) return '/login';
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
-        if (role.homePage && isPermissionGranted(role.permissions[role.homePage])) {
-            return role.homePage;
-        }
+  if (!role) {
+    return <Login />;
+  }
 
-        const fallbackLink = NAV_LINKS.find(link => isPermissionGranted(role.permissions[link.permissionKey]));
-        if (fallbackLink) {
-            return fallbackLink.href;
-        }
-        return '/login';
-    };
-
-    return (
-        <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/commande-client" element={<CommandeClient />} />
-            
-            <Route path="/" element={
-                <PrivateRoute>
-                    <ProtectedLayout />
-                </PrivateRoute>
-            }>
-                <Route index element={<Navigate to={getHomeRedirect()} replace />} />
-                <Route path="dashboard" element={<PrivateRoute permissionKey="/dashboard"><Dashboard /></PrivateRoute>} />
-                <Route path="para-llevar" element={<PrivateRoute permissionKey="/para-llevar"><ParaLlevar /></PrivateRoute>} />
-                <Route path="ventes" element={<PrivateRoute permissionKey="/ventes"><Ventes /></PrivateRoute>} />
-                <Route path="commande/:tableId" element={<PrivateRoute permissionKey="/ventes"><Commande /></PrivateRoute>} />
-                <Route path="cocina" element={<PrivateRoute permissionKey="/cocina"><Cuisine /></PrivateRoute>} />
-                <Route path="resume-ventes" element={<PrivateRoute permissionKey="/resume-ventes"><ResumeVentes /></PrivateRoute>} />
-                <Route path="ingredients" element={<PrivateRoute permissionKey="/ingredients"><Ingredients /></PrivateRoute>} />
-                <Route path="produits" element={<PrivateRoute permissionKey="/produits"><Produits /></PrivateRoute>} />
-                <Route
-                  path={SITE_CUSTOMIZER_PERMISSION_KEY.slice(1)}
-                  element={
-                    <PrivateRoute permissionKey={SITE_CUSTOMIZER_PERMISSION_KEY}>
-                      <SiteCustomization />
-                    </PrivateRoute>
-                  }
-                />
-            </Route>
-            
-            <Route path="*" element={<NotFound />} />
-        </Routes>
-    );
+  return <Navigate to={getHomeRedirectPath(role)} replace />;
 };
+
+const ProtectedAppShell: React.FC = () => (
+  <PrivateRoute>
+    <ProtectedLayout />
+  </PrivateRoute>
+);
+
+const AppRoutes: React.FC = () => (
+  <Routes>
+    <Route path="/" element={<RootRoute />} />
+    <Route path="/login" element={<Navigate to="/" replace />} />
+    <Route path="/commande-client" element={<CommandeClient />} />
+
+    <Route element={<ProtectedAppShell />}>
+      <Route
+        path="/dashboard"
+        element={
+          <PrivateRoute permissionKey="/dashboard">
+            <Dashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/para-llevar"
+        element={
+          <PrivateRoute permissionKey="/para-llevar">
+            <ParaLlevar />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/ventes"
+        element={
+          <PrivateRoute permissionKey="/ventes">
+            <Ventes />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/commande/:tableId"
+        element={
+          <PrivateRoute permissionKey="/ventes">
+            <Commande />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/cocina"
+        element={
+          <PrivateRoute permissionKey="/cocina">
+            <Cuisine />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/resume-ventes"
+        element={
+          <PrivateRoute permissionKey="/resume-ventes">
+            <ResumeVentes />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/ingredients"
+        element={
+          <PrivateRoute permissionKey="/ingredients">
+            <Ingredients />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/produits"
+        element={
+          <PrivateRoute permissionKey="/produits">
+            <Produits />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path={SITE_CUSTOMIZER_PERMISSION_KEY}
+        element={
+          <PrivateRoute permissionKey={SITE_CUSTOMIZER_PERMISSION_KEY}>
+            <SiteCustomization />
+          </PrivateRoute>
+        }
+      />
+    </Route>
+
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
 
 
 const App: React.FC = () => {

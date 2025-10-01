@@ -20,6 +20,7 @@ import {
   createTextStyle,
 } from '../utils/siteStyleHelpers';
 import { resolveZoneFromElement } from '../components/SitePreviewCanvas';
+import { getHomeRedirectPath } from '../utils/navigation';
 
 const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
 
@@ -334,8 +335,8 @@ const Login: React.FC = () => {
     setError('');
     setLoading(true);
     try {
-      await login(pinToSubmit);
-      navigate('/');
+      const authenticatedRole = await login(pinToSubmit);
+      navigate(getHomeRedirectPath(authenticatedRole));
     } catch (err: any) {
       setError(err.message || 'PIN invalide. Veuillez réessayer.');
       setPin('');
