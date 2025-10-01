@@ -486,6 +486,9 @@ const CommandeClient: React.FC = () => {
         }
     }, [siteContent]);
 
+    const assetsLibrary = content?.assets.library ?? [];
+    useCustomFonts(assetsLibrary);
+
     if (!content) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -499,7 +502,6 @@ const CommandeClient: React.FC = () => {
     const { hero, navigation, assets } = content;
     const brandLogo = navigation.brandLogo ?? '/logo-brand.svg';
 
-    useCustomFonts(assets.library ?? []);
 
     const heroBackgroundStyle = createHeroBackgroundStyle(hero.style, hero.backgroundImage);
     const navigationBackgroundStyle = createBackgroundStyle(navigation.style);
