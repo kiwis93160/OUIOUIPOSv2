@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useId } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -15,23 +15,50 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
 
   const sizeClasses = {
     sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
     xl: 'max-w-4xl',
   };
 
+  const headingId = useId();
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6 sm:px-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-4 sm:px-6 sm:py-8"
       onClick={onClose}
     >
       <div
-        className={`relative flex w-full flex-col overflow-hidden rounded-lg bg-white shadow-xl ${sizeClasses[size]} max-h-[90vh]`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        className={`relative flex w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${sizeClasses[size]} max-h-[calc(100vh-2rem)] sm:max-h-[90vh] focus:outline-none`}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b px-4 py-3 sm:px-6">
-          <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="rounded-full p-1 text-gray-500 transition-colors hover:text-gray-700">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-white/80 px-4 py-3 sm:px-6">
+          <h3 id={headingId} className="text-lg font-semibold text-slate-900 sm:text-xl">
+            {title}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
+            aria-label="Fermer la fenêtre modale"
+          >
             <X size={20} />
           </button>
         </div>
