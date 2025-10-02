@@ -3,29 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
-import {
-  EditableElementKey,
-  EditableZoneKey,
-  Product,
-  Order,
-  SiteContent,
-  SectionStyle,
-  INSTAGRAM_REVIEW_IDS,
-} from '../types';
-import {
-  Clock,
-  Mail,
-  MapPin,
-  Menu,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Quote,
-  Heart,
-  MessageCircle,
-  Send,
-  Bookmark,
-} from 'lucide-react';
+import { EditableElementKey, EditableZoneKey, Product, Order, SiteContent, SectionStyle } from '../types';
+import { Clock, Mail, MapPin, Menu, X } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
@@ -93,32 +72,7 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
     image: null,
     style: createDefaultSectionStyle(),
   },
-  instagramReviews: {
-    title: '',
-    subtitle: '',
-    image: null,
-    style: createDefaultSectionStyle(),
-    reviews: INSTAGRAM_REVIEW_IDS.reduce(
-      (acc, id) => {
-        acc[id] = {
-          name: '',
-          handle: '',
-          timeAgo: '',
-          message: '',
-          highlight: '',
-          highlightCaption: '',
-          location: '',
-          badgeLabel: '',
-          postImageAlt: '',
-          avatarUrl: null,
-          highlightImageUrl: null,
-          postImageUrl: null,
-        };
-        return acc;
-      },
-      {} as SiteContent['instagramReviews']['reviews'],
-    ),
-  },
+  instagramReviews: JSON.parse(JSON.stringify(BASE_SITE_CONTENT.instagramReviews)) as SiteContent['instagramReviews'],
   findUs: {
     title: '',
     addressLabel: '',
@@ -277,15 +231,7 @@ const Login: React.FC = () => {
   const safeContent = content ?? DEFAULT_SITE_CONTENT;
   useCustomFonts(safeContent.assets.library);
 
-  const {
-    navigation,
-    hero,
-    about,
-    menu: menuContent,
-    instagramReviews: instagramReviewContent,
-    findUs,
-    footer,
-  } = safeContent;
+  const { navigation, hero, about, menu: menuContent, findUs, footer } = safeContent;
   const brandLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const staffTriggerLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const navigationBackgroundStyle = createBackgroundStyle(navigation.style);
@@ -298,8 +244,6 @@ const Login: React.FC = () => {
   const menuBackgroundStyle = createBackgroundStyle(menuContent.style);
   const menuTextStyle = createTextStyle(menuContent.style);
   const menuBodyTextStyle = createBodyTextStyle(menuContent.style);
-  const instagramReviewsBackgroundStyle = createBackgroundStyle(instagramReviewContent.style);
-  const instagramReviewsTextStyle = createTextStyle(instagramReviewContent.style);
   const findUsBackgroundStyle = createBackgroundStyle(findUs.style);
   const findUsTextStyle = createTextStyle(findUs.style);
   const footerBackgroundStyle = createBackgroundStyle(footer.style);
@@ -311,7 +255,7 @@ const Login: React.FC = () => {
     hero: hero.style,
     about: about.style,
     menu: menuContent.style,
-    instagramReviews: instagramReviewContent.style,
+    instagramReviews: safeContent.instagramReviews.style,
     findUs: findUs.style,
     footer: footer.style,
   };
@@ -362,7 +306,6 @@ const Login: React.FC = () => {
   const [menuLoading, setMenuLoading] = useState(true);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
-  const [activeReviewIndex, setActiveReviewIndex] = useState(0);
 
   const findUsMapQuery = findUs.address.trim();
   const encodedFindUsQuery = findUsMapQuery.length > 0 ? encodeURIComponent(findUsMapQuery) : '';
@@ -377,142 +320,6 @@ const Login: React.FC = () => {
   const bestSellerCount = bestSellersToDisplay.length;
   const menuGridClassName = computeMenuGridClassName(bestSellerCount);
   const menuCardClassName = computeMenuCardClassName(bestSellerCount);
-  const instagramReviewDefaults = BASE_SITE_CONTENT.instagramReviews.reviews;
-  const instagramReviewSlides = INSTAGRAM_REVIEW_IDS.map(reviewId => {
-    const review = instagramReviewContent.reviews[reviewId];
-    const fallbackReview = instagramReviewDefaults[reviewId];
-    const ensureText = (value: string, fallbackValue: string) =>
-      value.trim().length > 0 ? value : fallbackValue;
-    const avatarUrl = review.avatarUrl ?? fallbackReview.avatarUrl;
-    const highlightImageUrl =
-      review.highlightImageUrl ??
-      review.postImageUrl ??
-      instagramReviewContent.image ??
-      fallbackReview.highlightImageUrl ??
-      fallbackReview.postImageUrl;
-    const postImageUrl =
-      review.postImageUrl ??
-      review.highlightImageUrl ??
-      fallbackReview.postImageUrl ??
-      fallbackReview.highlightImageUrl ??
-      instagramReviewContent.image;
-    const name = ensureText(review.name, fallbackReview.name);
-    const handle = ensureText(review.handle, fallbackReview.handle);
-    const timeAgo = ensureText(review.timeAgo, fallbackReview.timeAgo);
-    const message = ensureText(review.message, fallbackReview.message);
-    const highlight = ensureText(review.highlight, fallbackReview.highlight);
-    const highlightCaption = ensureText(review.highlightCaption, fallbackReview.highlightCaption);
-    const location = ensureText(review.location, fallbackReview.location);
-    const badgeLabel = ensureText(review.badgeLabel, fallbackReview.badgeLabel);
-    const fallbackPostImageAlt = ensureText(review.postImageAlt, fallbackReview.postImageAlt);
-    const postImageAlt =
-      postImageUrl && postImageUrl === (review.highlightImageUrl ?? fallbackReview.highlightImageUrl ?? null)
-        ? highlightCaption
-        : fallbackPostImageAlt;
-    return {
-      id: reviewId,
-      name,
-      handle,
-      timeAgo,
-      message,
-      highlight,
-      highlightCaption,
-      location,
-      badgeLabel,
-      avatarUrl: avatarUrl ?? fallbackReview.avatarUrl,
-      highlightImageUrl: highlightImageUrl ?? fallbackReview.highlightImageUrl ?? fallbackReview.postImageUrl,
-      postImageUrl: postImageUrl ?? fallbackReview.postImageUrl,
-      postImageAlt,
-    };
-  });
-  const reviewCount = instagramReviewSlides.length;
-  const isSingleReview = reviewCount <= 1;
-
-  const handleNextReview = useCallback(() => {
-    setActiveReviewIndex(index => (index + 1) % reviewCount);
-  }, [reviewCount]);
-
-  const handlePreviousReview = useCallback(() => {
-    setActiveReviewIndex(index => (index - 1 + reviewCount) % reviewCount);
-  }, [reviewCount]);
-
-  const submitPin = useCallback(async (pinToSubmit: string) => {
-    if (loading) return;
-    setError('');
-    setLoading(true);
-    try {
-      const authenticatedRole = await login(pinToSubmit);
-      const redirectPath = getHomeRedirectPath(authenticatedRole);
-      navigate(redirectPath ?? '/');
-    } catch (err: any) {
-      setError(err.message || 'PIN invalide. Veuillez réessayer.');
-      setPin('');
-    } finally {
-      setLoading(false);
-    }
-  }, [login, navigate, loading]);
-
-  useEffect(() => {
-    if (pin.length === 6) {
-      const timer = setTimeout(() => submitPin(pin), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [pin, submitPin]);
-
-  useEffect(() => {
-    if (isModalOpen) {
-      const timer = window.setTimeout(() => {
-        pinInputRef.current?.focus();
-      }, 50);
-      return () => window.clearTimeout(timer);
-    }
-  }, [isModalOpen]);
-
-  useEffect(() => {
-    const fetchMenuPreview = async () => {
-      try {
-        setMenuLoading(true);
-        const bestSellerProducts = await api.getBestSellerProducts();
-        setBestSellers(bestSellerProducts.slice(0, 6));
-      } catch (error) {
-        console.error("Failed to fetch menu preview:", error);
-      } finally {
-        setMenuLoading(false);
-      }
-    };
-    fetchMenuPreview();
-  }, []);
-
-  useEffect(() => {
-    if (reviewCount <= 1) {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      setActiveReviewIndex(index => (index + 1) % reviewCount);
-    }, 6500);
-    return () => window.clearInterval(timer);
-  }, [reviewCount]);
-
-  useEffect(() => {
-    try {
-      const historyJSON = localStorage.getItem('customer-order-history');
-      if (historyJSON) {
-        setOrderHistory(JSON.parse(historyJSON));
-      }
-    } catch (error) {
-      console.error('Failed to read order history from storage', error);
-    }
-  }, []);
-
-  if (!content) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <p className="text-sm text-slate-500">
-          {siteContentLoading ? 'Chargement du contenu du site…' : 'Initialisation du contenu du site…'}
-        </p>
-      </div>
-    );
-  }
 
   const handleFormSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -859,134 +666,6 @@ const Login: React.FC = () => {
           </div>
         </section>
 
-        <section
-          id="instagram-reviews"
-          aria-labelledby="instagram-reviews-title"
-          className="section section-reviews"
-          style={{ ...instagramReviewsBackgroundStyle, ...instagramReviewsTextStyle }}
-        >
-          <div className="section-inner section-inner--wide" style={instagramReviewsTextStyle}>
-            <div className="reviews-heading">
-              {renderRichTextElement(
-                'instagramReviews.title',
-                'h2',
-                {
-                  id: 'instagram-reviews-title',
-                  className: 'section-title',
-                  style: getElementTextStyle('instagramReviews.title'),
-                },
-                instagramReviewContent.title,
-              )}
-              {renderRichTextElement(
-                'instagramReviews.subtitle',
-                'p',
-                {
-                  className: 'reviews-subtitle',
-                  style: getElementBodyTextStyle('instagramReviews.subtitle'),
-                },
-                instagramReviewContent.subtitle,
-              )}
-            </div>
-            <div className="reviews-carousel">
-              <div
-                className="reviews-track"
-                style={{
-                  transform: `translateX(calc(-${activeReviewIndex} * var(--review-slide-offset)))`,
-                }}
-              >
-                {instagramReviewSlides.map(review => (
-                  <article key={review.id} className="review-card" aria-hidden={false}>
-                    <header className="review-card__header">
-                      <span className="review-card__avatar" aria-hidden="true">
-                        <img src={review.avatarUrl} alt="" />
-                      </span>
-                      <div className="review-card__meta">
-                        <p className="review-card__name">{review.name}</p>
-                        <p className="review-card__handle">{review.handle}</p>
-                      </div>
-                      <span className="review-card__badge">{review.badgeLabel}</span>
-                    </header>
-                    <div className="review-card__layout">
-                      <div className="review-card__content">
-                        {(review.highlight || review.highlightCaption) && (
-                          <div className="review-card__highlight">
-                            <span className="review-card__highlight-thumb" aria-hidden="true">
-                              <img src={review.highlightImageUrl} alt={review.highlight} />
-                            </span>
-                            <div className="review-card__highlight-copy">
-                              <p className="review-card__highlight-title">{review.highlight}</p>
-                              {review.highlightCaption && (
-                                <p className="review-card__highlight-caption">{review.highlightCaption}</p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        <blockquote className="review-card__quote">
-                          <Quote aria-hidden="true" className="review-card__quote-icon" />
-                          <p>{review.message}</p>
-                        </blockquote>
-                        {review.location && (
-                          <p className="review-card__location">
-                            <MapPin aria-hidden="true" />
-                            <span>{review.location}</span>
-                          </p>
-                        )}
-                        <p className="review-card__timestamp">{review.timeAgo}</p>
-                      </div>
-                      <div className="review-card__media">
-                        <span className="review-card__media-frame">
-                          <img src={review.postImageUrl} alt={review.postImageAlt} />
-                        </span>
-                      </div>
-                    </div>
-                    <footer className="review-card__footer" aria-hidden="true">
-                      <div className="review-card__actions">
-                        <Heart />
-                        <MessageCircle />
-                        <Send />
-                      </div>
-                      <Bookmark className="review-card__save" />
-                    </footer>
-                  </article>
-                ))}
-              </div>
-              {!isSingleReview && (
-                <div className="reviews-controls">
-                  <button
-                    type="button"
-                    className="reviews-control"
-                    onClick={handlePreviousReview}
-                    aria-label="Voir l'avis précédent"
-                  >
-                    <ChevronLeft aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    className="reviews-control"
-                    onClick={handleNextReview}
-                    aria-label="Voir l'avis suivant"
-                  >
-                    <ChevronRight aria-hidden="true" />
-                  </button>
-                </div>
-              )}
-            </div>
-            {reviewCount > 1 && (
-              <div className="reviews-pagination" role="tablist" aria-label="Avis Instagram">
-                {instagramReviewSlides.map((review, index) => (
-                  <button
-                    key={review.id}
-                    type="button"
-                    className={`reviews-dot${index === activeReviewIndex ? ' reviews-dot--active' : ''}`}
-                    onClick={() => setActiveReviewIndex(index)}
-                    aria-label={`Afficher l'avis de ${review.name}`}
-                    aria-current={index === activeReviewIndex}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
 
         <section
           id="find-us"
