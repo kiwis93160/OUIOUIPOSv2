@@ -22,6 +22,7 @@ import {
 import { resolveZoneFromElement } from '../components/SitePreviewCanvas';
 import { getHomeRedirectPath } from '../utils/navigation';
 import { DEFAULT_SITE_CONTENT as BASE_SITE_CONTENT } from '../utils/siteContent';
+import { withAppendedQueryParam } from '../utils/url';
 
 const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
 
@@ -82,6 +83,7 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
     hoursLabel: '',
     hours: '',
     mapLabel: '',
+    mapUrl: '',
     style: createDefaultSectionStyle(),
   },
   footer: {
@@ -307,14 +309,70 @@ const Login: React.FC = () => {
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const historyJSON = window.localStorage.getItem('customer-order-history');
+      if (!historyJSON) {
+        return;
+      }
+
+      const parsed = JSON.parse(historyJSON) as Order[];
+      if (Array.isArray(parsed)) {
+        setOrderHistory(parsed);
+      }
+    } catch (error) {
+      console.error('Could not load order history', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchBestSellers = async () => {
+      try {
+        const products = await api.getBestSellerProducts();
+        if (isMounted) {
+          setBestSellers(products);
+        }
+      } catch (error) {
+        console.error('Could not load best seller products', error);
+      } finally {
+        if (isMounted) {
+          setMenuLoading(false);
+        }
+      }
+    };
+
+    fetchBestSellers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const findUsMapQuery = findUs.address.trim();
-  const encodedFindUsQuery = findUsMapQuery.length > 0 ? encodeURIComponent(findUsMapQuery) : '';
-  const findUsMapUrl = encodedFindUsQuery
-    ? `https://www.google.com/maps?q=${encodedFindUsQuery}`
-    : 'https://www.google.com/maps';
-  const findUsMapEmbedUrl = encodedFindUsQuery
-    ? `https://www.google.com/maps?q=${encodedFindUsQuery}&output=embed`
-    : 'about:blank';
+  const customFindUsMapUrlRaw = findUs.mapUrl;
+  const customFindUsMapUrl = typeof customFindUsMapUrlRaw === 'string' ? customFindUsMapUrlRaw.trim() : '';
+  const hasCustomMapUrl = customFindUsMapUrl.length > 0;
+  const encodedFindUsQuery = !hasCustomMapUrl && findUsMapQuery.length > 0
+    ? encodeURIComponent(findUsMapQuery)
+    : '';
+  const findUsMapUrl = hasCustomMapUrl
+    ? customFindUsMapUrl
+    : encodedFindUsQuery
+      ? `https://www.google.com/maps?q=${encodedFindUsQuery}`
+      : 'https://www.google.com/maps';
+  const findUsMapEmbedUrl = hasCustomMapUrl
+    ? withAppendedQueryParam(customFindUsMapUrl, 'output', 'embed')
+    : encodedFindUsQuery
+      ? `https://www.google.com/maps?q=${encodedFindUsQuery}&output=embed`
+      : 'about:blank';
+  const hasMapLocation = hasCustomMapUrl || encodedFindUsQuery.length > 0;
+  const findUsMapTitle = findUsMapQuery.length > 0 ? findUsMapQuery : findUs.title;
   const activeOrderId = activeOrder?.orderId ?? null;
   const bestSellersToDisplay = bestSellers.slice(0, 6);
   const bestSellerCount = bestSellersToDisplay.length;
@@ -623,7 +681,7 @@ const Login: React.FC = () => {
                 },
                 menuContent.loadingLabel,
               )
-            ) : (
+            ) : bestSellersToDisplay.length > 0 ? (
               <div className={menuGridClassName}>
                 {bestSellersToDisplay.map(product => (
                   <article key={product.id} className={menuCardClassName}>
@@ -642,6 +700,10 @@ const Login: React.FC = () => {
                   </article>
                 ))}
               </div>
+            ) : (
+              <p className="section-text section-text--muted" style={menuBodyTextStyle}>
+                Aucun produit best seller n'est disponible pour le moment.
+              </p>
             )}
             <div className="section-actions">
               <button
@@ -756,10 +818,10 @@ const Login: React.FC = () => {
               </div>
             </div>
             <div className="find-us-map" style={findUsTextStyle}>
-              {encodedFindUsQuery ? (
+              {hasMapLocation ? (
                 <div className="find-us-map__frame">
                   <iframe
-                    title={`Carte Google Maps pour ${findUsMapQuery}`}
+                    title={`Carte Google Maps pour ${findUsMapTitle}`}
                     src={findUsMapEmbedUrl}
                     loading="lazy"
                     allowFullScreen

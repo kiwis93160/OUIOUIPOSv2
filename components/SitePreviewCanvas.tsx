@@ -17,6 +17,7 @@ import {
   createTextStyle,
 } from '../utils/siteStyleHelpers';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
+import { withAppendedQueryParam } from '../utils/url';
 
 const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
 
@@ -228,13 +229,24 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
   };
 
   const findUsMapQuery = content.findUs.address.trim();
-  const encodedFindUsQuery = findUsMapQuery.length > 0 ? encodeURIComponent(findUsMapQuery) : '';
-  const findUsMapUrl = encodedFindUsQuery
-    ? `https://www.google.com/maps?q=${encodedFindUsQuery}`
-    : 'https://www.google.com/maps';
-  const findUsMapEmbedUrl = encodedFindUsQuery
-    ? `https://www.google.com/maps?q=${encodedFindUsQuery}&output=embed`
-    : 'about:blank';
+  const customFindUsMapUrlRaw = content.findUs.mapUrl;
+  const customFindUsMapUrl = typeof customFindUsMapUrlRaw === 'string' ? customFindUsMapUrlRaw.trim() : '';
+  const hasCustomMapUrl = customFindUsMapUrl.length > 0;
+  const encodedFindUsQuery = !hasCustomMapUrl && findUsMapQuery.length > 0
+    ? encodeURIComponent(findUsMapQuery)
+    : '';
+  const findUsMapUrl = hasCustomMapUrl
+    ? customFindUsMapUrl
+    : encodedFindUsQuery
+      ? `https://www.google.com/maps?q=${encodedFindUsQuery}`
+      : 'https://www.google.com/maps';
+  const findUsMapEmbedUrl = hasCustomMapUrl
+    ? withAppendedQueryParam(customFindUsMapUrl, 'output', 'embed')
+    : encodedFindUsQuery
+      ? `https://www.google.com/maps?q=${encodedFindUsQuery}&output=embed`
+      : 'about:blank';
+  const hasMapLocation = hasCustomMapUrl || encodedFindUsQuery.length > 0;
+  const findUsMapTitle = findUsMapQuery.length > 0 ? findUsMapQuery : content.findUs.title;
 
   return (
     <EditButtonVisibilityContext.Provider value={showEditButtons}>
@@ -853,10 +865,10 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 </div>
               </div>
               <div className="find-us-map" style={findUsTextStyle}>
-                {encodedFindUsQuery ? (
+                {hasMapLocation ? (
                   <div className="find-us-map__frame">
                     <iframe
-                      title={`Carte Google Maps pour ${findUsMapQuery}`}
+                      title={`Carte Google Maps pour ${findUsMapTitle}`}
                       src={findUsMapEmbedUrl}
                       loading="lazy"
                       allowFullScreen

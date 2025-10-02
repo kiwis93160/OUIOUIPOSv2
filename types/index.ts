@@ -219,6 +219,7 @@ export interface SiteContent {
     hoursLabel: string;
     hours: string;
     mapLabel: string;
+    mapUrl: string;
     style: SectionStyle;
   };
   footer: {
