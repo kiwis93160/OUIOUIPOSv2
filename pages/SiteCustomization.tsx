@@ -23,7 +23,6 @@ import {
   SectionStyle,
   SiteContent,
   STYLE_EDITABLE_ELEMENT_KEYS,
-  INSTAGRAM_REVIEW_IDS,
 } from '../types';
 import { api } from '../services/api';
 import { normalizeCloudinaryImageUrl, uploadCustomizationAsset } from '../services/cloudinary';
@@ -68,28 +67,16 @@ const BACKGROUND_ELEMENT_KEYS = new Set<EditableElementKey>([
   'hero.style.background',
   'about.style.background',
   'menu.style.background',
-  'instagramReviews.style.background',
   'findUs.style.background',
   'footer.style.background',
 ]);
-
-const INSTAGRAM_REVIEW_IMAGE_ELEMENT_KEYS = INSTAGRAM_REVIEW_IDS.flatMap(
-  id =>
-    [
-      `instagramReviews.reviews.${id}.avatarUrl`,
-      `instagramReviews.reviews.${id}.highlightImageUrl`,
-      `instagramReviews.reviews.${id}.postImageUrl`,
-    ] as EditableElementKey[],
-);
 
 const IMAGE_ELEMENT_KEYS = new Set<EditableElementKey>([
   'hero.backgroundImage',
   'about.image',
   'menu.image',
-  'instagramReviews.image',
   'navigation.brandLogo',
   'navigation.staffLogo',
-  ...INSTAGRAM_REVIEW_IMAGE_ELEMENT_KEYS,
 ]);
 
 const BASE_ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
@@ -118,10 +105,6 @@ const BASE_ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
   'menu.loadingLabel': 'Texte de chargement du menu',
   'menu.image': 'Image du menu',
   'menu.style.background': 'Fond du menu',
-  'instagramReviews.title': 'Titre Avis Instagram',
-  'instagramReviews.subtitle': 'Sous-titre Avis Instagram',
-  'instagramReviews.image': 'Image Avis Instagram',
-  'instagramReviews.style.background': 'Fond Avis Instagram',
   'findUs.title': 'Titre Encuéntranos',
   'findUs.addressLabel': "Libellé de l'adresse (Encuéntranos)",
   'findUs.address': 'Adresse (Encuéntranos)',
@@ -135,30 +118,8 @@ const BASE_ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
   'footer.style.background': 'Fond du pied de page',
 };
 
-const instagramReviewElementLabels = INSTAGRAM_REVIEW_IDS.reduce(
-  (acc, id, index) => {
-    const reviewNumber = index + 1;
-    const prefix = `instagramReviews.reviews.${id}`;
-    acc[`${prefix}.name` as EditableElementKey] = `Nom avis Instagram ${reviewNumber}`;
-    acc[`${prefix}.handle` as EditableElementKey] = `Pseudo avis Instagram ${reviewNumber}`;
-    acc[`${prefix}.timeAgo` as EditableElementKey] = `Temps écoulé avis Instagram ${reviewNumber}`;
-    acc[`${prefix}.message` as EditableElementKey] = `Message avis Instagram ${reviewNumber}`;
-    acc[`${prefix}.highlight` as EditableElementKey] = `Titre highlight avis Instagram ${reviewNumber}`;
-    acc[`${prefix}.highlightCaption` as EditableElementKey] = `Sous-titre highlight avis Instagram ${reviewNumber}`;
-    acc[`${prefix}.location` as EditableElementKey] = `Localisation avis Instagram ${reviewNumber}`;
-    acc[`${prefix}.badgeLabel` as EditableElementKey] = `Badge avis Instagram ${reviewNumber}`;
-    acc[`${prefix}.postImageAlt` as EditableElementKey] = `Texte alternatif image avis Instagram ${reviewNumber}`;
-    acc[`${prefix}.avatarUrl` as EditableElementKey] = `Avatar avis Instagram ${reviewNumber}`;
-    acc[`${prefix}.highlightImageUrl` as EditableElementKey] = `Image de story avis Instagram ${reviewNumber}`;
-    acc[`${prefix}.postImageUrl` as EditableElementKey] = `Image du post avis Instagram ${reviewNumber}`;
-    return acc;
-  },
-  {} as Partial<Record<EditableElementKey, string>>,
-);
-
 const ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
   ...BASE_ELEMENT_LABELS,
-  ...instagramReviewElementLabels,
 };
 
 const TABS = [
@@ -1361,7 +1322,7 @@ const SiteCustomization: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 px-4 sm:px-6 lg:px-0">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Site public</h1>
@@ -1403,7 +1364,7 @@ const SiteCustomization: React.FC = () => {
         </div>
       )}
 
-      <nav className="flex w-full items-center gap-2 rounded-full bg-slate-100 p-1">
+      <nav className="flex w-full items-center gap-2 overflow-x-auto rounded-full bg-slate-100 p-1">
         {TABS.map(tab => (
           <button
             key={tab.id}
@@ -1422,14 +1383,16 @@ const SiteCustomization: React.FC = () => {
 
       <div>
         {activeTab === 'preview' ? (
-          <div className="rounded-[2.5rem] border border-slate-200 bg-slate-50 p-6">
-            <SitePreviewCanvas
-              content={draft}
-              bestSellerProducts={bestSellerProducts}
-              onEdit={() => undefined}
-              activeZone={null}
-              showEditButtons={false}
-            />
+          <div className="mx-auto w-full max-w-6xl">
+            <div className="rounded-[2.5rem] border border-slate-200 bg-slate-50 p-6">
+              <SitePreviewCanvas
+                content={draft}
+                bestSellerProducts={bestSellerProducts}
+                onEdit={() => undefined}
+                activeZone={null}
+                showEditButtons={false}
+              />
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -1439,12 +1402,14 @@ const SiteCustomization: React.FC = () => {
                 <p>{bestSellerError}</p>
               </div>
             )}
-            <SitePreviewCanvas
-              content={draft}
-              bestSellerProducts={bestSellerProducts}
-              onEdit={(element, meta) => handleEdit(element, meta)}
-              activeZone={activeZone}
-            />
+            <div className="mx-auto w-full max-w-6xl">
+              <SitePreviewCanvas
+                content={draft}
+                bestSellerProducts={bestSellerProducts}
+                onEdit={(element, meta) => handleEdit(element, meta)}
+                activeZone={activeZone}
+              />
+            </div>
             {bestSellerLoading && (
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
