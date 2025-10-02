@@ -142,7 +142,7 @@ body {
   border-radius: clamp(1.75rem, 4vw, 2.5rem);
   background: #ffffff;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
-  padding: clamp(1.5rem, 4vw, 2.5rem);
+  padding: clamp(1rem, 3vw, 1.75rem);
   --reviews-visible-count: 2.5;
   --review-slide-offset: calc(100% / var(--reviews-visible-count));
 }
@@ -157,9 +157,9 @@ body {
   box-sizing: border-box;
   flex: 0 0 calc(100% / var(--reviews-visible-count));
   min-width: calc(100% / var(--reviews-visible-count));
-  padding: 0 clamp(0.85rem, 2vw, 1.35rem);
+  padding: 0 clamp(0.65rem, 1.8vw, 1.1rem);
   display: grid;
-  gap: clamp(1.1rem, 3vw, 2rem);
+  gap: clamp(0.85rem, 2.4vw, 1.6rem);
   align-items: center;
 }
 
@@ -172,8 +172,8 @@ body {
 .review-card__content {
   display: flex;
   flex-direction: column;
-  gap: clamp(1rem, 2.5vw, 1.75rem);
-  padding-bottom: clamp(1rem, 2.5vw, 1.5rem);
+  gap: clamp(0.85rem, 2.2vw, 1.5rem);
+  padding-bottom: clamp(0.85rem, 2.2vw, 1.25rem);
 }
 
 .review-card__header {
@@ -260,12 +260,14 @@ body {
   padding: 0.4rem;
   background: linear-gradient(135deg, rgba(236, 72, 153, 0.65), rgba(99, 102, 241, 0.5));
   box-shadow: 0 24px 60px rgba(99, 102, 241, 0.25);
+  width: clamp(150px, 18vw, 210px);
+  aspect-ratio: 1 / 1;
 }
 
 .review-card__media-frame img {
   display: block;
-  width: clamp(168px, 22.4vw, 252px);
-  height: clamp(168px, 22.4vw, 252px);
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   border-radius: clamp(1.1rem, 3vw, 1.5rem);
 }
@@ -334,7 +336,7 @@ body {
 
 @media (max-width: 768px) {
   .reviews-carousel {
-    padding: clamp(1.5rem, 6vw, 2.25rem);
+    padding: clamp(1.1rem, 6vw, 1.75rem);
   }
 
   .review-card__header {
@@ -349,9 +351,8 @@ body {
     display: none;
   }
 
-  .review-card__media-frame img {
-    width: clamp(140px, 47.6vw, 196px);
-    height: clamp(140px, 47.6vw, 196px);
+  .review-card__media-frame {
+    width: clamp(132px, 52vw, 180px);
   }
 }
 
