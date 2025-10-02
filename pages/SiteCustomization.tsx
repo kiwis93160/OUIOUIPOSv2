@@ -23,6 +23,7 @@ import {
   SectionStyle,
   SiteContent,
   STYLE_EDITABLE_ELEMENT_KEYS,
+  INSTAGRAM_REVIEW_IDS,
 } from '../types';
 import { api } from '../services/api';
 import { normalizeCloudinaryImageUrl, uploadCustomizationAsset } from '../services/cloudinary';
@@ -72,6 +73,15 @@ const BACKGROUND_ELEMENT_KEYS = new Set<EditableElementKey>([
   'footer.style.background',
 ]);
 
+const INSTAGRAM_REVIEW_IMAGE_ELEMENT_KEYS = INSTAGRAM_REVIEW_IDS.flatMap(
+  id =>
+    [
+      `instagramReviews.reviews.${id}.avatarUrl`,
+      `instagramReviews.reviews.${id}.highlightImageUrl`,
+      `instagramReviews.reviews.${id}.postImageUrl`,
+    ] as EditableElementKey[],
+);
+
 const IMAGE_ELEMENT_KEYS = new Set<EditableElementKey>([
   'hero.backgroundImage',
   'about.image',
@@ -79,9 +89,10 @@ const IMAGE_ELEMENT_KEYS = new Set<EditableElementKey>([
   'instagramReviews.image',
   'navigation.brandLogo',
   'navigation.staffLogo',
+  ...INSTAGRAM_REVIEW_IMAGE_ELEMENT_KEYS,
 ]);
 
-const ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
+const BASE_ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
   'navigation.brand': 'Nom de la marque',
   'navigation.brandLogo': 'Logo principal',
   'navigation.staffLogo': "Logo d'accès équipe",
@@ -122,6 +133,32 @@ const ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
   'findUs.style.background': 'Fond Encuéntranos',
   'footer.text': 'Texte du pied de page',
   'footer.style.background': 'Fond du pied de page',
+};
+
+const instagramReviewElementLabels = INSTAGRAM_REVIEW_IDS.reduce(
+  (acc, id, index) => {
+    const reviewNumber = index + 1;
+    const prefix = `instagramReviews.reviews.${id}`;
+    acc[`${prefix}.name` as EditableElementKey] = `Nom avis Instagram ${reviewNumber}`;
+    acc[`${prefix}.handle` as EditableElementKey] = `Pseudo avis Instagram ${reviewNumber}`;
+    acc[`${prefix}.timeAgo` as EditableElementKey] = `Temps écoulé avis Instagram ${reviewNumber}`;
+    acc[`${prefix}.message` as EditableElementKey] = `Message avis Instagram ${reviewNumber}`;
+    acc[`${prefix}.highlight` as EditableElementKey] = `Titre highlight avis Instagram ${reviewNumber}`;
+    acc[`${prefix}.highlightCaption` as EditableElementKey] = `Sous-titre highlight avis Instagram ${reviewNumber}`;
+    acc[`${prefix}.location` as EditableElementKey] = `Localisation avis Instagram ${reviewNumber}`;
+    acc[`${prefix}.badgeLabel` as EditableElementKey] = `Badge avis Instagram ${reviewNumber}`;
+    acc[`${prefix}.postImageAlt` as EditableElementKey] = `Texte alternatif image avis Instagram ${reviewNumber}`;
+    acc[`${prefix}.avatarUrl` as EditableElementKey] = `Avatar avis Instagram ${reviewNumber}`;
+    acc[`${prefix}.highlightImageUrl` as EditableElementKey] = `Image de story avis Instagram ${reviewNumber}`;
+    acc[`${prefix}.postImageUrl` as EditableElementKey] = `Image du post avis Instagram ${reviewNumber}`;
+    return acc;
+  },
+  {} as Partial<Record<EditableElementKey, string>>,
+);
+
+const ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
+  ...BASE_ELEMENT_LABELS,
+  ...instagramReviewElementLabels,
 };
 
 const TABS = [

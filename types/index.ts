@@ -23,6 +23,32 @@ export interface SectionStyle {
   textColor: string;
 }
 
+export const INSTAGRAM_REVIEW_IDS = ['review1', 'review2', 'review3', 'review4', 'review5'] as const;
+
+export type InstagramReviewId = (typeof INSTAGRAM_REVIEW_IDS)[number];
+
+export const INSTAGRAM_REVIEW_TEXT_FIELDS = [
+  'name',
+  'handle',
+  'timeAgo',
+  'message',
+  'highlight',
+  'highlightCaption',
+  'location',
+  'badgeLabel',
+  'postImageAlt',
+] as const;
+
+export const INSTAGRAM_REVIEW_IMAGE_FIELDS = ['avatarUrl', 'highlightImageUrl', 'postImageUrl'] as const;
+
+export type InstagramReviewTextField = (typeof INSTAGRAM_REVIEW_TEXT_FIELDS)[number];
+export type InstagramReviewImageField = (typeof INSTAGRAM_REVIEW_IMAGE_FIELDS)[number];
+export type InstagramReviewField = InstagramReviewTextField | InstagramReviewImageField;
+
+export type InstagramReviewElementKey<
+  Field extends InstagramReviewField = InstagramReviewField,
+> = `instagramReviews.reviews.${InstagramReviewId}.${Field}`;
+
 export const EDITABLE_ZONE_KEYS = ['navigation', 'hero', 'about', 'menu', 'instagramReviews', 'findUs', 'footer'] as const;
 
 export type EditableZoneKey = (typeof EDITABLE_ZONE_KEYS)[number];
@@ -56,6 +82,66 @@ export const EDITABLE_ELEMENT_KEYS = [
   'instagramReviews.subtitle',
   'instagramReviews.image',
   'instagramReviews.style.background',
+  'instagramReviews.reviews.review1.name',
+  'instagramReviews.reviews.review1.handle',
+  'instagramReviews.reviews.review1.timeAgo',
+  'instagramReviews.reviews.review1.message',
+  'instagramReviews.reviews.review1.highlight',
+  'instagramReviews.reviews.review1.highlightCaption',
+  'instagramReviews.reviews.review1.location',
+  'instagramReviews.reviews.review1.badgeLabel',
+  'instagramReviews.reviews.review1.postImageAlt',
+  'instagramReviews.reviews.review1.avatarUrl',
+  'instagramReviews.reviews.review1.highlightImageUrl',
+  'instagramReviews.reviews.review1.postImageUrl',
+  'instagramReviews.reviews.review2.name',
+  'instagramReviews.reviews.review2.handle',
+  'instagramReviews.reviews.review2.timeAgo',
+  'instagramReviews.reviews.review2.message',
+  'instagramReviews.reviews.review2.highlight',
+  'instagramReviews.reviews.review2.highlightCaption',
+  'instagramReviews.reviews.review2.location',
+  'instagramReviews.reviews.review2.badgeLabel',
+  'instagramReviews.reviews.review2.postImageAlt',
+  'instagramReviews.reviews.review2.avatarUrl',
+  'instagramReviews.reviews.review2.highlightImageUrl',
+  'instagramReviews.reviews.review2.postImageUrl',
+  'instagramReviews.reviews.review3.name',
+  'instagramReviews.reviews.review3.handle',
+  'instagramReviews.reviews.review3.timeAgo',
+  'instagramReviews.reviews.review3.message',
+  'instagramReviews.reviews.review3.highlight',
+  'instagramReviews.reviews.review3.highlightCaption',
+  'instagramReviews.reviews.review3.location',
+  'instagramReviews.reviews.review3.badgeLabel',
+  'instagramReviews.reviews.review3.postImageAlt',
+  'instagramReviews.reviews.review3.avatarUrl',
+  'instagramReviews.reviews.review3.highlightImageUrl',
+  'instagramReviews.reviews.review3.postImageUrl',
+  'instagramReviews.reviews.review4.name',
+  'instagramReviews.reviews.review4.handle',
+  'instagramReviews.reviews.review4.timeAgo',
+  'instagramReviews.reviews.review4.message',
+  'instagramReviews.reviews.review4.highlight',
+  'instagramReviews.reviews.review4.highlightCaption',
+  'instagramReviews.reviews.review4.location',
+  'instagramReviews.reviews.review4.badgeLabel',
+  'instagramReviews.reviews.review4.postImageAlt',
+  'instagramReviews.reviews.review4.avatarUrl',
+  'instagramReviews.reviews.review4.highlightImageUrl',
+  'instagramReviews.reviews.review4.postImageUrl',
+  'instagramReviews.reviews.review5.name',
+  'instagramReviews.reviews.review5.handle',
+  'instagramReviews.reviews.review5.timeAgo',
+  'instagramReviews.reviews.review5.message',
+  'instagramReviews.reviews.review5.highlight',
+  'instagramReviews.reviews.review5.highlightCaption',
+  'instagramReviews.reviews.review5.location',
+  'instagramReviews.reviews.review5.badgeLabel',
+  'instagramReviews.reviews.review5.postImageAlt',
+  'instagramReviews.reviews.review5.avatarUrl',
+  'instagramReviews.reviews.review5.highlightImageUrl',
+  'instagramReviews.reviews.review5.postImageUrl',
   'findUs.title',
   'findUs.addressLabel',
   'findUs.address',
@@ -75,6 +161,9 @@ export const STYLE_EDITABLE_ELEMENT_KEYS = EDITABLE_ELEMENT_KEYS.filter(
   key =>
     !key.endsWith('.style.background') &&
     !key.endsWith('.image') &&
+    !key.endsWith('.avatarUrl') &&
+    !key.endsWith('.highlightImageUrl') &&
+    !key.endsWith('.postImageUrl') &&
     key !== 'hero.backgroundImage' &&
     key !== 'navigation.brandLogo' &&
     key !== 'navigation.staffLogo',
@@ -155,6 +244,7 @@ export interface SiteContent {
     subtitle: string;
     image: string | null;
     style: SectionStyle;
+    reviews: Record<InstagramReviewId, InstagramReview>;
   };
   findUs: {
     title: string;
@@ -174,6 +264,21 @@ export interface SiteContent {
   elementStyles: ElementStyles;
   elementRichText: ElementRichText;
   assets: SiteAssets;
+}
+
+export interface InstagramReview {
+  name: string;
+  handle: string;
+  timeAgo: string;
+  message: string;
+  highlight: string;
+  highlightCaption: string;
+  location: string;
+  badgeLabel: string;
+  postImageAlt: string;
+  avatarUrl: string | null;
+  highlightImageUrl: string | null;
+  postImageUrl: string | null;
 }
 
 export interface Ingredient {
