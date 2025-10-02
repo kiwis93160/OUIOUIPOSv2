@@ -597,6 +597,8 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     hoursLabel: 'Horarios',
     hours: 'Lunes a domingo · 11h00 - 23h00',
     mapLabel: 'Ver en Google Maps',
+    mapUrl:
+      'https://www.google.com/maps/place/OuiOuiTacos/@11.002146,-74.8076539,17z/data=!3m1!4b1!4m6!3m5!1s0x8ef42df1d75b2ca7:0xeb86955accff816d!8m2!3d11.002146!4d-74.805079!16s%2Fg%2F11vs3882q9?authuser=1&entry=ttu&g_ep=EgoyMDI1MDkzMC4wIKXMDSoASAFQAw%3D%3D',
     style: DEFAULT_FIND_US_STYLE,
   },
   footer: {
@@ -665,6 +667,7 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
       hoursLabel: resolveString(content?.findUs?.hoursLabel, base.findUs.hoursLabel),
       hours: resolveString(content?.findUs?.hours, base.findUs.hours),
       mapLabel: resolveString(content?.findUs?.mapLabel, base.findUs.mapLabel),
+      mapUrl: resolveString(content?.findUs?.mapUrl, base.findUs.mapUrl),
       style: resolveSectionStyle(content?.findUs?.style, base.findUs.style),
     },
     footer: {
@@ -729,6 +732,7 @@ export const sanitizeSiteContentInput = (content: SiteContent): SiteContent => (
     hoursLabel: trimOrEmpty(content.findUs.hoursLabel),
     hours: trimOrEmpty(content.findUs.hours),
     mapLabel: trimOrEmpty(content.findUs.mapLabel),
+    mapUrl: trimOrEmpty(content.findUs.mapUrl),
     style: sanitizeSectionStyle(content.findUs.style, DEFAULT_FIND_US_STYLE),
   },
   footer: {
