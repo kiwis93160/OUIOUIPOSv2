@@ -123,17 +123,17 @@ body {
 .reviews-heading {
   text-align: center;
   max-width: 680px;
-  margin: 0 auto clamp(2rem, 5vw, 3rem);
+  margin: 0 auto clamp(1.5rem, 6vw, 3rem);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: clamp(0.75rem, 4vw, 1.5rem);
 }
 
 .reviews-subtitle {
   margin: 0;
-  font-size: clamp(1.05rem, 2.6vw, 1.35rem);
+  font-size: clamp(0.95rem, 2.4vw, 1.3rem);
   color: color-mix(in srgb, var(--color-heading) 72%, transparent);
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .reviews-carousel {
@@ -142,8 +142,8 @@ body {
   border-radius: clamp(1.75rem, 4vw, 2.5rem);
   background: #ffffff;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
-  padding: clamp(1rem, 3vw, 1.75rem);
-  --reviews-visible-count: 2.5;
+  padding: clamp(1rem, 5vw, 2.25rem);
+  --reviews-visible-count: 1;
   --review-slide-offset: calc(100% / var(--reviews-visible-count));
 }
 
@@ -153,13 +153,44 @@ body {
   will-change: transform;
 }
 
+@media (min-width: 640px) {
+  .reviews-carousel {
+    --reviews-visible-count: 1.5;
+    padding: clamp(1.25rem, 4.5vw, 2.5rem);
+  }
+
+  .review-card {
+    padding: clamp(1.15rem, 3.5vw, 2rem);
+  }
+}
+
+@media (min-width: 768px) {
+  .reviews-carousel {
+    --reviews-visible-count: 2;
+  }
+
+  .reviews-heading {
+    margin: 0 auto clamp(1.75rem, 5vw, 3rem);
+  }
+
+  .review-card__quote {
+    font-size: clamp(0.95rem, 2vw, 1.25rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .reviews-carousel {
+    --reviews-visible-count: 2.5;
+  }
+}
+
 .review-card {
   box-sizing: border-box;
   flex: 0 0 calc(100% / var(--reviews-visible-count));
   min-width: calc(100% / var(--reviews-visible-count));
-  padding: clamp(1.15rem, 3.2vw, 1.85rem);
+  padding: clamp(1rem, 4vw, 1.85rem);
   display: grid;
-  gap: clamp(1rem, 2.8vw, 1.8rem);
+  gap: clamp(0.85rem, 3vw, 1.8rem);
   grid-template-areas:
     'header'
     'layout'
@@ -175,7 +206,7 @@ body {
   grid-area: header;
   display: flex;
   align-items: center;
-  gap: clamp(0.85rem, 2vw, 1.15rem);
+  gap: clamp(0.75rem, 2.4vw, 1.15rem);
 }
 
 .review-card__layout {
@@ -221,14 +252,14 @@ body {
 
 .review-card__name {
   margin: 0;
-  font-size: clamp(0.95rem, 2vw, 1.1rem);
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
   font-weight: 700;
   color: var(--color-heading);
 }
 
 .review-card__handle {
   margin: 0;
-  font-size: clamp(0.75rem, 1.6vw, 0.9rem);
+  font-size: clamp(0.7rem, 1.6vw, 0.9rem);
   color: color-mix(in srgb, var(--color-heading) 60%, transparent);
 }
 
@@ -237,11 +268,11 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.4rem 0.85rem;
+  padding: clamp(0.35rem, 2vw, 0.5rem) clamp(0.6rem, 2.4vw, 0.95rem);
   border-radius: 999px;
   background: color-mix(in srgb, #ec4899 15%, #6366f1 20%, transparent);
   color: #ec4899;
-  font-size: 0.75rem;
+  font-size: clamp(0.65rem, 1.6vw, 0.8rem);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -250,8 +281,8 @@ body {
 .review-card__highlight {
   display: flex;
   align-items: center;
-  gap: clamp(0.75rem, 2vw, 1rem);
-  padding: 0.65rem 0.9rem;
+  gap: clamp(0.65rem, 2.4vw, 1rem);
+  padding: 0.6rem 0.85rem;
   border-radius: clamp(1.25rem, 3vw, 1.75rem);
   background: color-mix(in srgb, rgba(236, 72, 153, 0.16) 55%, rgba(99, 102, 241, 0.12));
 }
@@ -280,32 +311,32 @@ body {
 
 .review-card__highlight-title {
   margin: 0;
-  font-size: clamp(0.85rem, 2vw, 1rem);
+  font-size: clamp(0.8rem, 2vw, 1rem);
   font-weight: 700;
   color: var(--color-heading);
 }
 
 .review-card__highlight-caption {
   margin: 0;
-  font-size: clamp(0.7rem, 1.8vw, 0.85rem);
+  font-size: clamp(0.65rem, 1.8vw, 0.85rem);
   color: color-mix(in srgb, var(--color-heading) 55%, transparent);
 }
 
 .review-card__quote {
   position: relative;
   margin: 0;
-  padding-left: clamp(1rem, 3vw, 1.5rem);
-  font-size: clamp(0.95rem, 2.4vw, 1.25rem);
-  line-height: 1.6;
+  padding-left: clamp(0.85rem, 3vw, 1.5rem);
+  font-size: clamp(0.9rem, 2.2vw, 1.2rem);
+  line-height: 1.65;
   color: color-mix(in srgb, var(--color-heading) 88%, transparent);
 }
 
 .review-card__quote-icon {
   position: absolute;
   left: 0;
-  top: 0.2rem;
-  width: 1.15rem;
-  height: 1.15rem;
+  top: 0.15rem;
+  width: 1rem;
+  height: 1rem;
   color: color-mix(in srgb, var(--color-heading) 40%, transparent);
 }
 
@@ -333,7 +364,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
+  gap: clamp(0.65rem, 2vw, 0.9rem);
 }
 
 @media (min-width: 768px) {

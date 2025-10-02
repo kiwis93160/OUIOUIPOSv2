@@ -425,7 +425,6 @@ const Login: React.FC = () => {
       postImageAlt,
     };
   });
-  const REVIEWS_VISIBLE_COUNT = 2.5;
   const reviewCount = instagramReviewSlides.length;
   const isSingleReview = reviewCount <= 1;
 
@@ -888,12 +887,7 @@ const Login: React.FC = () => {
                 instagramReviewContent.subtitle,
               )}
             </div>
-            <div
-              className="reviews-carousel"
-              style={{
-                '--reviews-visible-count': REVIEWS_VISIBLE_COUNT,
-              } as React.CSSProperties}
-            >
+            <div className="reviews-carousel">
               <div
                 className="reviews-track"
                 style={{
