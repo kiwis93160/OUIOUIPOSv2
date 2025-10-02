@@ -368,6 +368,8 @@ export interface DashboardStats {
     ingredientsStockBas: Ingredient[];
     ventesPeriodeSeries: PeriodSalesChartPoint[];
     ventesParCategorie: SalesDataPoint[];
+    recentOrders: Order[];
+    bestSellerProducts: Product[];
 }
 
 export interface NotificationCounts {

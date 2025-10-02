@@ -87,6 +87,38 @@ const Dashboard: React.FC = () => {
     if (loading) return <div className="text-gray-800">Cargando datos del panel...</div>;
     if (!stats) return <div className="text-red-500">No fue posible cargar los datos.</div>;
 
+    const resolveOrderTitle = (order: (typeof stats.recentOrders)[number]) => {
+        if (order.type === 'a_emporter') {
+            return 'Commande à emporter';
+        }
+        if (order.table_nom) {
+            return `Table ${order.table_nom}`;
+        }
+        return 'Commande sur place';
+    };
+
+    const resolveOrderMeta = (order: (typeof stats.recentOrders)[number]) => {
+        const parts: string[] = [];
+        parts.push(order.type === 'a_emporter' ? 'À emporter' : 'Sur place');
+        const formattedDate = new Date(order.date_creation).toLocaleString('fr-FR', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+        });
+        parts.push(formattedDate);
+        if (order.couverts) {
+            parts.push(`${order.couverts} couverts`);
+        }
+        if (order.payment_method) {
+            const paymentLabels: Record<NonNullable<typeof order.payment_method>, string> = {
+                efectivo: 'Espèces',
+                tarjeta: 'Carte',
+                transferencia: 'Transfert',
+            };
+            parts.push(paymentLabels[order.payment_method]);
+        }
+        return parts.join(' • ');
+    };
+
     const PIE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF4560', '#775DD0'];
     const pieData = pieChartMode === 'category' ? stats.ventesParCategorie : salesByProduct;
     const hasPieData = pieData.length > 0;
@@ -179,6 +211,58 @@ const Dashboard: React.FC = () => {
                         No hay datos para el periodo seleccionado.
                     </div>
                 )}
+            </div>
+
+            {/* Block 5: Recent Orders & Best Sellers */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="ui-card p-6 h-full">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Commandes passées</h3>
+                    {stats.recentOrders.length > 0 ? (
+                        <ul className="space-y-4">
+                            {stats.recentOrders.map(order => (
+                                <li key={order.id} className="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <p className="font-semibold text-gray-900 truncate">{resolveOrderTitle(order)}</p>
+                                        <span className="text-sm font-semibold text-brand-primary whitespace-nowrap">
+                                            {formatCurrencyCOP(order.total)}
+                                        </span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-gray-500 break-words">{resolveOrderMeta(order)}</p>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-sm text-gray-500">Aucune commande finalisée sur la période sélectionnée.</p>
+                    )}
+                </div>
+
+                <div className="ui-card p-6 h-full">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Produits best sellers</h3>
+                    {stats.bestSellerProducts.length > 0 ? (
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {stats.bestSellerProducts.map(product => (
+                                <li key={product.id} className="flex items-center gap-3">
+                                    <div className="h-14 w-14 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                                        {product.image ? (
+                                            <img src={product.image} alt={product.nom_produit} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <span className="text-xs text-gray-400">Aucune image</span>
+                                        )}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-gray-900 truncate">
+                                            {product.best_seller_rank != null ? `#${product.best_seller_rank} · ` : ''}
+                                            {product.nom_produit}
+                                        </p>
+                                        <p className="text-xs text-gray-500">{formatCurrencyCOP(product.prix_vente)}</p>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-sm text-gray-500">Aucun produit best seller n'a été configuré.</p>
+                    )}
+                </div>
             </div>
 
             <Modal isOpen={isLowStockModalOpen} onClose={() => setLowStockModalOpen(false)} title="Ingredientes con inventario bajo">
