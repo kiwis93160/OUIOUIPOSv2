@@ -264,8 +264,8 @@ body {
 
 .review-card__media-frame img {
   display: block;
-  width: clamp(240px, 32vw, 360px);
-  height: clamp(240px, 32vw, 360px);
+  width: clamp(168px, 22.4vw, 252px);
+  height: clamp(168px, 22.4vw, 252px);
   object-fit: cover;
   border-radius: clamp(1.1rem, 3vw, 1.5rem);
 }
@@ -350,8 +350,8 @@ body {
   }
 
   .review-card__media-frame img {
-    width: clamp(200px, 68vw, 280px);
-    height: clamp(200px, 68vw, 280px);
+    width: clamp(140px, 47.6vw, 196px);
+    height: clamp(140px, 47.6vw, 196px);
   }
 }
 
