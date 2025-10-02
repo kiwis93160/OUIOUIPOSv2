@@ -16,6 +16,7 @@ import ResumeVentes from './pages/ResumeVentes';
 import SiteCustomization from './pages/SiteCustomization';
 import { SITE_CUSTOMIZER_PERMISSION_KEY } from './constants';
 import { getHomeRedirectPath, isPermissionGranted } from './utils/navigation';
+import NoAccess from './components/NoAccess';
 
 const LoadingScreen: React.FC = () => (
   <div className="flex items-center justify-center h-screen">
@@ -27,7 +28,7 @@ const PrivateRoute: React.FC<{ children: React.ReactElement; permissionKey?: str
   children,
   permissionKey,
 }) => {
-  const { role, loading } = useAuth();
+  const { role, loading, logout } = useAuth();
 
   if (loading) {
     return <LoadingScreen />;
@@ -41,14 +42,19 @@ const PrivateRoute: React.FC<{ children: React.ReactElement; permissionKey?: str
   const hasPermission = permissionKey ? isPermissionGranted(permission) : true;
 
   if (!hasPermission) {
-    return <Navigate to={getHomeRedirectPath(role)} replace />;
+    const redirectPath = getHomeRedirectPath(role);
+    if (redirectPath) {
+      return <Navigate to={redirectPath} replace />;
+    }
+
+    return <NoAccess onLogout={logout} />;
   }
 
   return children;
 };
 
 const RootRoute: React.FC = () => {
-  const { role, loading } = useAuth();
+  const { role, loading, logout } = useAuth();
 
   if (loading) {
     return <LoadingScreen />;
@@ -58,7 +64,12 @@ const RootRoute: React.FC = () => {
     return <Login />;
   }
 
-  return <Navigate to={getHomeRedirectPath(role)} replace />;
+  const redirectPath = getHomeRedirectPath(role);
+  if (!redirectPath) {
+    return <NoAccess onLogout={logout} />;
+  }
+
+  return <Navigate to={redirectPath} replace />;
 };
 
 const ProtectedAppShell: React.FC = () => (
