@@ -947,11 +947,6 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                               )}
                             </EditableElement>
                           </header>
-                          <div className="review-card__stars" aria-label="Note 5 sur 5">
-                            {Array.from({ length: 5 }).map((_, starIndex) => (
-                              <Star key={starIndex} aria-hidden="true" />
-                            ))}
-                          </div>
                           <blockquote className="review-card__quote">
                             <Quote aria-hidden="true" className="review-card__quote-icon" />
                             <EditableElement
@@ -971,73 +966,6 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                               )}
                             </EditableElement>
                           </blockquote>
-                          <div className="review-card__footer">
-                            <div className="review-card__highlight">
-                              <EditableElement
-                                id={highlightImageKey}
-                                label={`Modifier l'image de story de l'avis ${index + 1}`}
-                                onEdit={onEdit}
-                                className="review-card__story-ring"
-                                buttonClassName="-left-3 -top-3"
-                                as="span"
-                              >
-                                <img src={highlightImageUrl} alt="" />
-                              </EditableElement>
-                              <div>
-                                <EditableElement
-                                  id={highlightKey}
-                                  label={`Modifier le titre du highlight ${index + 1}`}
-                                  onEdit={onEdit}
-                                  className="block"
-                                  buttonClassName="right-0 -top-3"
-                                >
-                                  {renderRichTextElement(
-                                    highlightKey,
-                                    'p',
-                                    {
-                                      className: 'review-card__highlight-title',
-                                      style: getElementTextStyle(highlightKey),
-                                    },
-                                    card.review.highlight,
-                                  )}
-                                </EditableElement>
-                                <EditableElement
-                                  id={highlightCaptionKey}
-                                  label={`Modifier la légende du highlight ${index + 1}`}
-                                  onEdit={onEdit}
-                                  className="block"
-                                  buttonClassName="right-0 -top-3"
-                                >
-                                  {renderRichTextElement(
-                                    highlightCaptionKey,
-                                    'p',
-                                    {
-                                      className: 'review-card__highlight-caption',
-                                      style: getElementBodyTextStyle(highlightCaptionKey),
-                                    },
-                                    card.review.highlightCaption,
-                                  )}
-                                </EditableElement>
-                              </div>
-                            </div>
-                            <EditableElement
-                              id={locationKey}
-                              label={`Modifier la localisation de l'avis ${index + 1}`}
-                              onEdit={onEdit}
-                              className="block"
-                              buttonClassName="right-0 -top-3"
-                            >
-                              {renderRichTextElement(
-                                locationKey,
-                                'p',
-                                {
-                                  className: 'review-card__location',
-                                  style: getElementBodyTextStyle(locationKey),
-                                },
-                                card.review.location,
-                              )}
-                            </EditableElement>
-                          </div>
                         </div>
                         <div className="review-card__media">
                           <EditableElement
