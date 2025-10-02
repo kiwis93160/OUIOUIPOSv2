@@ -591,14 +591,14 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   findUs: {
     title: 'Encuéntranos',
     addressLabel: 'Dirección',
-    address: 'Cra 53 #75 - 98\nBarranquilla\nEn el local y terraza del bar RedDoor',
+    address: 'Cra. 53 #75-98\nBarranquilla, Atlántico\nColombie',
     cityLabel: 'Email',
     city: 'hola@ouiouipos.co',
     hoursLabel: 'Horarios',
     hours: 'Lunes a domingo · 11h00 - 23h00',
     mapLabel: 'Ver en Google Maps',
     mapUrl:
-      'https://www.google.com/maps/place/OuiOuiTacos/@11.002146,-74.8076539,17z/data=!3m1!4b1!4m6!3m5!1s0x8ef42df1d75b2ca7:0xeb86955accff816d!8m2!3d11.002146!4d-74.805079!16s%2Fg%2F11vs3882q9?authuser=1&entry=ttu&g_ep=EgoyMDI1MDkzMC4wIKXMDSoASAFQAw%3D%3D',
+      'https://www.google.com/maps?q=OUIOUITACOS%2C%20Cra%2053%20%2375-98%2C%20Barranquilla%2C%20Atl%C3%A1ntico%2C%20Colombie',
     style: DEFAULT_FIND_US_STYLE,
   },
   footer: {
