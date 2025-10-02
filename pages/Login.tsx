@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
-import { EditableElementKey, EditableZoneKey, Product, Order, SiteContent } from '../types';
+import { EditableElementKey, EditableZoneKey, Product, Order, SiteContent, SectionStyle } from '../types';
 import { Clock, Mail, MapPin, Menu, X, ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
@@ -23,6 +23,81 @@ import { resolveZoneFromElement } from '../components/SitePreviewCanvas';
 import { getHomeRedirectPath } from '../utils/navigation';
 
 const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
+
+const createDefaultSectionStyle = (): SectionStyle => ({
+  background: {
+    type: 'color',
+    color: '#ffffff',
+    image: null,
+  },
+  fontFamily: 'inherit',
+  fontSize: '16px',
+  textColor: '#000000',
+});
+
+const DEFAULT_SITE_CONTENT: SiteContent = {
+  navigation: {
+    brand: '',
+    brandLogo: DEFAULT_BRAND_LOGO,
+    staffLogo: DEFAULT_BRAND_LOGO,
+    links: {
+      home: '',
+      about: '',
+      menu: '',
+      contact: '',
+      loginCta: '',
+    },
+    style: createDefaultSectionStyle(),
+  },
+  hero: {
+    title: '',
+    subtitle: '',
+    ctaLabel: '',
+    backgroundImage: null,
+    historyTitle: '',
+    reorderCtaLabel: '',
+    style: createDefaultSectionStyle(),
+  },
+  about: {
+    title: '',
+    description: '',
+    image: null,
+    style: createDefaultSectionStyle(),
+  },
+  menu: {
+    title: '',
+    ctaLabel: '',
+    loadingLabel: '',
+    image: null,
+    style: createDefaultSectionStyle(),
+  },
+  instagramReviews: {
+    title: '',
+    subtitle: '',
+    image: null,
+    style: createDefaultSectionStyle(),
+  },
+  findUs: {
+    title: '',
+    addressLabel: '',
+    address: '',
+    cityLabel: '',
+    city: '',
+    hoursLabel: '',
+    hours: '',
+    mapLabel: '',
+    style: createDefaultSectionStyle(),
+  },
+  footer: {
+    text: '',
+    style: createDefaultSectionStyle(),
+  },
+  elementStyles: {},
+  elementRichText: {},
+  assets: {
+    library: [],
+  },
+};
 
 const INSTAGRAM_REVIEWS = [
   {
@@ -199,17 +274,8 @@ const Login: React.FC = () => {
       setContent(siteContent);
     }
   }, [siteContent]);
-  useCustomFonts(content?.assets.library ?? []);
-
-  if (!content) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <p className="text-sm text-slate-500">
-          {siteContentLoading ? 'Chargement du contenu du site…' : 'Initialisation du contenu du site…'}
-        </p>
-      </div>
-    );
-  }
+  const safeContent = content ?? DEFAULT_SITE_CONTENT;
+  useCustomFonts(safeContent.assets.library);
 
   const {
     navigation,
@@ -219,7 +285,7 @@ const Login: React.FC = () => {
     instagramReviews: instagramReviewContent,
     findUs,
     footer,
-  } = content;
+  } = safeContent;
   const brandLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const staffTriggerLogo = navigation.brandLogo ?? DEFAULT_BRAND_LOGO;
   const navigationBackgroundStyle = createBackgroundStyle(navigation.style);
@@ -239,7 +305,7 @@ const Login: React.FC = () => {
   const footerBackgroundStyle = createBackgroundStyle(footer.style);
   const footerTextStyle = createBodyTextStyle(footer.style);
 
-  const elementStyles = content.elementStyles ?? {};
+  const elementStyles = safeContent.elementStyles ?? {};
   const zoneStyleMap: Record<EditableZoneKey, typeof navigation.style> = {
     navigation: navigation.style,
     hero: hero.style,
@@ -267,7 +333,7 @@ const Login: React.FC = () => {
     return createElementBackgroundStyle(zoneStyleMap[zone], getElementStyle(key));
   };
 
-  const elementRichText = content.elementRichText ?? {};
+  const elementRichText = safeContent.elementRichText ?? {};
 
   const getRichTextHtml = (key: EditableElementKey): string | null => {
     const entry = elementRichText[key];
@@ -297,6 +363,7 @@ const Login: React.FC = () => {
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
   const [activeReviewIndex, setActiveReviewIndex] = useState(0);
+
   const findUsMapQuery = findUs.address.trim();
   const encodedFindUsQuery = findUsMapQuery.length > 0 ? encodeURIComponent(findUsMapQuery) : '';
   const findUsMapUrl = encodedFindUsQuery
@@ -397,6 +464,16 @@ const Login: React.FC = () => {
       console.error('Failed to read order history from storage', error);
     }
   }, []);
+
+  if (!content) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="text-sm text-slate-500">
+          {siteContentLoading ? 'Chargement du contenu du site…' : 'Initialisation du contenu du site…'}
+        </p>
+      </div>
+    );
+  }
 
   const handleFormSubmit = (e: FormEvent) => {
     e.preventDefault();
