@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
 import { EditableElementKey, EditableZoneKey, Product, Order, SiteContent, SectionStyle } from '../types';
-import { Clock, Mail, MapPin, Menu, X, ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react';
+import { Clock, Mail, MapPin, Menu, X, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
@@ -108,10 +108,11 @@ const INSTAGRAM_REVIEWS = [
     postImageUrl: 'https://images.unsplash.com/photo-1521305916504-4a1121188589?auto=format&fit=crop&w=640&q=80',
     postImageAlt: "Assiette de tacos colorés garnis d'herbes fraîches.",
     message:
-      'Impossible de résister à leurs tacos al pastor ! Service ultra chaleureux et vibes latinas au top. Je reviens dès la semaine prochaine ✨',
+      'No puedo con la originalidad de estos tacos al pastor: cada mordisco tiene un giro gourmet brutal. La salsa cheddar queda cremosa sin empalagar y el toque crujiente lo es todo.',
     highlight: 'Story « Taco Tuesday »',
-    location: 'Bogotá · Service du soir',
-    timeAgo: 'il y a 2 jours',
+    highlightCaption: 'Guardado en Destacadas',
+    location: 'Bogotá · Servicio nocturno',
+    timeAgo: 'hace 2 días',
   },
   {
     id: 'review-camila',
@@ -121,10 +122,11 @@ const INSTAGRAM_REVIEWS = [
     postImageUrl: 'https://images.unsplash.com/photo-1478145046317-39f10e56b5e9?auto=format&fit=crop&w=640&q=80',
     postImageAlt: 'Gros plan sur des arepas dorées et une sauce maison.',
     message:
-      'Les arepas croustillantes et le guacamole maison… c’est un 10/10 ! Mention spéciale pour la playlist qui nous transporte direct à Medellín.',
+      'Estas arepas son lo más: combinan ingredientes súper frescos con un toque gourmet creativo. La mezcla dulce-salado y esa salsa cheddar para remojar me tuvieron feliz todo el brunch.',
     highlight: 'Reel « Brunch entre amigas »',
-    location: 'Medellín · Brunch du dimanche',
-    timeAgo: 'il y a 5 jours',
+    highlightCaption: 'Comentarios llenos de antojos',
+    location: 'Medellín · Brunch de domingo',
+    timeAgo: 'hace 5 días',
   },
   {
     id: 'review-sebastian',
@@ -134,10 +136,39 @@ const INSTAGRAM_REVIEWS = [
     postImageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=640&q=80',
     postImageAlt: 'Table conviviale avec plusieurs plats mexicains et des boissons fraîches.',
     message:
-      'On a privatisé la terrasse pour un afterwork : organisation parfaite, cocktails frais et portions généreuses. La team a adoré !',
+      'Armamos un afterwork aquí y fue un hit: combos originales, porciones generosas y un crunch brutal en cada bocado. La salsa cheddar se volvió tema de conversación.',
     highlight: 'Post « Team Afterwork »',
-    location: 'Barranquilla · Terrasse privatisée',
-    timeAgo: 'il y a 1 semaine',
+    highlightCaption: 'Reacciones de la oficina',
+    location: 'Barranquilla · Terraza privada',
+    timeAgo: 'hace 1 semana',
+  },
+  {
+    id: 'review-valentina',
+    name: 'Valentina Ríos',
+    handle: '@valen.foodnotes',
+    avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=640&q=80',
+    postImageAlt: 'Pizza gourmande avec fromage coulant et herbes fraîches.',
+    message:
+      'El menú tiene un mood gourmet sin perder lo reconfortante: masa crocante, cheddar fundido y combinaciones de ingredientes que se sienten pensadas con cariño. Increíble experiencia.',
+    highlight: 'Carousel « Night Out »',
+    highlightCaption: 'Comentarios fijados',
+    location: 'Cali · Cena casual',
+    timeAgo: 'hace 2 semanas',
+  },
+  {
+    id: 'review-alejandro',
+    name: 'Alejandro Pérez',
+    handle: '@alexlovesfood',
+    avatarUrl: 'https://images.unsplash.com/photo-1529665253569-6d01c0eaf7b6?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=640&q=80',
+    postImageAlt: 'Burger gourmet avec sauce et frites croustillantes.',
+    message:
+      'Vine por curiosidad y me quedé por la originalidad del menú: el cheddar baña la burger justo como me gusta y el pan crujiente aguanta toda la salsa. Asociaciones de sabores top.',
+    highlight: 'Live « Burger Night »',
+    highlightCaption: 'Chat lleno de elogios',
+    location: 'Bogotá · Servicio takeout',
+    timeAgo: 'hace 3 semanas',
   },
 ] as const;
 
@@ -863,11 +894,6 @@ const Login: React.FC = () => {
                         </div>
                         <span className="review-card__badge">Instagram</span>
                       </header>
-                      <div className="review-card__stars" aria-label="Note 5 sur 5">
-                        {Array.from({ length: 5 }).map((_, starIndex) => (
-                          <Star key={starIndex} aria-hidden="true" />
-                        ))}
-                      </div>
                       <blockquote className="review-card__quote">
                         <Quote aria-hidden="true" className="review-card__quote-icon" />
                         <p>{review.message}</p>
@@ -879,7 +905,7 @@ const Login: React.FC = () => {
                           </span>
                           <div>
                             <p className="review-card__highlight-title">{review.highlight}</p>
-                            <p className="review-card__highlight-caption">5 étoiles assurées ✨</p>
+                            <p className="review-card__highlight-caption">{review.highlightCaption}</p>
                           </div>
                         </div>
                         <p className="review-card__location">{review.location}</p>
