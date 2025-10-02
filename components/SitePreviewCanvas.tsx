@@ -1,5 +1,18 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Clock, Edit2, Mail, MapPin, Quote, Star } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Edit2,
+  Mail,
+  MapPin,
+  Quote,
+  Star,
+  Heart,
+  MessageCircle,
+  Send,
+  Bookmark,
+} from 'lucide-react';
 import {
   EditableElementKey,
   EditableZoneKey,
@@ -856,148 +869,243 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     const avatarUrl = card.avatarUrl ?? 'https://i.pravatar.cc/96?img=12';
                     const highlightImageUrl = card.highlightImageUrl ?? DEFAULT_REVIEW_HIGHLIGHT_IMAGE;
                     const postImageUrl = card.postImageUrl ?? DEFAULT_REVIEW_POST_IMAGE;
+                    const highlightText = card.review.highlight ?? '';
+                    const highlightCaption = card.review.highlightCaption ?? '';
+                    const locationText = card.review.location ?? '';
+                    const timeAgoText = card.review.timeAgo ?? '';
+                    const highlightAltText =
+                      highlightText.trim().length > 0 ? highlightText : highlightCaption;
+                    const showHighlight =
+                      isCustomizationMode ||
+                      highlightText.trim().length > 0 ||
+                      highlightCaption.trim().length > 0 ||
+                      Boolean(highlightImageUrl);
+                    const showLocation = isCustomizationMode || locationText.trim().length > 0;
+                    const showTimestamp = isCustomizationMode || timeAgoText.trim().length > 0;
                     return (
                       <article key={card.reviewId} className="review-card" aria-hidden={false}>
-                        <div className="review-card__content">
-                          <header className="review-card__header">
+                        <header className="review-card__header">
+                          <EditableElement
+                            id={avatarKey}
+                            label={`Modifier la photo de profil de l'avis ${index + 1}`}
+                            onEdit={onEdit}
+                            className="review-card__avatar"
+                            buttonClassName="-left-3 -top-3"
+                            as="span"
+                          >
+                            <img src={avatarUrl} alt="" />
+                          </EditableElement>
+                          <div className="review-card__meta">
                             <EditableElement
-                              id={avatarKey}
-                              label={`Modifier la photo de profil de l'avis ${index + 1}`}
+                              id={nameKey}
+                              label={`Modifier le nom de l'avis ${index + 1}`}
                               onEdit={onEdit}
-                              className="review-card__avatar"
-                              buttonClassName="-left-3 -top-3"
-                              as="span"
+                              className="block"
+                              buttonClassName="right-0 -top-3"
                             >
-                              <img src={avatarUrl} alt="" />
+                              {renderRichTextElement(
+                                nameKey,
+                                'p',
+                                {
+                                  className: 'review-card__name',
+                                  style: getElementTextStyle(nameKey),
+                                },
+                                card.review.name,
+                              )}
                             </EditableElement>
-                            <div className="review-card__meta">
+                            <p className="review-card__handle">
                               <EditableElement
-                                id={nameKey}
-                                label={`Modifier le nom de l'avis ${index + 1}`}
+                                id={handleKey}
+                                label={`Modifier le pseudo de l'avis ${index + 1}`}
                                 onEdit={onEdit}
-                                className="block"
+                                className="inline"
+                                buttonClassName="-left-3 -top-3"
+                                as="span"
+                              >
+                                {renderRichTextElement(
+                                  handleKey,
+                                  'span',
+                                  {
+                                    className: 'inline-flex items-center',
+                                    style: getElementBodyTextStyle(handleKey),
+                                  },
+                                  card.review.handle,
+                                )}
+                              </EditableElement>
+                            </p>
+                          </div>
+                          <EditableElement
+                            id={badgeKey}
+                            label={`Modifier le badge de l'avis ${index + 1}`}
+                            onEdit={onEdit}
+                            className="review-card__badge"
+                            buttonClassName="-right-3 -top-3"
+                            as="span"
+                          >
+                            {renderRichTextElement(
+                              badgeKey,
+                              'span',
+                              {
+                                className: 'review-card__badge',
+                                style: getElementTextStyle(badgeKey),
+                              },
+                              card.badgeLabel,
+                            )}
+                          </EditableElement>
+                        </header>
+                        <div className="review-card__layout">
+                          <div className="review-card__content">
+                            {showHighlight && (
+                              <div className="review-card__highlight">
+                                <EditableElement
+                                  id={highlightImageKey}
+                                  label={`Modifier l'image à la une de l'avis ${index + 1}`}
+                                  onEdit={onEdit}
+                                  className="review-card__highlight-thumb"
+                                  buttonClassName="-left-3 -top-3"
+                                  as="span"
+                                >
+                                  <img src={highlightImageUrl} alt={highlightAltText ?? ''} />
+                                </EditableElement>
+                                <div className="review-card__highlight-copy">
+                                  <EditableElement
+                                    id={highlightKey}
+                                    label={`Modifier le titre du highlight de l'avis ${index + 1}`}
+                                    onEdit={onEdit}
+                                    className="block"
+                                    buttonClassName="right-0 -top-3"
+                                  >
+                                    {renderRichTextElement(
+                                      highlightKey,
+                                      'p',
+                                      {
+                                        className: 'review-card__highlight-title',
+                                        style: getElementTextStyle(highlightKey),
+                                      },
+                                      card.review.highlight,
+                                    )}
+                                  </EditableElement>
+                                  <EditableElement
+                                    id={highlightCaptionKey}
+                                    label={`Modifier la description du highlight de l'avis ${index + 1}`}
+                                    onEdit={onEdit}
+                                    className="mt-1 block"
+                                    buttonClassName="right-0 -top-3"
+                                  >
+                                    {renderRichTextElement(
+                                      highlightCaptionKey,
+                                      'p',
+                                      {
+                                        className: 'review-card__highlight-caption',
+                                        style: getElementBodyTextStyle(highlightCaptionKey),
+                                      },
+                                      card.review.highlightCaption,
+                                    )}
+                                  </EditableElement>
+                                </div>
+                              </div>
+                            )}
+                            <blockquote className="review-card__quote">
+                              <Quote aria-hidden="true" className="review-card__quote-icon" />
+                              <EditableElement
+                                id={messageKey}
+                                label={`Modifier le message de l'avis ${index + 1}`}
+                                onEdit={onEdit}
+                                className="mt-2 block"
                                 buttonClassName="right-0 -top-3"
                               >
                                 {renderRichTextElement(
-                                  nameKey,
+                                  messageKey,
                                   'p',
                                   {
-                                    className: 'review-card__name',
-                                    style: getElementTextStyle(nameKey),
+                                    style: getElementBodyTextStyle(messageKey),
                                   },
-                                  card.review.name,
+                                  card.review.message,
                                 )}
                               </EditableElement>
-                              <p className="review-card__handle">
+                            </blockquote>
+                            {showLocation && (
+                              <p className="review-card__location">
+                                <MapPin aria-hidden="true" />
                                 <EditableElement
-                                  id={handleKey}
-                                  label={`Modifier le pseudo de l'avis ${index + 1}`}
+                                  id={locationKey}
+                                  label={`Modifier le lieu de l'avis ${index + 1}`}
                                   onEdit={onEdit}
                                   className="inline"
                                   buttonClassName="-left-3 -top-3"
                                   as="span"
                                 >
                                   {renderRichTextElement(
-                                    handleKey,
+                                    locationKey,
                                     'span',
                                     {
-                                      className: 'inline-flex items-center',
-                                      style: getElementBodyTextStyle(handleKey),
+                                      style: getElementBodyTextStyle(locationKey),
                                     },
-                                    card.review.handle,
+                                    card.review.location,
                                   )}
                                 </EditableElement>
-                                <span className="mx-1 text-slate-400" aria-hidden="true">
-                                  •
-                                </span>
+                              </p>
+                            )}
+                            {showTimestamp && (
+                              <p className="review-card__timestamp">
                                 <EditableElement
                                   id={timeKey}
                                   label={`Modifier le délai de publication de l'avis ${index + 1}`}
                                   onEdit={onEdit}
                                   className="inline"
-                                  buttonClassName="-right-3 -top-3"
+                                  buttonClassName="-left-3 -top-3"
                                   as="span"
                                 >
                                   {renderRichTextElement(
                                     timeKey,
                                     'span',
                                     {
-                                      className: 'inline-flex items-center',
                                       style: getElementBodyTextStyle(timeKey),
                                     },
                                     card.review.timeAgo,
                                   )}
                                 </EditableElement>
                               </p>
-                            </div>
+                            )}
+                          </div>
+                          <div className="review-card__media">
                             <EditableElement
-                              id={badgeKey}
-                              label={`Modifier le badge de l'avis ${index + 1}`}
+                              id={postImageKey}
+                              label={`Modifier l'image du post ${index + 1}`}
                               onEdit={onEdit}
-                              className="review-card__badge"
+                              className="review-card__media-frame"
                               buttonClassName="-right-3 -top-3"
                               as="span"
                             >
-                              {renderRichTextElement(
-                                badgeKey,
-                                'span',
-                                {
-                                  className: 'review-card__badge',
-                                  style: getElementTextStyle(badgeKey),
-                                },
-                                card.badgeLabel,
-                              )}
+                              <img src={postImageUrl} alt={card.postImageAlt} />
                             </EditableElement>
-                          </header>
-                          <blockquote className="review-card__quote">
-                            <Quote aria-hidden="true" className="review-card__quote-icon" />
                             <EditableElement
-                              id={messageKey}
-                              label={`Modifier le message de l'avis ${index + 1}`}
+                              id={postImageAltKey}
+                              label={`Modifier le texte alternatif de l'image ${index + 1}`}
                               onEdit={onEdit}
-                              className="mt-2 block"
+                              className="mt-3 block"
                               buttonClassName="right-0 -top-3"
                             >
                               {renderRichTextElement(
-                                messageKey,
+                                postImageAltKey,
                                 'p',
                                 {
-                                  style: getElementBodyTextStyle(messageKey),
+                                  className: 'text-xs italic text-slate-500',
+                                  style: getElementBodyTextStyle(postImageAltKey),
                                 },
-                                card.review.message,
+                                card.review.postImageAlt,
                               )}
                             </EditableElement>
-                          </blockquote>
+                          </div>
                         </div>
-                        <div className="review-card__media">
-                          <EditableElement
-                            id={postImageKey}
-                            label={`Modifier l'image du post ${index + 1}`}
-                            onEdit={onEdit}
-                            className="review-card__media-frame"
-                            buttonClassName="-right-3 -top-3"
-                            as="span"
-                          >
-                            <img src={postImageUrl} alt={card.postImageAlt} />
-                          </EditableElement>
-                          <EditableElement
-                            id={postImageAltKey}
-                            label={`Modifier le texte alternatif de l'image ${index + 1}`}
-                            onEdit={onEdit}
-                            className="mt-3 block"
-                            buttonClassName="right-0 -top-3"
-                          >
-                            {renderRichTextElement(
-                              postImageAltKey,
-                              'p',
-                              {
-                                className: 'text-xs italic text-slate-500',
-                                style: getElementBodyTextStyle(postImageAltKey),
-                              },
-                              card.review.postImageAlt,
-                            )}
-                          </EditableElement>
-                        </div>
+                        <footer className="review-card__footer" aria-hidden="true">
+                          <div className="review-card__actions">
+                            <Heart />
+                            <MessageCircle />
+                            <Send />
+                          </div>
+                          <Bookmark className="review-card__save" />
+                        </footer>
                       </article>
                     );
                   })}

@@ -12,7 +12,20 @@ import {
   SectionStyle,
   INSTAGRAM_REVIEW_IDS,
 } from '../types';
-import { Clock, Mail, MapPin, Menu, X, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
+import {
+  Clock,
+  Mail,
+  MapPin,
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Quote,
+  Heart,
+  MessageCircle,
+  Send,
+  Bookmark,
+} from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
@@ -889,27 +902,57 @@ const Login: React.FC = () => {
               >
                 {instagramReviewSlides.map(review => (
                   <article key={review.id} className="review-card" aria-hidden={false}>
-                    <div className="review-card__content">
-                      <header className="review-card__header">
-                        <span className="review-card__avatar" aria-hidden="true">
-                          <img src={review.avatarUrl} alt="" />
-                        </span>
-                        <div className="review-card__meta">
-                          <p className="review-card__name">{review.name}</p>
-                          <p className="review-card__handle">{review.handle} • {review.timeAgo}</p>
-                        </div>
-                        <span className="review-card__badge">{review.badgeLabel}</span>
-                      </header>
-                      <blockquote className="review-card__quote">
-                        <Quote aria-hidden="true" className="review-card__quote-icon" />
-                        <p>{review.message}</p>
-                      </blockquote>
-                    </div>
-                    <div className="review-card__media">
-                      <span className="review-card__media-frame">
-                        <img src={review.postImageUrl} alt={review.postImageAlt} />
+                    <header className="review-card__header">
+                      <span className="review-card__avatar" aria-hidden="true">
+                        <img src={review.avatarUrl} alt="" />
                       </span>
+                      <div className="review-card__meta">
+                        <p className="review-card__name">{review.name}</p>
+                        <p className="review-card__handle">{review.handle}</p>
+                      </div>
+                      <span className="review-card__badge">{review.badgeLabel}</span>
+                    </header>
+                    <div className="review-card__layout">
+                      <div className="review-card__content">
+                        {(review.highlight || review.highlightCaption) && (
+                          <div className="review-card__highlight">
+                            <span className="review-card__highlight-thumb" aria-hidden="true">
+                              <img src={review.highlightImageUrl} alt={review.highlight} />
+                            </span>
+                            <div className="review-card__highlight-copy">
+                              <p className="review-card__highlight-title">{review.highlight}</p>
+                              {review.highlightCaption && (
+                                <p className="review-card__highlight-caption">{review.highlightCaption}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <blockquote className="review-card__quote">
+                          <Quote aria-hidden="true" className="review-card__quote-icon" />
+                          <p>{review.message}</p>
+                        </blockquote>
+                        {review.location && (
+                          <p className="review-card__location">
+                            <MapPin aria-hidden="true" />
+                            <span>{review.location}</span>
+                          </p>
+                        )}
+                        <p className="review-card__timestamp">{review.timeAgo}</p>
+                      </div>
+                      <div className="review-card__media">
+                        <span className="review-card__media-frame">
+                          <img src={review.postImageUrl} alt={review.postImageAlt} />
+                        </span>
+                      </div>
                     </div>
+                    <footer className="review-card__footer" aria-hidden="true">
+                      <div className="review-card__actions">
+                        <Heart />
+                        <MessageCircle />
+                        <Send />
+                      </div>
+                      <Bookmark className="review-card__save" />
+                    </footer>
                   </article>
                 ))}
               </div>
