@@ -211,6 +211,51 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
 
   const elementStyles = content.elementStyles ?? {};
   const elementRichText = content.elementRichText ?? {};
+  const [customActiveReviewIndex, setCustomActiveReviewIndex] = React.useState(0);
+  const reviewCount = instagramReviewCards.length;
+  const isCustomizationMode = showEditButtons;
+  const activeReviewIndex = isCustomizationMode ? customActiveReviewIndex : 0;
+  const canPaginateReviews = reviewCount > 1;
+
+  React.useEffect(() => {
+    if (!isCustomizationMode) {
+      return;
+    }
+    setCustomActiveReviewIndex(current => {
+      if (reviewCount === 0) {
+        return 0;
+      }
+      return Math.min(current, reviewCount - 1);
+    });
+  }, [isCustomizationMode, reviewCount]);
+
+  const handleNextReview = React.useCallback(() => {
+    if (!isCustomizationMode || reviewCount <= 0) {
+      return;
+    }
+    setCustomActiveReviewIndex(index => Math.min(index + 1, reviewCount - 1));
+  }, [isCustomizationMode, reviewCount]);
+
+  const handlePreviousReview = React.useCallback(() => {
+    if (!isCustomizationMode || reviewCount <= 0) {
+      return;
+    }
+    setCustomActiveReviewIndex(index => Math.max(index - 1, 0));
+  }, [isCustomizationMode, reviewCount]);
+
+  const handleGoToReview = React.useCallback(
+    (index: number) => {
+      if (!isCustomizationMode || index < 0 || index >= reviewCount) {
+        return;
+      }
+      setCustomActiveReviewIndex(index);
+    },
+    [isCustomizationMode, reviewCount],
+  );
+
+  const trackStyle = isCustomizationMode
+    ? { transform: `translateX(-${activeReviewIndex * 100}%)` }
+    : undefined;
 
   const getRichTextHtml = (key: EditableElementKey): string | null => {
     const entry = elementRichText[key];
@@ -787,7 +832,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                 </EditableElement>
               </div>
               <div className="reviews-carousel">
-                <div className="reviews-track">
+                <div className="reviews-track" style={trackStyle}>
                   {instagramReviewCards.map((card, index) => {
                     const baseKey = `instagramReviews.reviews.${card.reviewId}` as EditableElementKey;
                     const nameKey = `${baseKey}.name` as EditableElementKey;
@@ -806,7 +851,11 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     const highlightImageUrl = card.highlightImageUrl ?? DEFAULT_REVIEW_HIGHLIGHT_IMAGE;
                     const postImageUrl = card.postImageUrl ?? DEFAULT_REVIEW_POST_IMAGE;
                     return (
-                      <article key={card.reviewId} className="review-card" aria-hidden={index !== 0}>
+                      <article
+                        key={card.reviewId}
+                        className="review-card"
+                        aria-hidden={index !== activeReviewIndex}
+                      >
                         <div className="review-card__content">
                           <header className="review-card__header">
                             <EditableElement
@@ -1023,14 +1072,51 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     );
                   })}
                 </div>
-                <div className="reviews-controls" aria-hidden="true">
-                  <button type="button" className="reviews-control" disabled>
+                <div className="reviews-controls" aria-hidden={!isCustomizationMode}>
+                  <button
+                    type="button"
+                    className="reviews-control"
+                    onClick={handlePreviousReview}
+                    aria-label="Voir l'avis précédent"
+                    disabled={!isCustomizationMode || !canPaginateReviews || activeReviewIndex === 0}
+                  >
                     <ChevronLeft aria-hidden="true" />
                   </button>
-                  <button type="button" className="reviews-control" disabled>
+                  <button
+                    type="button"
+                    className="reviews-control"
+                    onClick={handleNextReview}
+                    aria-label="Voir l'avis suivant"
+                    disabled={!isCustomizationMode || !canPaginateReviews || activeReviewIndex === reviewCount - 1}
+                  >
                     <ChevronRight aria-hidden="true" />
                   </button>
                 </div>
+                {isCustomizationMode && canPaginateReviews && (
+                  <div
+                    className="reviews-pagination"
+                    role="tablist"
+                    aria-label="Avis Instagram"
+                  >
+                    {instagramReviewCards.map((card, index) => {
+                      const reviewerName = card.review.name?.trim();
+                      const ariaLabel = reviewerName && reviewerName.length > 0
+                        ? `Afficher l'avis de ${reviewerName}`
+                        : `Afficher l'avis ${index + 1}`;
+                      return (
+                        <button
+                          key={card.reviewId}
+                          type="button"
+                          className={`reviews-dot${index === activeReviewIndex ? ' reviews-dot--active' : ''}`}
+                          onClick={() => handleGoToReview(index)}
+                          aria-label={ariaLabel}
+                          aria-current={index === activeReviewIndex}
+                          disabled={!isCustomizationMode || index === activeReviewIndex}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </section>
