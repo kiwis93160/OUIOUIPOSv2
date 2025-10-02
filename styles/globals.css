@@ -157,15 +157,37 @@ body {
   box-sizing: border-box;
   flex: 0 0 calc(100% / var(--reviews-visible-count));
   min-width: calc(100% / var(--reviews-visible-count));
-  padding: 0 clamp(0.65rem, 1.8vw, 1.1rem);
+  padding: clamp(1.15rem, 3.2vw, 1.85rem);
   display: grid;
-  gap: clamp(0.85rem, 2.4vw, 1.6rem);
-  align-items: center;
+  gap: clamp(1rem, 2.8vw, 1.8rem);
+  grid-template-areas:
+    'header'
+    'layout'
+    'footer';
+  align-items: start;
+  border-radius: clamp(1.5rem, 3vw, 2rem);
+  background: color-mix(in srgb, #ffffff 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-heading) 12%, transparent);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
 }
 
-@media (min-width: 960px) {
-  .review-card {
-    grid-template-columns: 1.05fr 0.95fr;
+.review-card__header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.85rem, 2vw, 1.15rem);
+}
+
+.review-card__layout {
+  grid-area: layout;
+  display: grid;
+  gap: clamp(1rem, 2.6vw, 1.6rem);
+}
+
+@media (min-width: 768px) {
+  .review-card__layout {
+    grid-template-columns: minmax(0, 1fr) minmax(200px, clamp(230px, 24vw, 320px));
+    align-items: stretch;
   }
 }
 
@@ -173,13 +195,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: clamp(0.85rem, 2.2vw, 1.5rem);
-  padding-bottom: clamp(0.85rem, 2.2vw, 1.25rem);
-}
-
-.review-card__header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
 }
 
 .review-card__avatar {
@@ -232,6 +247,50 @@ body {
   text-transform: uppercase;
 }
 
+.review-card__highlight {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 1rem);
+  padding: 0.65rem 0.9rem;
+  border-radius: clamp(1.25rem, 3vw, 1.75rem);
+  background: color-mix(in srgb, rgba(236, 72, 153, 0.16) 55%, rgba(99, 102, 241, 0.12));
+}
+
+.review-card__highlight-thumb {
+  display: inline-flex;
+  width: clamp(2.8rem, 5vw, 3.4rem);
+  height: clamp(2.8rem, 5vw, 3.4rem);
+  border-radius: 999px;
+  padding: 0.2rem;
+  background: conic-gradient(from 180deg at 50% 50%, #f97316, #ec4899, #6366f1, #f97316);
+}
+
+.review-card__highlight-thumb img {
+  border-radius: inherit;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.review-card__highlight-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.review-card__highlight-title {
+  margin: 0;
+  font-size: clamp(0.85rem, 2vw, 1rem);
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.review-card__highlight-caption {
+  margin: 0;
+  font-size: clamp(0.7rem, 1.8vw, 0.85rem);
+  color: color-mix(in srgb, var(--color-heading) 55%, transparent);
+}
+
 .review-card__quote {
   position: relative;
   margin: 0;
@@ -250,8 +309,38 @@ body {
   color: color-mix(in srgb, var(--color-heading) 40%, transparent);
 }
 
+.review-card__location,
+.review-card__timestamp {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: clamp(0.7rem, 1.8vw, 0.85rem);
+  color: color-mix(in srgb, var(--color-heading) 55%, transparent);
+}
+
+.review-card__location svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.review-card__timestamp {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .review-card__media {
-  justify-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .review-card__media {
+    align-items: flex-end;
+    justify-content: center;
+  }
 }
 
 .review-card__media-frame {
@@ -260,8 +349,8 @@ body {
   padding: 0.4rem;
   background: linear-gradient(135deg, rgba(236, 72, 153, 0.65), rgba(99, 102, 241, 0.5));
   box-shadow: 0 24px 60px rgba(99, 102, 241, 0.25);
-  width: clamp(150px, 18vw, 210px);
-  aspect-ratio: 1 / 1;
+  width: clamp(180px, 22vw, 260px);
+  aspect-ratio: 4 / 5;
 }
 
 .review-card__media-frame img {
@@ -270,6 +359,26 @@ body {
   height: 100%;
   object-fit: cover;
   border-radius: clamp(1.1rem, 3vw, 1.5rem);
+}
+
+.review-card__footer {
+  grid-area: footer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: color-mix(in srgb, var(--color-heading) 65%, transparent);
+}
+
+.review-card__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(0.8rem, 2vw, 1.1rem);
+}
+
+.review-card__actions svg,
+.review-card__save {
+  width: clamp(1.05rem, 2vw, 1.25rem);
+  height: clamp(1.05rem, 2vw, 1.25rem);
 }
 
 .reviews-controls {
