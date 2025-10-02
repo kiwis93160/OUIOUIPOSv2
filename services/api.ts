@@ -1117,6 +1117,22 @@ export const api = {
       value,
     }));
 
+    const recentOrders = [...currentPeriodOrders]
+      .sort((a, b) => b.date_creation - a.date_creation)
+      .slice(0, 5);
+
+    const bestSellerProducts = Array.from(productMap.values())
+      .filter(product => product.is_best_seller)
+      .sort((a, b) => {
+        const rankA = a.best_seller_rank ?? Number.POSITIVE_INFINITY;
+        const rankB = b.best_seller_rank ?? Number.POSITIVE_INFINITY;
+        if (rankA === rankB) {
+          return a.nom_produit.localeCompare(b.nom_produit);
+        }
+        return rankA - rankB;
+      })
+      .slice(0, 6);
+
     const tablesOccupees = tables.filter(table => table.statut !== 'libre').length;
     const clientsActuels = tables.reduce((sum, table) => sum + (table.couverts ?? 0), 0);
     const commandesEnCuisine = todaysOrders.filter(order => order.estado_cocina === 'recibido').length;
@@ -1173,6 +1189,8 @@ export const api = {
       ingredientsStockBas,
       ventesPeriodeSeries,
       ventesParCategorie,
+      recentOrders,
+      bestSellerProducts,
     };
   },
 
