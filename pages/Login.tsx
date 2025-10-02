@@ -398,6 +398,7 @@ const Login: React.FC = () => {
       postImageAlt,
     };
   });
+  const REVIEWS_VISIBLE_COUNT = 2.5;
   const reviewCount = instagramReviewSlides.length;
   const isSingleReview = reviewCount <= 1;
 
@@ -860,10 +861,20 @@ const Login: React.FC = () => {
                 instagramReviewContent.subtitle,
               )}
             </div>
-            <div className="reviews-carousel">
-              <div className="reviews-track" style={{ transform: `translateX(-${activeReviewIndex * 100}%)` }}>
-                {instagramReviewSlides.map((review, index) => (
-                  <article key={review.id} className="review-card" aria-hidden={index !== activeReviewIndex}>
+            <div
+              className="reviews-carousel"
+              style={{
+                '--reviews-visible-count': REVIEWS_VISIBLE_COUNT,
+              } as React.CSSProperties}
+            >
+              <div
+                className="reviews-track"
+                style={{
+                  transform: `translateX(calc(-${activeReviewIndex} * var(--review-slide-offset)))`,
+                }}
+              >
+                {instagramReviewSlides.map(review => (
+                  <article key={review.id} className="review-card" aria-hidden={false}>
                     <div className="review-card__content">
                       <header className="review-card__header">
                         <span className="review-card__avatar" aria-hidden="true">

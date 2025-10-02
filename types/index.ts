@@ -23,7 +23,15 @@ export interface SectionStyle {
   textColor: string;
 }
 
-export const INSTAGRAM_REVIEW_IDS = ['review1', 'review2', 'review3', 'review4', 'review5'] as const;
+export const INSTAGRAM_REVIEW_IDS = [
+  'review1',
+  'review2',
+  'review3',
+  'review4',
+  'review5',
+  'review6',
+  'review7',
+] as const;
 
 export type InstagramReviewId = (typeof INSTAGRAM_REVIEW_IDS)[number];
 
