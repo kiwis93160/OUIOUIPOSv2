@@ -102,22 +102,26 @@ type PinInputProps = {
   onPinChange: (pin: string) => void;
   pinLength: number;
   describedBy?: string;
+  disabled?: boolean;
 };
 
-const PinInput = React.forwardRef<HTMLInputElement, PinInputProps>(({ pin, onPinChange, pinLength, describedBy }, ref) => {
+const PinInput = React.forwardRef<HTMLInputElement, PinInputProps>(({ pin, onPinChange, pinLength, describedBy, disabled }, ref) => {
   const handleKeyClick = (key: string) => {
-    if (pin.length < pinLength) {
+    if (pin.length < pinLength && !disabled) {
       onPinChange(pin + key);
     }
   };
 
   const handleDelete = () => {
-    if (pin.length > 0) {
+    if (pin.length > 0 && !disabled) {
       onPinChange(pin.slice(0, -1));
     }
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) {
+      return;
+    }
     const sanitized = event.target.value.replace(/\D/g, '').slice(0, pinLength);
     onPinChange(sanitized);
   };
@@ -160,6 +164,9 @@ const PinInput = React.forwardRef<HTMLInputElement, PinInputProps>(({ pin, onPin
         onKeyDown={handleInputKeyDown}
         aria-describedby={describedBy}
         aria-label={`Code PIN à ${pinLength} chiffres`}
+        disabled={disabled}
+        aria-disabled={disabled}
+        aria-busy={disabled}
       />
       <div className="pin-indicator" role="presentation">
         {Array.from({ length: pinLength }).map((_, index) => (
@@ -178,15 +185,16 @@ const PinInput = React.forwardRef<HTMLInputElement, PinInputProps>(({ pin, onPin
             key={index + 1}
             onClick={() => handleKeyClick(String(index + 1))}
             className="pin-pad__button"
+            disabled={disabled}
           >
             {index + 1}
           </button>
         ))}
         <div aria-hidden="true" />
-        <button type="button" onClick={() => handleKeyClick('0')} className="pin-pad__button">
+        <button type="button" onClick={() => handleKeyClick('0')} className="pin-pad__button" disabled={disabled}>
           0
         </button>
-        <button type="button" onClick={handleDelete} className="pin-pad__button pin-pad__button--muted">
+        <button type="button" onClick={handleDelete} className="pin-pad__button pin-pad__button--muted" disabled={disabled}>
           DEL
         </button>
       </div>
@@ -309,6 +317,51 @@ const Login: React.FC = () => {
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(() => getActiveCustomerOrder());
 
+  const submitPin = useCallback(
+    async (pinValue: string) => {
+      setLoading(true);
+      setError('');
+
+      try {
+        const role = await login(pinValue);
+        const redirectPath = getHomeRedirectPath(role) ?? '/dashboard';
+
+        setIsModalOpen(false);
+        setPin('');
+        navigate(redirectPath);
+      } catch (error) {
+        console.error('Failed to authenticate with PIN', error);
+        const message = error instanceof Error && error.message ? error.message : 'PIN invalide';
+        setError(message);
+        setPin('');
+        requestAnimationFrame(() => {
+          pinInputRef.current?.focus();
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [login, navigate],
+  );
+
+  useEffect(() => {
+    if (!isModalOpen) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      pinInputRef.current?.focus();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    if (pin.length === 6 && !loading) {
+      submitPin(pin);
+    }
+  }, [pin, loading, submitPin]);
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -381,7 +434,7 @@ const Login: React.FC = () => {
 
   const handleFormSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (pin.length === 6) {
+    if (pin.length === 6 && !loading) {
       submitPin(pin);
     }
   };
@@ -897,6 +950,7 @@ const Login: React.FC = () => {
                 onPinChange={setPin}
                 pinLength={6}
                 describedBy={error ? 'staff-pin-error' : undefined}
+                disabled={loading}
               />
               {error && (
                 <p id="staff-pin-error" className="login-modal__error" role="alert" aria-live="assertive">
