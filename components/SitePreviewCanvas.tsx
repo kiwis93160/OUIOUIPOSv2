@@ -1,6 +1,12 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, Clock, Edit2, Mail, MapPin, Quote, Star } from 'lucide-react';
-import { EditableElementKey, EditableZoneKey, Product, SiteContent } from '../types';
+import {
+  EditableElementKey,
+  EditableZoneKey,
+  INSTAGRAM_REVIEW_IDS,
+  Product,
+  SiteContent,
+} from '../types';
 import useCustomFonts from '../hooks/useCustomFonts';
 import {
   createBackgroundStyle,
@@ -11,9 +17,12 @@ import {
   createHeroBackgroundStyle,
   createTextStyle,
 } from '../utils/siteStyleHelpers';
+import { DEFAULT_SITE_CONTENT } from '../utils/siteContent';
 import { formatCurrencyCOP } from '../utils/formatIntegerAmount';
 
 const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
+const DEFAULT_REVIEW_HIGHLIGHT_IMAGE = 'https://picsum.photos/seed/reviewpreview/160/160';
+const DEFAULT_REVIEW_POST_IMAGE = 'https://picsum.photos/seed/reviewpreview/320/320';
 
 export const resolveZoneFromElement = (element: EditableElementKey): EditableZoneKey => {
   if (element.startsWith('navigation.')) {
@@ -164,6 +173,35 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
   const menuBodyTextStyle = createBodyTextStyle(content.menu.style);
   const instagramReviewsBackgroundStyle = createBackgroundStyle(content.instagramReviews.style);
   const instagramReviewsTextStyle = createTextStyle(content.instagramReviews.style);
+  const instagramReviewDefaults = DEFAULT_SITE_CONTENT.instagramReviews.reviews;
+  const instagramReviewCards = INSTAGRAM_REVIEW_IDS.map(reviewId => {
+    const review = content.instagramReviews.reviews[reviewId] ?? instagramReviewDefaults[reviewId];
+    const fallback = instagramReviewDefaults[reviewId];
+    const avatarUrl = review.avatarUrl ?? fallback.avatarUrl;
+    const highlightImageUrl =
+      review.highlightImageUrl ??
+      review.postImageUrl ??
+      content.instagramReviews.image ??
+      fallback.highlightImageUrl ??
+      fallback.postImageUrl ??
+      DEFAULT_REVIEW_HIGHLIGHT_IMAGE;
+    const postImageUrl =
+      review.postImageUrl ??
+      content.instagramReviews.image ??
+      fallback.postImageUrl ??
+      DEFAULT_REVIEW_POST_IMAGE;
+    const postImageAlt = review.postImageAlt.trim().length > 0 ? review.postImageAlt : fallback.postImageAlt;
+    const badgeLabel = review.badgeLabel.trim().length > 0 ? review.badgeLabel : fallback.badgeLabel;
+    return {
+      reviewId,
+      review,
+      avatarUrl,
+      highlightImageUrl,
+      postImageUrl,
+      postImageAlt,
+      badgeLabel,
+    };
+  });
   const findUsBackgroundStyle = createBackgroundStyle(content.findUs.style);
   const findUsTextStyle = createTextStyle(content.findUs.style);
   const footerBackgroundStyle = createBackgroundStyle(content.footer.style);
@@ -750,54 +788,240 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
               </div>
               <div className="reviews-carousel">
                 <div className="reviews-track">
-                  <article className="review-card" aria-hidden={false}>
-                    <div className="review-card__content">
-                      <header className="review-card__header">
-                        <span className="review-card__avatar" aria-hidden="true">
-                          <img src="https://i.pravatar.cc/96?img=12" alt="" />
-                        </span>
-                        <div className="review-card__meta">
-                          <p className="review-card__name">Camila G.</p>
-                          <p className="review-card__handle">@camilafoodie • il y a 2 jours</p>
-                        </div>
-                        <span className="review-card__badge">Instagram</span>
-                      </header>
-                      <div className="review-card__stars" aria-label="Note 5 sur 5">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                          <Star key={index} aria-hidden="true" />
-                        ))}
-                      </div>
-                      <blockquote className="review-card__quote">
-                        <Quote aria-hidden="true" className="review-card__quote-icon" />
-                        <p>
-                          "Des portions généreuses et des sauces incroyables. On sent que tout est préparé avec passion, vivement la prochaine commande !"
-                        </p>
-                      </blockquote>
-                      <div className="review-card__footer">
-                        <div className="review-card__highlight">
-                          <span className="review-card__story-ring" aria-hidden="true">
-                            <img
-                              src={content.instagramReviews.image ?? 'https://picsum.photos/seed/reviewpreview/160/160'}
-                              alt=""
-                            />
-                          </span>
-                          <div>
-                            <p className="review-card__highlight-title">Story highlight</p>
-                            <p className="review-card__highlight-caption">5 étoiles assurées ✨</p>
+                  {instagramReviewCards.map((card, index) => {
+                    const baseKey = `instagramReviews.reviews.${card.reviewId}` as EditableElementKey;
+                    const nameKey = `${baseKey}.name` as EditableElementKey;
+                    const handleKey = `${baseKey}.handle` as EditableElementKey;
+                    const timeKey = `${baseKey}.timeAgo` as EditableElementKey;
+                    const badgeKey = `${baseKey}.badgeLabel` as EditableElementKey;
+                    const messageKey = `${baseKey}.message` as EditableElementKey;
+                    const highlightKey = `${baseKey}.highlight` as EditableElementKey;
+                    const highlightCaptionKey = `${baseKey}.highlightCaption` as EditableElementKey;
+                    const locationKey = `${baseKey}.location` as EditableElementKey;
+                    const avatarKey = `${baseKey}.avatarUrl` as EditableElementKey;
+                    const highlightImageKey = `${baseKey}.highlightImageUrl` as EditableElementKey;
+                    const postImageKey = `${baseKey}.postImageUrl` as EditableElementKey;
+                    const postImageAltKey = `${baseKey}.postImageAlt` as EditableElementKey;
+                    const avatarUrl = card.avatarUrl ?? 'https://i.pravatar.cc/96?img=12';
+                    const highlightImageUrl = card.highlightImageUrl ?? DEFAULT_REVIEW_HIGHLIGHT_IMAGE;
+                    const postImageUrl = card.postImageUrl ?? DEFAULT_REVIEW_POST_IMAGE;
+                    return (
+                      <article key={card.reviewId} className="review-card" aria-hidden={index !== 0}>
+                        <div className="review-card__content">
+                          <header className="review-card__header">
+                            <EditableElement
+                              id={avatarKey}
+                              label={`Modifier la photo de profil de l'avis ${index + 1}`}
+                              onEdit={onEdit}
+                              className="review-card__avatar"
+                              buttonClassName="-left-3 -top-3"
+                              as="span"
+                            >
+                              <img src={avatarUrl} alt="" />
+                            </EditableElement>
+                            <div className="review-card__meta">
+                              <EditableElement
+                                id={nameKey}
+                                label={`Modifier le nom de l'avis ${index + 1}`}
+                                onEdit={onEdit}
+                                className="block"
+                                buttonClassName="right-0 -top-3"
+                              >
+                                {renderRichTextElement(
+                                  nameKey,
+                                  'p',
+                                  {
+                                    className: 'review-card__name',
+                                    style: getElementTextStyle(nameKey),
+                                  },
+                                  card.review.name,
+                                )}
+                              </EditableElement>
+                              <p className="review-card__handle">
+                                <EditableElement
+                                  id={handleKey}
+                                  label={`Modifier le pseudo de l'avis ${index + 1}`}
+                                  onEdit={onEdit}
+                                  className="inline"
+                                  buttonClassName="-left-3 -top-3"
+                                  as="span"
+                                >
+                                  {renderRichTextElement(
+                                    handleKey,
+                                    'span',
+                                    {
+                                      className: 'inline-flex items-center',
+                                      style: getElementBodyTextStyle(handleKey),
+                                    },
+                                    card.review.handle,
+                                  )}
+                                </EditableElement>
+                                <span className="mx-1 text-slate-400" aria-hidden="true">
+                                  •
+                                </span>
+                                <EditableElement
+                                  id={timeKey}
+                                  label={`Modifier le délai de publication de l'avis ${index + 1}`}
+                                  onEdit={onEdit}
+                                  className="inline"
+                                  buttonClassName="-right-3 -top-3"
+                                  as="span"
+                                >
+                                  {renderRichTextElement(
+                                    timeKey,
+                                    'span',
+                                    {
+                                      className: 'inline-flex items-center',
+                                      style: getElementBodyTextStyle(timeKey),
+                                    },
+                                    card.review.timeAgo,
+                                  )}
+                                </EditableElement>
+                              </p>
+                            </div>
+                            <EditableElement
+                              id={badgeKey}
+                              label={`Modifier le badge de l'avis ${index + 1}`}
+                              onEdit={onEdit}
+                              className="review-card__badge"
+                              buttonClassName="-right-3 -top-3"
+                              as="span"
+                            >
+                              {renderRichTextElement(
+                                badgeKey,
+                                'span',
+                                {
+                                  className: 'review-card__badge',
+                                  style: getElementTextStyle(badgeKey),
+                                },
+                                card.badgeLabel,
+                              )}
+                            </EditableElement>
+                          </header>
+                          <div className="review-card__stars" aria-label="Note 5 sur 5">
+                            {Array.from({ length: 5 }).map((_, starIndex) => (
+                              <Star key={starIndex} aria-hidden="true" />
+                            ))}
+                          </div>
+                          <blockquote className="review-card__quote">
+                            <Quote aria-hidden="true" className="review-card__quote-icon" />
+                            <EditableElement
+                              id={messageKey}
+                              label={`Modifier le message de l'avis ${index + 1}`}
+                              onEdit={onEdit}
+                              className="mt-2 block"
+                              buttonClassName="right-0 -top-3"
+                            >
+                              {renderRichTextElement(
+                                messageKey,
+                                'p',
+                                {
+                                  style: getElementBodyTextStyle(messageKey),
+                                },
+                                card.review.message,
+                              )}
+                            </EditableElement>
+                          </blockquote>
+                          <div className="review-card__footer">
+                            <div className="review-card__highlight">
+                              <EditableElement
+                                id={highlightImageKey}
+                                label={`Modifier l'image de story de l'avis ${index + 1}`}
+                                onEdit={onEdit}
+                                className="review-card__story-ring"
+                                buttonClassName="-left-3 -top-3"
+                                as="span"
+                              >
+                                <img src={highlightImageUrl} alt="" />
+                              </EditableElement>
+                              <div>
+                                <EditableElement
+                                  id={highlightKey}
+                                  label={`Modifier le titre du highlight ${index + 1}`}
+                                  onEdit={onEdit}
+                                  className="block"
+                                  buttonClassName="right-0 -top-3"
+                                >
+                                  {renderRichTextElement(
+                                    highlightKey,
+                                    'p',
+                                    {
+                                      className: 'review-card__highlight-title',
+                                      style: getElementTextStyle(highlightKey),
+                                    },
+                                    card.review.highlight,
+                                  )}
+                                </EditableElement>
+                                <EditableElement
+                                  id={highlightCaptionKey}
+                                  label={`Modifier la légende du highlight ${index + 1}`}
+                                  onEdit={onEdit}
+                                  className="block"
+                                  buttonClassName="right-0 -top-3"
+                                >
+                                  {renderRichTextElement(
+                                    highlightCaptionKey,
+                                    'p',
+                                    {
+                                      className: 'review-card__highlight-caption',
+                                      style: getElementBodyTextStyle(highlightCaptionKey),
+                                    },
+                                    card.review.highlightCaption,
+                                  )}
+                                </EditableElement>
+                              </div>
+                            </div>
+                            <EditableElement
+                              id={locationKey}
+                              label={`Modifier la localisation de l'avis ${index + 1}`}
+                              onEdit={onEdit}
+                              className="block"
+                              buttonClassName="right-0 -top-3"
+                            >
+                              {renderRichTextElement(
+                                locationKey,
+                                'p',
+                                {
+                                  className: 'review-card__location',
+                                  style: getElementBodyTextStyle(locationKey),
+                                },
+                                card.review.location,
+                              )}
+                            </EditableElement>
                           </div>
                         </div>
-                        <p className="review-card__location">Bogotá, CO</p>
-                      </div>
-                    </div>
-                    <div className="review-card__media">
-                      <span className="review-card__media-frame">
-                        <img
-                          src={content.instagramReviews.image ?? 'https://picsum.photos/seed/reviewpreview/320/320'}
-                          alt={content.instagramReviews.title}
-                        />
-                      </span>
-                    </div>
-                  </article>
+                        <div className="review-card__media">
+                          <EditableElement
+                            id={postImageKey}
+                            label={`Modifier l'image du post ${index + 1}`}
+                            onEdit={onEdit}
+                            className="review-card__media-frame"
+                            buttonClassName="-right-3 -top-3"
+                            as="span"
+                          >
+                            <img src={postImageUrl} alt={card.postImageAlt} />
+                          </EditableElement>
+                          <EditableElement
+                            id={postImageAltKey}
+                            label={`Modifier le texte alternatif de l'image ${index + 1}`}
+                            onEdit={onEdit}
+                            className="mt-3 block"
+                            buttonClassName="right-0 -top-3"
+                          >
+                            {renderRichTextElement(
+                              postImageAltKey,
+                              'p',
+                              {
+                                className: 'text-xs italic text-slate-500',
+                                style: getElementBodyTextStyle(postImageAltKey),
+                              },
+                              card.review.postImageAlt,
+                            )}
+                          </EditableElement>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
                 <div className="reviews-controls" aria-hidden="true">
                   <button type="button" className="reviews-control" disabled>

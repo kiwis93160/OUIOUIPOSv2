@@ -3,7 +3,15 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { api } from '../services/api';
-import { EditableElementKey, EditableZoneKey, Product, Order, SiteContent, SectionStyle } from '../types';
+import {
+  EditableElementKey,
+  EditableZoneKey,
+  Product,
+  Order,
+  SiteContent,
+  SectionStyle,
+  INSTAGRAM_REVIEW_IDS,
+} from '../types';
 import { Clock, Mail, MapPin, Menu, X, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import CustomerOrderTracker from '../components/CustomerOrderTracker';
 import { clearActiveCustomerOrder, getActiveCustomerOrder } from '../services/customerOrderStorage';
@@ -21,6 +29,7 @@ import {
 } from '../utils/siteStyleHelpers';
 import { resolveZoneFromElement } from '../components/SitePreviewCanvas';
 import { getHomeRedirectPath } from '../utils/navigation';
+import { DEFAULT_SITE_CONTENT as BASE_SITE_CONTENT } from '../utils/siteContent';
 
 const DEFAULT_BRAND_LOGO = '/logo-brand.svg';
 
@@ -76,6 +85,26 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
     subtitle: '',
     image: null,
     style: createDefaultSectionStyle(),
+    reviews: INSTAGRAM_REVIEW_IDS.reduce(
+      (acc, id) => {
+        acc[id] = {
+          name: '',
+          handle: '',
+          timeAgo: '',
+          message: '',
+          highlight: '',
+          highlightCaption: '',
+          location: '',
+          badgeLabel: '',
+          postImageAlt: '',
+          avatarUrl: null,
+          highlightImageUrl: null,
+          postImageUrl: null,
+        };
+        return acc;
+      },
+      {} as SiteContent['instagramReviews']['reviews'],
+    ),
   },
   findUs: {
     title: '',
@@ -98,79 +127,6 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
     library: [],
   },
 };
-
-const INSTAGRAM_REVIEWS = [
-  {
-    id: 'review-laura',
-    name: 'Laura Méndez',
-    handle: '@laurita.eats',
-    avatarUrl: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=320&q=80',
-    postImageUrl: 'https://images.unsplash.com/photo-1521305916504-4a1121188589?auto=format&fit=crop&w=640&q=80',
-    postImageAlt: "Assiette de tacos colorés garnis d'herbes fraîches.",
-    message:
-      'No puedo con la originalidad de estos tacos al pastor: cada mordisco tiene un giro gourmet brutal. La salsa cheddar queda cremosa sin empalagar y el toque crujiente lo es todo.',
-    highlight: 'Story « Taco Tuesday »',
-    highlightCaption: 'Guardado en Destacadas',
-    location: 'Bogotá · Servicio nocturno',
-    timeAgo: 'hace 2 días',
-  },
-  {
-    id: 'review-camila',
-    name: 'Camila Torres',
-    handle: '@camigoesout',
-    avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=320&q=80',
-    postImageUrl: 'https://images.unsplash.com/photo-1478145046317-39f10e56b5e9?auto=format&fit=crop&w=640&q=80',
-    postImageAlt: 'Gros plan sur des arepas dorées et une sauce maison.',
-    message:
-      'Estas arepas son lo más: combinan ingredientes súper frescos con un toque gourmet creativo. La mezcla dulce-salado y esa salsa cheddar para remojar me tuvieron feliz todo el brunch.',
-    highlight: 'Reel « Brunch entre amigas »',
-    highlightCaption: 'Comentarios llenos de antojos',
-    location: 'Medellín · Brunch de domingo',
-    timeAgo: 'hace 5 días',
-  },
-  {
-    id: 'review-sebastian',
-    name: 'Sebastián Ruiz',
-    handle: '@ruizhungry',
-    avatarUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=320&q=80',
-    postImageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=640&q=80',
-    postImageAlt: 'Table conviviale avec plusieurs plats mexicains et des boissons fraîches.',
-    message:
-      'Armamos un afterwork aquí y fue un hit: combos originales, porciones generosas y un crunch brutal en cada bocado. La salsa cheddar se volvió tema de conversación.',
-    highlight: 'Post « Team Afterwork »',
-    highlightCaption: 'Reacciones de la oficina',
-    location: 'Barranquilla · Terraza privada',
-    timeAgo: 'hace 1 semana',
-  },
-  {
-    id: 'review-valentina',
-    name: 'Valentina Ríos',
-    handle: '@valen.foodnotes',
-    avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=320&q=80',
-    postImageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=640&q=80',
-    postImageAlt: 'Pizza gourmande avec fromage coulant et herbes fraîches.',
-    message:
-      'El menú tiene un mood gourmet sin perder lo reconfortante: masa crocante, cheddar fundido y combinaciones de ingredientes que se sienten pensadas con cariño. Increíble experiencia.',
-    highlight: 'Carousel « Night Out »',
-    highlightCaption: 'Comentarios fijados',
-    location: 'Cali · Cena casual',
-    timeAgo: 'hace 2 semanas',
-  },
-  {
-    id: 'review-alejandro',
-    name: 'Alejandro Pérez',
-    handle: '@alexlovesfood',
-    avatarUrl: 'https://images.unsplash.com/photo-1529665253569-6d01c0eaf7b6?auto=format&fit=crop&w=320&q=80',
-    postImageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=640&q=80',
-    postImageAlt: 'Burger gourmet avec sauce et frites croustillantes.',
-    message:
-      'Vine por curiosidad y me quedé por la originalidad del menú: el cheddar baña la burger justo como me gusta y el pan crujiente aguanta toda la salsa. Asociaciones de sabores top.',
-    highlight: 'Live « Burger Night »',
-    highlightCaption: 'Chat lleno de elogios',
-    location: 'Bogotá · Servicio takeout',
-    timeAgo: 'hace 3 semanas',
-  },
-] as const;
 
 type PinInputProps = {
   pin: string;
@@ -408,12 +364,37 @@ const Login: React.FC = () => {
   const bestSellerCount = bestSellersToDisplay.length;
   const menuGridClassName = computeMenuGridClassName(bestSellerCount);
   const menuCardClassName = computeMenuCardClassName(bestSellerCount);
-  const instagramReviewSlides = INSTAGRAM_REVIEWS.map(review => {
-    const postImageUrl = instagramReviewContent.image ?? review.postImageUrl;
-    const postImageAlt = instagramReviewContent.image ? instagramReviewContent.title : review.postImageAlt;
+  const instagramReviewDefaults = BASE_SITE_CONTENT.instagramReviews.reviews;
+  const instagramReviewSlides = INSTAGRAM_REVIEW_IDS.map(reviewId => {
+    const review = instagramReviewContent.reviews[reviewId];
+    const fallbackReview = instagramReviewDefaults[reviewId];
+    const ensureText = (value: string, fallbackValue: string) =>
+      value.trim().length > 0 ? value : fallbackValue;
+    const avatarUrl = review.avatarUrl ?? fallbackReview.avatarUrl;
+    const highlightImageUrl =
+      review.highlightImageUrl ??
+      review.postImageUrl ??
+      instagramReviewContent.image ??
+      fallbackReview.highlightImageUrl ??
+      fallbackReview.postImageUrl;
+    const postImageUrl =
+      review.postImageUrl ??
+      instagramReviewContent.image ??
+      fallbackReview.postImageUrl;
+    const postImageAlt = ensureText(review.postImageAlt, fallbackReview.postImageAlt);
     return {
-      ...review,
-      postImageUrl,
+      id: reviewId,
+      name: ensureText(review.name, fallbackReview.name),
+      handle: ensureText(review.handle, fallbackReview.handle),
+      timeAgo: ensureText(review.timeAgo, fallbackReview.timeAgo),
+      message: ensureText(review.message, fallbackReview.message),
+      highlight: ensureText(review.highlight, fallbackReview.highlight),
+      highlightCaption: ensureText(review.highlightCaption, fallbackReview.highlightCaption),
+      location: ensureText(review.location, fallbackReview.location),
+      badgeLabel: ensureText(review.badgeLabel, fallbackReview.badgeLabel),
+      avatarUrl: avatarUrl ?? fallbackReview.avatarUrl,
+      highlightImageUrl: highlightImageUrl ?? fallbackReview.highlightImageUrl ?? fallbackReview.postImageUrl,
+      postImageUrl: postImageUrl ?? fallbackReview.postImageUrl,
       postImageAlt,
     };
   });
@@ -892,7 +873,7 @@ const Login: React.FC = () => {
                           <p className="review-card__name">{review.name}</p>
                           <p className="review-card__handle">{review.handle} • {review.timeAgo}</p>
                         </div>
-                        <span className="review-card__badge">Instagram</span>
+                        <span className="review-card__badge">{review.badgeLabel}</span>
                       </header>
                       <blockquote className="review-card__quote">
                         <Quote aria-hidden="true" className="review-card__quote-icon" />
@@ -901,7 +882,7 @@ const Login: React.FC = () => {
                       <div className="review-card__footer">
                         <div className="review-card__highlight">
                           <span className="review-card__story-ring" aria-hidden="true">
-                            <img src={review.postImageUrl} alt={review.postImageAlt} />
+                            <img src={review.highlightImageUrl} alt={review.highlight} />
                           </span>
                           <div>
                             <p className="review-card__highlight-title">{review.highlight}</p>

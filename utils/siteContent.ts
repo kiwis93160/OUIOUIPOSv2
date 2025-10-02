@@ -5,13 +5,100 @@ import {
   ElementRichText,
   ElementStyle,
   ElementStyles,
+  InstagramReview,
+  InstagramReviewId,
   SectionStyle,
   SiteAssets,
   SiteContent,
   EDITABLE_ELEMENT_KEYS,
+  INSTAGRAM_REVIEW_IDS,
 } from '../types';
 import { normalizeCloudinaryImageUrl } from '../services/cloudinary';
 import { sanitizeRichTextValue } from './richText';
+
+const DEFAULT_INSTAGRAM_REVIEW_ITEMS: Record<InstagramReviewId, InstagramReview> = {
+  review1: {
+    name: 'Laura Méndez',
+    handle: '@laurita.eats',
+    timeAgo: 'hace 2 días',
+    message:
+      'No puedo con la originalidad de estos tacos al pastor: cada mordisco tiene un giro gourmet brutal. La salsa cheddar queda cremosa sin empalagar y el toque crujiente lo es todo.',
+    highlight: 'Story « Taco Tuesday »',
+    highlightCaption: 'Guardado en Destacadas',
+    location: 'Bogotá · Servicio nocturno',
+    badgeLabel: 'Instagram',
+    postImageAlt: "Assiette de tacos colorés garnis d'herbes fraîches.",
+    avatarUrl:
+      'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=320&q=80',
+    highlightImageUrl: 'https://images.unsplash.com/photo-1521305916504-4a1121188589?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1521305916504-4a1121188589?auto=format&fit=crop&w=640&q=80',
+  },
+  review2: {
+    name: 'Camila Torres',
+    handle: '@camigoesout',
+    timeAgo: 'hace 5 días',
+    message:
+      'Estas arepas son lo más: combinan ingredientes súper frescos con un toque gourmet creativo. La mezcla dulce-salado y esa salsa cheddar para remojar me tuvieron feliz todo el brunch.',
+    highlight: 'Reel « Brunch entre amigas »',
+    highlightCaption: 'Comentarios llenos de antojos',
+    location: 'Medellín · Brunch de domingo',
+    badgeLabel: 'Instagram',
+    postImageAlt: 'Gros plan sur des arepas dorées et une sauce maison.',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=320&q=80',
+    highlightImageUrl: 'https://images.unsplash.com/photo-1478145046317-39f10e56b5e9?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1478145046317-39f10e56b5e9?auto=format&fit=crop&w=640&q=80',
+  },
+  review3: {
+    name: 'Sebastián Ruiz',
+    handle: '@ruizhungry',
+    timeAgo: 'hace 1 semana',
+    message:
+      'Armamos un afterwork aquí y fue un hit: combos originales, porciones generosas y un crunch brutal en cada bocado. La salsa cheddar se volvió tema de conversación.',
+    highlight: 'Post « Team Afterwork »',
+    highlightCaption: 'Reacciones de la oficina',
+    location: 'Barranquilla · Terraza privada',
+    badgeLabel: 'Instagram',
+    postImageAlt:
+      'Table conviviale avec plusieurs plats mexicains et des boissons fraîches.',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=320&q=80',
+    highlightImageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=640&q=80',
+  },
+  review4: {
+    name: 'Valentina Ríos',
+    handle: '@valen.foodnotes',
+    timeAgo: 'hace 2 semanas',
+    message:
+      'El menú tiene un mood gourmet sin perder lo reconfortante: masa crocante, cheddar fundido y combinaciones de ingredientes que se sienten pensadas con cariño. Increíble experiencia.',
+    highlight: 'Carousel « Night Out »',
+    highlightCaption: 'Comentarios fijados',
+    location: 'Cali · Cena casual',
+    badgeLabel: 'Instagram',
+    postImageAlt: 'Pizza gourmande avec fromage coulant et herbes fraîches.',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=320&q=80',
+    highlightImageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=640&q=80',
+  },
+  review5: {
+    name: 'Alejandro Pérez',
+    handle: '@alexlovesfood',
+    timeAgo: 'hace 3 semanas',
+    message:
+      'Vine por curiosidad y me quedé por la originalidad del menú: el cheddar baña la burger justo como me gusta y el pan crujiente aguanta toda la salsa. Asociaciones de sabores top.',
+    highlight: 'Live « Burger Night »',
+    highlightCaption: 'Chat lleno de elogios',
+    location: 'Bogotá · Servicio takeout',
+    badgeLabel: 'Instagram',
+    postImageAlt: 'Burger gourmet avec sauce et frites croustillantes.',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1529665253569-6d01c0eaf7b6?auto=format&fit=crop&w=320&q=80',
+    highlightImageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=640&q=80',
+  },
+};
 
 const trimOrEmpty = (value: string): string => value.trim();
 
@@ -52,6 +139,62 @@ const resolveImage = (value: string | null | undefined, fallback: string | null)
 const sanitizeImage = (value: string | null | undefined): string | null => {
   const normalized = normalizeCloudinaryImageUrl(value);
   return normalized ?? null;
+};
+
+const resolveInstagramReviewRecords = (
+  reviews: Partial<Record<InstagramReviewId, Partial<InstagramReview>>> | null | undefined,
+  fallback: Record<InstagramReviewId, InstagramReview>,
+): Record<InstagramReviewId, InstagramReview> => {
+  const resolved: Record<InstagramReviewId, InstagramReview> = {} as Record<
+    InstagramReviewId,
+    InstagramReview
+  >;
+  INSTAGRAM_REVIEW_IDS.forEach(id => {
+    const base = fallback[id];
+    const source = reviews?.[id] ?? {};
+    resolved[id] = {
+      name: resolveString(source?.name, base.name),
+      handle: resolveString(source?.handle, base.handle),
+      timeAgo: resolveString(source?.timeAgo, base.timeAgo),
+      message: resolveString(source?.message, base.message),
+      highlight: resolveString(source?.highlight, base.highlight),
+      highlightCaption: resolveString(source?.highlightCaption, base.highlightCaption),
+      location: resolveString(source?.location, base.location),
+      badgeLabel: resolveString(source?.badgeLabel, base.badgeLabel),
+      postImageAlt: resolveString(source?.postImageAlt, base.postImageAlt),
+      avatarUrl: resolveImage(source?.avatarUrl, base.avatarUrl),
+      highlightImageUrl: resolveImage(source?.highlightImageUrl, base.highlightImageUrl),
+      postImageUrl: resolveImage(source?.postImageUrl, base.postImageUrl),
+    };
+  });
+  return resolved;
+};
+
+const sanitizeInstagramReviewRecords = (
+  reviews: Partial<Record<InstagramReviewId, Partial<InstagramReview>>> | null | undefined,
+): Record<InstagramReviewId, InstagramReview> => {
+  const sanitized: Record<InstagramReviewId, InstagramReview> = {} as Record<
+    InstagramReviewId,
+    InstagramReview
+  >;
+  INSTAGRAM_REVIEW_IDS.forEach(id => {
+    const source = reviews?.[id] ?? {};
+    sanitized[id] = {
+      name: trimOrEmpty(source?.name ?? ''),
+      handle: trimOrEmpty(source?.handle ?? ''),
+      timeAgo: trimOrEmpty(source?.timeAgo ?? ''),
+      message: trimOrEmpty(source?.message ?? ''),
+      highlight: trimOrEmpty(source?.highlight ?? ''),
+      highlightCaption: trimOrEmpty(source?.highlightCaption ?? ''),
+      location: trimOrEmpty(source?.location ?? ''),
+      badgeLabel: trimOrEmpty(source?.badgeLabel ?? ''),
+      postImageAlt: trimOrEmpty(source?.postImageAlt ?? ''),
+      avatarUrl: sanitizeImage(source?.avatarUrl),
+      highlightImageUrl: sanitizeImage(source?.highlightImageUrl),
+      postImageUrl: sanitizeImage(source?.postImageUrl),
+    };
+  });
+  return sanitized;
 };
 
 const sanitizeElementStyleValue = (value: string | null | undefined): string | undefined => {
@@ -405,6 +548,13 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       'Des foodies de toute la Colombie partagent leur coup de cœur pour notre cuisine : ambiance solaire, service attentionné et assiettes qui brillent autant que leurs stories.',
     image: 'https://picsum.photos/seed/instagramreviews/600/600',
     style: DEFAULT_INSTAGRAM_REVIEWS_STYLE,
+    reviews: INSTAGRAM_REVIEW_IDS.reduce(
+      (acc, id) => {
+        acc[id] = { ...DEFAULT_INSTAGRAM_REVIEW_ITEMS[id] };
+        return acc;
+      },
+      {} as Record<InstagramReviewId, InstagramReview>,
+    ),
   },
   findUs: {
     title: 'Encuéntranos',
@@ -469,6 +619,10 @@ export const resolveSiteContent = (content?: Partial<SiteContent> | null): SiteC
       subtitle: resolveString(content?.instagramReviews?.subtitle, base.instagramReviews.subtitle),
       image: resolveImage(content?.instagramReviews?.image, base.instagramReviews.image),
       style: resolveSectionStyle(content?.instagramReviews?.style, base.instagramReviews.style),
+      reviews: resolveInstagramReviewRecords(
+        content?.instagramReviews?.reviews ?? null,
+        base.instagramReviews.reviews,
+      ),
     },
     findUs: {
       title: resolveString(content?.findUs?.title, base.findUs.title),
@@ -532,6 +686,7 @@ export const sanitizeSiteContentInput = (content: SiteContent): SiteContent => (
     subtitle: trimOrEmpty(content.instagramReviews.subtitle),
     image: sanitizeImage(content.instagramReviews.image),
     style: sanitizeSectionStyle(content.instagramReviews.style, DEFAULT_INSTAGRAM_REVIEWS_STYLE),
+    reviews: sanitizeInstagramReviewRecords(content.instagramReviews.reviews ?? null),
   },
   findUs: {
     title: trimOrEmpty(content.findUs.title),
