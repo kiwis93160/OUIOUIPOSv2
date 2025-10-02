@@ -61,7 +61,7 @@ export const EDITABLE_ZONE_KEYS = ['navigation', 'hero', 'about', 'menu', 'insta
 
 export type EditableZoneKey = (typeof EDITABLE_ZONE_KEYS)[number];
 
-export const EDITABLE_ELEMENT_KEYS = [
+const BASE_EDITABLE_ELEMENT_KEYS = [
   'navigation.brand',
   'navigation.brandLogo',
   'navigation.staffLogo',
@@ -90,66 +90,6 @@ export const EDITABLE_ELEMENT_KEYS = [
   'instagramReviews.subtitle',
   'instagramReviews.image',
   'instagramReviews.style.background',
-  'instagramReviews.reviews.review1.name',
-  'instagramReviews.reviews.review1.handle',
-  'instagramReviews.reviews.review1.timeAgo',
-  'instagramReviews.reviews.review1.message',
-  'instagramReviews.reviews.review1.highlight',
-  'instagramReviews.reviews.review1.highlightCaption',
-  'instagramReviews.reviews.review1.location',
-  'instagramReviews.reviews.review1.badgeLabel',
-  'instagramReviews.reviews.review1.postImageAlt',
-  'instagramReviews.reviews.review1.avatarUrl',
-  'instagramReviews.reviews.review1.highlightImageUrl',
-  'instagramReviews.reviews.review1.postImageUrl',
-  'instagramReviews.reviews.review2.name',
-  'instagramReviews.reviews.review2.handle',
-  'instagramReviews.reviews.review2.timeAgo',
-  'instagramReviews.reviews.review2.message',
-  'instagramReviews.reviews.review2.highlight',
-  'instagramReviews.reviews.review2.highlightCaption',
-  'instagramReviews.reviews.review2.location',
-  'instagramReviews.reviews.review2.badgeLabel',
-  'instagramReviews.reviews.review2.postImageAlt',
-  'instagramReviews.reviews.review2.avatarUrl',
-  'instagramReviews.reviews.review2.highlightImageUrl',
-  'instagramReviews.reviews.review2.postImageUrl',
-  'instagramReviews.reviews.review3.name',
-  'instagramReviews.reviews.review3.handle',
-  'instagramReviews.reviews.review3.timeAgo',
-  'instagramReviews.reviews.review3.message',
-  'instagramReviews.reviews.review3.highlight',
-  'instagramReviews.reviews.review3.highlightCaption',
-  'instagramReviews.reviews.review3.location',
-  'instagramReviews.reviews.review3.badgeLabel',
-  'instagramReviews.reviews.review3.postImageAlt',
-  'instagramReviews.reviews.review3.avatarUrl',
-  'instagramReviews.reviews.review3.highlightImageUrl',
-  'instagramReviews.reviews.review3.postImageUrl',
-  'instagramReviews.reviews.review4.name',
-  'instagramReviews.reviews.review4.handle',
-  'instagramReviews.reviews.review4.timeAgo',
-  'instagramReviews.reviews.review4.message',
-  'instagramReviews.reviews.review4.highlight',
-  'instagramReviews.reviews.review4.highlightCaption',
-  'instagramReviews.reviews.review4.location',
-  'instagramReviews.reviews.review4.badgeLabel',
-  'instagramReviews.reviews.review4.postImageAlt',
-  'instagramReviews.reviews.review4.avatarUrl',
-  'instagramReviews.reviews.review4.highlightImageUrl',
-  'instagramReviews.reviews.review4.postImageUrl',
-  'instagramReviews.reviews.review5.name',
-  'instagramReviews.reviews.review5.handle',
-  'instagramReviews.reviews.review5.timeAgo',
-  'instagramReviews.reviews.review5.message',
-  'instagramReviews.reviews.review5.highlight',
-  'instagramReviews.reviews.review5.highlightCaption',
-  'instagramReviews.reviews.review5.location',
-  'instagramReviews.reviews.review5.badgeLabel',
-  'instagramReviews.reviews.review5.postImageAlt',
-  'instagramReviews.reviews.review5.avatarUrl',
-  'instagramReviews.reviews.review5.highlightImageUrl',
-  'instagramReviews.reviews.review5.postImageUrl',
   'findUs.title',
   'findUs.addressLabel',
   'findUs.address',
@@ -161,6 +101,22 @@ export const EDITABLE_ELEMENT_KEYS = [
   'findUs.style.background',
   'footer.text',
   'footer.style.background',
+] as const;
+
+const INSTAGRAM_REVIEW_FIELDS = [
+  ...INSTAGRAM_REVIEW_TEXT_FIELDS,
+  ...INSTAGRAM_REVIEW_IMAGE_FIELDS,
+] as readonly InstagramReviewField[];
+
+const INSTAGRAM_REVIEW_ELEMENT_KEYS = INSTAGRAM_REVIEW_IDS.flatMap(id =>
+  INSTAGRAM_REVIEW_FIELDS.map(
+    field => `instagramReviews.reviews.${id}.${field}` as InstagramReviewElementKey,
+  ),
+) as readonly InstagramReviewElementKey[];
+
+export const EDITABLE_ELEMENT_KEYS = [
+  ...BASE_EDITABLE_ELEMENT_KEYS,
+  ...INSTAGRAM_REVIEW_ELEMENT_KEYS,
 ] as const;
 
 export type EditableElementKey = (typeof EDITABLE_ELEMENT_KEYS)[number];
