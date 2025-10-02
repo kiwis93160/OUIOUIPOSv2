@@ -98,6 +98,38 @@ const DEFAULT_INSTAGRAM_REVIEW_ITEMS: Record<InstagramReviewId, InstagramReview>
     highlightImageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=320&q=80',
     postImageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=640&q=80',
   },
+  review6: {
+    name: 'Juliana Gómez',
+    handle: '@julie.foodstories',
+    timeAgo: 'hace 1 mes',
+    message:
+      'Pedimos catering para un cumpleaños y fue éxito total: tacos mini, dips calientes y una mesa que se veía divina para fotos. Todo llegó puntual y con instrucciones claras.',
+    highlight: 'Story « Fiesta privada »',
+    highlightCaption: 'Reseñas con confeti',
+    location: 'Cartagena · Evento privado',
+    badgeLabel: 'Instagram',
+    postImageAlt: 'Buffet coloré avec tacos, dips et accompagnements.',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=320&q=80',
+    highlightImageUrl: 'https://images.unsplash.com/photo-1528715471579-d1bcf0ba5e83?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?auto=format&fit=crop&w=640&q=80',
+  },
+  review7: {
+    name: 'Manuela Herrera',
+    handle: '@manuelatryit',
+    timeAgo: 'hace 6 semanas',
+    message:
+      'Amo que tengan opciones veggies sin perder el toque cheddar: las quesadillas con hongos y maíz dulce son mi nueva obsesión. Además, la atención es rapidísima.',
+    highlight: 'Reel « Veggie Lovers »',
+    highlightCaption: 'Comentarios verdes y felices',
+    location: 'Bogotá · Servicio para llevar',
+    badgeLabel: 'Instagram',
+    postImageAlt: 'Quesadillas dorées servies avec salsa verde.',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=320&q=80',
+    highlightImageUrl: 'https://images.unsplash.com/photo-1528712306091-ed0763094c98?auto=format&fit=crop&w=320&q=80',
+    postImageUrl: 'https://images.unsplash.com/photo-1528712306091-ed0763094c98?auto=format&fit=crop&w=640&q=80',
+  },
 };
 
 const trimOrEmpty = (value: string): string => value.trim();

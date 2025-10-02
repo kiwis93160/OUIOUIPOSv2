@@ -212,6 +212,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
   const elementStyles = content.elementStyles ?? {};
   const elementRichText = content.elementRichText ?? {};
   const [customActiveReviewIndex, setCustomActiveReviewIndex] = React.useState(0);
+  const REVIEWS_VISIBLE_COUNT = 2.5;
   const reviewCount = instagramReviewCards.length;
   const isCustomizationMode = showEditButtons;
   const activeReviewIndex = isCustomizationMode ? customActiveReviewIndex : 0;
@@ -254,7 +255,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
   );
 
   const trackStyle = isCustomizationMode
-    ? { transform: `translateX(-${activeReviewIndex * 100}%)` }
+    ? { transform: `translateX(calc(-${activeReviewIndex} * var(--review-slide-offset)))` }
     : undefined;
 
   const getRichTextHtml = (key: EditableElementKey): string | null => {
@@ -831,7 +832,12 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                   )}
                 </EditableElement>
               </div>
-              <div className="reviews-carousel">
+              <div
+                className="reviews-carousel"
+                style={{
+                  '--reviews-visible-count': REVIEWS_VISIBLE_COUNT,
+                } as React.CSSProperties}
+              >
                 <div className="reviews-track" style={trackStyle}>
                   {instagramReviewCards.map((card, index) => {
                     const baseKey = `instagramReviews.reviews.${card.reviewId}` as EditableElementKey;
@@ -851,11 +857,7 @@ const SitePreviewCanvas: React.FC<SitePreviewCanvasProps> = ({
                     const highlightImageUrl = card.highlightImageUrl ?? DEFAULT_REVIEW_HIGHLIGHT_IMAGE;
                     const postImageUrl = card.postImageUrl ?? DEFAULT_REVIEW_POST_IMAGE;
                     return (
-                      <article
-                        key={card.reviewId}
-                        className="review-card"
-                        aria-hidden={index !== activeReviewIndex}
-                      >
+                      <article key={card.reviewId} className="review-card" aria-hidden={false}>
                         <div className="review-card__content">
                           <header className="review-card__header">
                             <EditableElement
