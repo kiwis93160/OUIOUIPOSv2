@@ -114,6 +114,24 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
 // 1. Order Menu View
 // ==================================================================================
 
+const DOMICILIO_FEE = 8000;
+const DOMICILIO_ITEM_NAME = 'DOMICILIO';
+const DOMICILIO_PRODUCT_REF = 'domicilio_fee';
+
+const createDeliveryFeeItem = (): OrderItem => ({
+    id: `domicilio-${Date.now()}`,
+    produitRef: DOMICILIO_PRODUCT_REF,
+    nom_produit: DOMICILIO_ITEM_NAME,
+    prix_unitaire: DOMICILIO_FEE,
+    quantite: 1,
+    excluded_ingredients: [],
+    commentaire: '',
+    estado: 'en_attente',
+});
+
+const isDeliveryFeeItem = (item: OrderItem) =>
+    item.produitRef === DOMICILIO_PRODUCT_REF || item.nom_produit?.toUpperCase() === DOMICILIO_ITEM_NAME;
+
 const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({ onOrderSubmitted }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -184,7 +202,11 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     }, [products, activeCategoryId]);
 
     const total = useMemo(() => {
-        return cart.reduce((acc, item) => acc + item.quantite * item.prix_unitaire, 0);
+        const subtotal = cart.reduce((acc, item) => acc + item.quantite * item.prix_unitaire, 0);
+        if (cart.length === 0) {
+            return subtotal;
+        }
+        return subtotal + DOMICILIO_FEE;
     }, [cart]);
 
     const handleProductClick = (product: Product) => {
@@ -234,8 +256,10 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                 });
             }
 
+            const itemsToSubmit = cart.length > 0 ? [...cart, createDeliveryFeeItem()] : cart;
+
             const orderData = {
-                items: cart,
+                items: itemsToSubmit,
                 clientInfo,
                 receipt_url: receiptUrl,
             };
@@ -259,6 +283,10 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
         const missingProducts: string[] = [];
 
         const updatedItems = pastOrder.items.reduce<OrderItem[]>((acc, item, index) => {
+            if (isDeliveryFeeItem(item)) {
+                return acc;
+            }
+
             const product = products.find(p => p.id === item.produitRef);
 
             if (!product) {
@@ -397,6 +425,12 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                         </div>
                                     </div>
                                 ))}
+                                <div key="delivery-fee" className="flex justify-between items-start border-t pt-3">
+                                    <div>
+                                        <p className="font-semibold text-gray-700">{DOMICILIO_ITEM_NAME}</p>
+                                        <p className="text-sm text-gray-600 font-semibold">{formatCurrencyCOP(DOMICILIO_FEE)}</p>
+                                    </div>
+                                </div>
                             </div>
                         }
                         <div className="border-t my-4"></div>
@@ -426,6 +460,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                         <option value="efectivo" disabled>Efectivo - no disponible</option>
                                     </select>
                                 </div>
+                                <div className="text-sm font-semibold text-gray-700">Numero Nequi/BRE-B : 3238090562</div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Comprobante de transferencia</label>
                                     <label htmlFor="payment-proof-upload" className="mt-1 w-full border border-gray-300 p-2 rounded-md shadow-sm flex items-center gap-2 cursor-pointer bg-white text-gray-500">
