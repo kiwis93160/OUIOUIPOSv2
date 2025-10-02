@@ -336,7 +336,8 @@ const Login: React.FC = () => {
     setLoading(true);
     try {
       const authenticatedRole = await login(pinToSubmit);
-      navigate(getHomeRedirectPath(authenticatedRole));
+      const redirectPath = getHomeRedirectPath(authenticatedRole);
+      navigate(redirectPath ?? '/');
     } catch (err: any) {
       setError(err.message || 'PIN invalide. Veuillez réessayer.');
       setPin('');

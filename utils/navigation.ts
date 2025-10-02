@@ -6,9 +6,9 @@ type PermissionValue = Role['permissions'][string] | undefined;
 export const isPermissionGranted = (permission?: PermissionValue): boolean =>
   permission === 'editor' || permission === 'readonly';
 
-export const getHomeRedirectPath = (role: Role | null): string => {
+export const getHomeRedirectPath = (role: Role | null): string | null => {
   if (!role) {
-    return '/';
+    return null;
   }
 
   const { homePage, permissions } = role;
@@ -25,5 +25,5 @@ export const getHomeRedirectPath = (role: Role | null): string => {
     return fallbackLink.href;
   }
 
-  return '/';
+  return null;
 };
