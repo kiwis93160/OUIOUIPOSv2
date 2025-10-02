@@ -379,19 +379,33 @@ const Login: React.FC = () => {
       fallbackReview.postImageUrl;
     const postImageUrl =
       review.postImageUrl ??
-      instagramReviewContent.image ??
-      fallbackReview.postImageUrl;
-    const postImageAlt = ensureText(review.postImageAlt, fallbackReview.postImageAlt);
+      review.highlightImageUrl ??
+      fallbackReview.postImageUrl ??
+      fallbackReview.highlightImageUrl ??
+      instagramReviewContent.image;
+    const name = ensureText(review.name, fallbackReview.name);
+    const handle = ensureText(review.handle, fallbackReview.handle);
+    const timeAgo = ensureText(review.timeAgo, fallbackReview.timeAgo);
+    const message = ensureText(review.message, fallbackReview.message);
+    const highlight = ensureText(review.highlight, fallbackReview.highlight);
+    const highlightCaption = ensureText(review.highlightCaption, fallbackReview.highlightCaption);
+    const location = ensureText(review.location, fallbackReview.location);
+    const badgeLabel = ensureText(review.badgeLabel, fallbackReview.badgeLabel);
+    const fallbackPostImageAlt = ensureText(review.postImageAlt, fallbackReview.postImageAlt);
+    const postImageAlt =
+      postImageUrl && postImageUrl === (review.highlightImageUrl ?? fallbackReview.highlightImageUrl ?? null)
+        ? highlightCaption
+        : fallbackPostImageAlt;
     return {
       id: reviewId,
-      name: ensureText(review.name, fallbackReview.name),
-      handle: ensureText(review.handle, fallbackReview.handle),
-      timeAgo: ensureText(review.timeAgo, fallbackReview.timeAgo),
-      message: ensureText(review.message, fallbackReview.message),
-      highlight: ensureText(review.highlight, fallbackReview.highlight),
-      highlightCaption: ensureText(review.highlightCaption, fallbackReview.highlightCaption),
-      location: ensureText(review.location, fallbackReview.location),
-      badgeLabel: ensureText(review.badgeLabel, fallbackReview.badgeLabel),
+      name,
+      handle,
+      timeAgo,
+      message,
+      highlight,
+      highlightCaption,
+      location,
+      badgeLabel,
       avatarUrl: avatarUrl ?? fallbackReview.avatarUrl,
       highlightImageUrl: highlightImageUrl ?? fallbackReview.highlightImageUrl ?? fallbackReview.postImageUrl,
       postImageUrl: postImageUrl ?? fallbackReview.postImageUrl,
