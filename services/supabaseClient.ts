@@ -1,11 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createFallbackClient } from '../stubs/supabase-js';
 
-type SupabaseEnv = {
-  url: string;
-  anonKey: string;
-};
-
 const normalizeSupabaseUrl = (rawUrl: string): string => {
   try {
     const parsed = new URL(rawUrl);
@@ -25,21 +20,6 @@ const normalizeSupabaseUrl = (rawUrl: string): string => {
   }
 };
 
-const getSupabaseEnv = (): SupabaseEnv => {
-  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-
-  if (!url) {
-    throw new Error('VITE_SUPABASE_URL is not defined. Please configure your Supabase environment variables.');
-  }
-
-  if (!anonKey) {
-    throw new Error('VITE_SUPABASE_ANON_KEY is not defined. Please configure your Supabase environment variables.');
-  }
-
-  return { url: normalizeSupabaseUrl(url), anonKey };
-};
-
 type SupabaseClient = ReturnType<typeof createClient>;
 
 const createDisabledClient = (): SupabaseClient => {
@@ -50,18 +30,38 @@ let supabaseClient: SupabaseClient;
 let supabaseConfigured = true;
 
 try {
-  const { url, anonKey } = getSupabaseEnv();
-  supabaseClient = createClient(url, anonKey, {
+  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
+  if (!url || !anonKey) {
+    const missingVars = [
+      !url ? 'VITE_SUPABASE_URL' : null,
+      !anonKey ? 'VITE_SUPABASE_ANON_KEY' : null,
+    ].filter(Boolean);
+
+    throw new Error(`Missing Supabase environment variables: ${missingVars.join(', ')}`);
+  }
+
+  const normalizedUrl = normalizeSupabaseUrl(url);
+
+  supabaseClient = createClient(normalizedUrl, anonKey, {
     auth: {
       persistSession: false,
     },
   });
 } catch (error) {
   supabaseConfigured = false;
+
+  const reason =
+    error instanceof Error
+      ? error.message
+      : 'Unknown error while creating the Supabase client.';
+
   console.warn(
-    'Supabase environment variables are not configured. Falling back to a disabled client. Operations depending on Supabase will fail until the environment is configured.',
-    error,
+    'Supabase client disabled. Falling back to the offline stub. Operations depending on Supabase will fail until the environment is configured.',
+    reason,
   );
+
   supabaseClient = createDisabledClient();
 }
 
