@@ -879,18 +879,6 @@ const Login: React.FC = () => {
                         <Quote aria-hidden="true" className="review-card__quote-icon" />
                         <p>{review.message}</p>
                       </blockquote>
-                      <div className="review-card__footer">
-                        <div className="review-card__highlight">
-                          <span className="review-card__story-ring" aria-hidden="true">
-                            <img src={review.highlightImageUrl} alt={review.highlight} />
-                          </span>
-                          <div>
-                            <p className="review-card__highlight-title">{review.highlight}</p>
-                            <p className="review-card__highlight-caption">{review.highlightCaption}</p>
-                          </div>
-                        </div>
-                        <p className="review-card__location">{review.location}</p>
-                      </div>
                     </div>
                     <div className="review-card__media">
                       <span className="review-card__media-frame">
