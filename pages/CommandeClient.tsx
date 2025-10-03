@@ -410,7 +410,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                     <div className="bg-white/95 p-4 rounded-xl shadow-xl">
                         <h2 className="text-2xl font-bold flex items-center gap-2 mb-4 text-gray-700"><ShoppingCart/> Mi carrito</h2>
                         {cart.length === 0 ? <p className="text-gray-500">Tu carrito está vacío.</p> :
-                            <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
+                            <div className="space-y-3">
                                 {cart.map(item => (
                                     <div key={item.id} className="flex justify-between items-start">
                                         <div>
