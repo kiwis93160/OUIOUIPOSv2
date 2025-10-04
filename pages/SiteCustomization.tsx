@@ -80,6 +80,24 @@ const COLOR_SUGGESTIONS = [
   'currentColor',
 ] as const;
 
+const EXTENDED_COLOR_PALETTE = {
+  neutrals: ['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155', '#1e293b', '#0f172a'],
+  blues: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a'],
+  reds: ['#fef2f2', '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d'],
+  greens: ['#f0fdf4', '#dcfce7', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534'],
+  yellows: ['#fefce8', '#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e'],
+  oranges: ['#fff7ed', '#fed7aa', '#fdba74', '#fb923c', '#f97316', '#ea580c', '#dc2626', '#c2410c', '#9a3412'],
+  purples: ['#faf5ff', '#f3e8ff', '#e9d5ff', '#d8b4fe', '#c084fc', '#a855f7', '#9333ea', '#7c3aed', '#6b21a8'],
+  pinks: ['#fdf2f8', '#fce7f3', '#fbcfe8', '#f9a8d4', '#f472b6', '#ec4899', '#db2777', '#be185d', '#9d174d']
+} as const;
+
+const BRAND_COLORS = [
+  '#F9A826', // brand-primary
+  '#DD8C00', // brand-primary-dark  
+  '#2D2D2D', // brand-secondary
+  '#E63946', // brand-accent
+] as const;
+
 const TEXT_ELEMENT_KEYS = new Set<EditableElementKey>(STYLE_EDITABLE_ELEMENT_KEYS);
 
 const BACKGROUND_ELEMENT_KEYS = new Set<EditableElementKey>([
@@ -754,6 +772,37 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
   const [backgroundColor, setBackgroundColor] = useState<string>(elementStyle.backgroundColor ?? '');
   const [fontUploadError, setFontUploadError] = useState<string | null>(null);
   const [uploadingFont, setUploadingFont] = useState<boolean>(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [previewMode, setPreviewMode] = useState<boolean>(false);
+  
+  // Validation function
+  const validateInputs = useCallback(() => {
+    const errors: Record<string, string> = {};
+    
+    if (fontSize && fontSize.trim()) {
+      const sizeRegex = /^\d+(\.\d+)?(px|rem|em|%)$|^clamp\([^)]+\)$|^calc\([^)]+\)$/;
+      if (!sizeRegex.test(fontSize.trim())) {
+        errors.fontSize = 'Format invalide. Utilisez px, rem, em, % ou des fonctions CSS comme clamp()';
+      }
+    }
+    
+    if (textColor && textColor.trim()) {
+      const colorRegex = /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]+|transparent|currentColor)$/;
+      if (!colorRegex.test(textColor.trim())) {
+        errors.textColor = 'Format de couleur invalide. Utilisez hex, rgb, hsl ou nom de couleur';
+      }
+    }
+    
+    if (backgroundColor && backgroundColor.trim()) {
+      const colorRegex = /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]+|transparent|currentColor)$/;
+      if (!colorRegex.test(backgroundColor.trim())) {
+        errors.backgroundColor = 'Format de couleur invalide. Utilisez hex, rgb, hsl ou nom de couleur';
+      }
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [fontSize, textColor, backgroundColor]);
 
   useEffect(() => {
     setPlainText(initialPlain);
@@ -766,6 +815,11 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
+    if (!validateInputs()) {
+      return;
+    }
+    
     const sanitizedPlain = plainText;
 
     onApply(current => {
@@ -778,8 +832,24 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
         backgroundColor,
       });
       return current;
-    });
+    }, `Updated ${label}`);
     onClose();
+  };
+  
+  // Live validation on input change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      validateInputs();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [validateInputs]);
+  
+  // Preview styles
+  const previewStyles = {
+    fontFamily: fontFamily || undefined,
+    fontSize: fontSize || undefined,
+    color: textColor || undefined,
+    backgroundColor: backgroundColor || undefined,
   };
 
   const handleFontUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -821,19 +891,39 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
     >
       <form id={formId} onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor={`${formId}-plain`} className="block text-sm font-medium text-slate-700">
-            Texte de base
-          </label>
-          <textarea
-            id={`${formId}-plain`}
-            className="ui-textarea mt-2 w-full"
-            value={plainText}
-            onChange={event => {
-              setPlainText(event.target.value);
-              setRichText(null);
-            }}
-            rows={3}
-          />
+          <div className="flex items-center justify-between mb-2">
+            <label htmlFor={`${formId}-plain`} className="block text-sm font-medium text-slate-700">
+              Texte de base
+            </label>
+            <button
+              type="button"
+              onClick={() => setPreviewMode(!previewMode)}
+              className="text-sm text-brand-primary hover:text-brand-primary/80 flex items-center gap-1"
+            >
+              <Palette className="h-3 w-3" />
+              {previewMode ? 'Mode édition' : 'Aperçu en direct'}
+            </button>
+          </div>
+          
+          {previewMode ? (
+            <div 
+              className="ui-textarea mt-2 w-full min-h-[4rem] p-3 border border-slate-200 rounded-lg bg-white"
+              style={previewStyles}
+            >
+              {plainText || 'Tapez votre texte pour voir l\'aperçu...'}
+            </div>
+          ) : (
+            <textarea
+              id={`${formId}-plain`}
+              className="ui-textarea mt-2 w-full"
+              value={plainText}
+              onChange={event => {
+                setPlainText(event.target.value);
+                setRichText(null);
+              }}
+              rows={3}
+            />
+          )}
         </div>
         <div>
           <p className="text-sm font-medium text-slate-700">Mise en forme avancée</p>
@@ -898,17 +988,23 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
             </label>
             <input
               id={`${formId}-size`}
-              className="ui-input mt-2 w-full"
+              className={`ui-input mt-2 w-full ${validationErrors.fontSize ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
               value={fontSize}
               onChange={event => setFontSize(event.target.value)}
               list={`${formId}-size-options`}
-              placeholder="Ex: 18px"
+              placeholder="Ex: 18px, 1.2rem, clamp(1rem, 2vw, 1.5rem)"
             />
             <datalist id={`${formId}-size-options`}>
               {FONT_SIZE_SUGGESTIONS.map(size => (
                 <option key={size} value={size} />
               ))}
             </datalist>
+            {validationErrors.fontSize && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.fontSize}</p>
+            )}
+            {fontSize && !validationErrors.fontSize && (
+              <p className="mt-1 text-xs text-slate-500">✓ Format valide</p>
+            )}
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -919,30 +1015,83 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
             <div className="mt-2 flex items-center gap-3">
               <input
                 id={`${formId}-text-color`}
-                className="ui-input w-full"
+                className={`ui-input w-full ${validationErrors.textColor ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                 value={textColor}
                 onChange={event => setTextColor(event.target.value)}
-                placeholder="Ex: #0f172a"
+                placeholder="Ex: #0f172a, rgb(15, 23, 42), hsl(220, 39%, 11%)"
               />
               <input
                 type="color"
-                className="h-10 w-10 rounded border border-slate-200"
-                value={textColor || '#000000'}
+                className="h-10 w-10 rounded border border-slate-200 cursor-pointer transition hover:scale-105"
+                value={textColor && /^#[0-9a-fA-F]{6}$/.test(textColor) ? textColor : '#000000'}
                 onChange={event => setTextColor(event.target.value)}
                 aria-label="Choisir la couleur du texte"
               />
             </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {COLOR_SUGGESTIONS.map(color => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setTextColor(color)}
-                  className="h-8 w-8 rounded-full border border-slate-200"
-                  style={{ backgroundColor: color === 'transparent' ? '#ffffff' : color }}
-                  title={color}
-                />
-              ))}
+            {validationErrors.textColor && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.textColor}</p>
+            )}
+            {textColor && !validationErrors.textColor && (
+              <p className="mt-1 text-xs text-slate-500">✓ Format valide</p>
+            )}
+            <div className="mt-3 space-y-3">
+              <div>
+                <p className="text-xs font-medium text-slate-600 mb-2">Couleurs de marque</p>
+                <div className="flex flex-wrap gap-2">
+                  {BRAND_COLORS.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setTextColor(color)}
+                      className="h-8 w-8 rounded-full border border-slate-200 shadow-sm transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary"
+                      style={{ backgroundColor: color }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-slate-600 mb-2">Palette étendue</p>
+                <div className="grid grid-cols-8 gap-1">
+                  {Object.entries(EXTENDED_COLOR_PALETTE).map(([category, colors]) => 
+                    colors.slice(0, 8).map(color => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setTextColor(color)}
+                        className="h-6 w-6 rounded border border-slate-200 transition hover:scale-110 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-brand-primary"
+                        style={{ backgroundColor: color }}
+                        title={`${category}: ${color}`}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-slate-600 mb-2">Suggestions rapides</p>
+                <div className="flex flex-wrap gap-2">
+                  {COLOR_SUGGESTIONS.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setTextColor(color)}
+                      className="h-6 w-12 rounded border border-slate-200 text-xs font-medium transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary"
+                      style={{ 
+                        backgroundColor: color === 'transparent' ? '#ffffff' : color === 'currentColor' ? '#64748b' : color,
+                        color: color === 'transparent' ? '#64748b' : color === 'currentColor' ? '#ffffff' : '#ffffff',
+                        backgroundImage: color === 'transparent' ? 'linear-gradient(45deg, #f1f5f9 25%, transparent 25%), linear-gradient(-45deg, #f1f5f9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f1f5f9 75%), linear-gradient(-45deg, transparent 75%, #f1f5f9 75%)' : 'none',
+                        backgroundSize: color === 'transparent' ? '8px 8px' : 'auto',
+                        backgroundPosition: color === 'transparent' ? '0 0, 0 4px, 4px -4px, -4px 0px' : 'auto'
+                      }}
+                      title={color}
+                    >
+                      {color === 'transparent' ? 'T' : color === 'currentColor' ? 'C' : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
           <div>
@@ -952,35 +1101,78 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
             <div className="mt-2 flex items-center gap-3">
               <input
                 id={`${formId}-bg-color`}
-                className="ui-input w-full"
+                className={`ui-input w-full ${validationErrors.backgroundColor ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                 value={backgroundColor}
                 onChange={event => setBackgroundColor(event.target.value)}
-                placeholder="Ex: rgba(255,255,255,0.8)"
+                placeholder="Ex: rgba(255,255,255,0.8), transparent"
               />
               <input
                 type="color"
-                className="h-10 w-10 rounded border border-slate-200"
-                value={backgroundColor || '#ffffff'}
+                className="h-10 w-10 rounded border border-slate-200 cursor-pointer transition hover:scale-105"
+                value={backgroundColor && /^#[0-9a-fA-F]{6}$/.test(backgroundColor) ? backgroundColor : '#ffffff'}
                 onChange={event => setBackgroundColor(event.target.value)}
                 aria-label="Choisir la couleur d'arrière-plan"
               />
             </div>
+            {validationErrors.backgroundColor && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.backgroundColor}</p>
+            )}
+            {backgroundColor && !validationErrors.backgroundColor && (
+              <p className="mt-1 text-xs text-slate-500">✓ Format valide</p>
+            )}
           </div>
         </div>
-        <div className="flex items-center justify-between border-t border-slate-200 pt-4">
-          <p className="text-sm text-slate-500">Laissez un champ vide pour hériter du style par défaut.</p>
-          <button
-            type="button"
-            className="text-sm font-medium text-brand-primary hover:text-brand-primary/80"
-            onClick={() => {
-              setFontFamily('');
-              setFontSize('');
-              setTextColor('');
-              setBackgroundColor('');
-            }}
-          >
-            Réinitialiser le style
-          </button>
+        <div className="space-y-4 border-t border-slate-200 pt-4">
+          <div>
+            <p className="text-sm font-medium text-slate-700 mb-3">Presets de style</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {STYLE_PRESETS.map(preset => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => {
+                    setFontFamily(preset.styles.fontFamily || '');
+                    setFontSize(preset.styles.fontSize || '');
+                    setTextColor(preset.styles.textColor || '');
+                    setBackgroundColor(preset.styles.backgroundColor || '');
+                  }}
+                  className="text-left p-3 rounded-lg border border-slate-200 hover:border-brand-primary hover:bg-brand-primary/5 transition group"
+                  title={preset.description}
+                >
+                  <div className="text-sm font-medium text-slate-900 group-hover:text-brand-primary">
+                    {preset.name}
+                  </div>
+                  <div 
+                    className="text-xs mt-1 px-2 py-1 rounded"
+                    style={{
+                      fontFamily: preset.styles.fontFamily,
+                      fontSize: '12px',
+                      color: preset.styles.textColor,
+                      backgroundColor: preset.styles.backgroundColor === 'transparent' ? '#f8fafc' : preset.styles.backgroundColor
+                    }}
+                  >
+                    Exemple de texte
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-500">Laissez un champ vide pour hériter du style par défaut.</p>
+            <button
+              type="button"
+              className="text-sm font-medium text-brand-primary hover:text-brand-primary/80"
+              onClick={() => {
+                setFontFamily('');
+                setFontSize('');
+                setTextColor('');
+                setBackgroundColor('');
+              }}
+            >
+              Réinitialiser le style
+            </button>
+          </div>
         </div>
       </form>
     </EditorPopover>
@@ -1243,17 +1435,64 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
               aria-label="Choisir la couleur d'arrière-plan"
             />
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {COLOR_SUGGESTIONS.map(option => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setColor(option)}
-                className="h-8 w-8 rounded-full border border-slate-200"
-                style={{ backgroundColor: option === 'transparent' ? '#ffffff' : option }}
-                title={option}
-              />
-            ))}
+          <div className="mt-3 space-y-3">
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Couleurs de marque</p>
+              <div className="flex flex-wrap gap-2">
+                {BRAND_COLORS.map(color => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setColor(color)}
+                    className="h-8 w-8 rounded-full border border-slate-200 shadow-sm transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary"
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Palette étendue</p>
+              <div className="grid grid-cols-8 gap-1">
+                {Object.entries(EXTENDED_COLOR_PALETTE).map(([category, colors]) => 
+                  colors.slice(0, 8).map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setColor(color)}
+                      className="h-6 w-6 rounded border border-slate-200 transition hover:scale-110 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-brand-primary"
+                      style={{ backgroundColor: color }}
+                      title={`${category}: ${color}`}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Suggestions rapides</p>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_SUGGESTIONS.map(color => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setColor(color)}
+                    className="h-6 w-12 rounded border border-slate-200 text-xs font-medium transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary"
+                    style={{ 
+                      backgroundColor: color === 'transparent' ? '#ffffff' : color === 'currentColor' ? '#64748b' : color,
+                      color: color === 'transparent' ? '#64748b' : color === 'currentColor' ? '#ffffff' : '#ffffff',
+                      backgroundImage: color === 'transparent' ? 'linear-gradient(45deg, #f1f5f9 25%, transparent 25%), linear-gradient(-45deg, #f1f5f9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f1f5f9 75%), linear-gradient(-45deg, transparent 75%, #f1f5f9 75%)' : 'none',
+                      backgroundSize: color === 'transparent' ? '8px 8px' : 'auto',
+                      backgroundPosition: color === 'transparent' ? '0 0, 0 4px, 4px -4px, -4px 0px' : 'auto'
+                    }}
+                    title={color}
+                  >
+                    {color === 'transparent' ? 'T' : color === 'currentColor' ? 'C' : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
         {backgroundType === 'image' && (
@@ -1802,8 +2041,50 @@ const SiteCustomization: React.FC = () => {
     return () => clearTimeout(timeout);
   }, [saveSuccess]);
 
+  const addHistoryEntry = useCallback((newContent: SiteContent, description?: string) => {
+    const newEntry: HistoryEntry = {
+      content: cloneSiteContent(newContent),
+      timestamp: Date.now(),
+      description
+    };
+    
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(newEntry);
+      // Limit history to 50 entries
+      if (newHistory.length > 50) {
+        newHistory.shift();
+      }
+      return newHistory;
+    });
+    
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [historyIndex]);
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1;
+      const prevEntry = history[prevIndex];
+      if (prevEntry) {
+        setDraft(cloneSiteContent(prevEntry.content));
+        setHistoryIndex(prevIndex);
+      }
+    }
+  }, [history, historyIndex]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextIndex = historyIndex + 1;
+      const nextEntry = history[nextIndex];
+      if (nextEntry) {
+        setDraft(cloneSiteContent(nextEntry.content));
+        setHistoryIndex(nextIndex);
+      }
+    }
+  }, [history, historyIndex]);
+
   const applyDraftUpdate = useCallback(
-    (updater: DraftUpdater) => {
+    (updater: DraftUpdater, description?: string) => {
       setDraft(prev => {
         if (!prev) {
           return prev;
@@ -1814,7 +2095,7 @@ const SiteCustomization: React.FC = () => {
         return updated;
       });
     },
-    [],
+    [addHistoryEntry],
   );
 
   const appendAssetToDraft = useCallback((asset: CustomizationAsset) => {
@@ -1847,22 +2128,30 @@ const SiteCustomization: React.FC = () => {
   }, []);
 
   const handleSave = async () => {
+    if (!draft) {
+      setSaveError('Aucune modification à sauvegarder.');
+      return;
+    }
+    
     setSaving(true);
     setSaveError(null);
     setSaveSuccess(null);
+    
     try {
-      if (!draft) {
-        throw new Error('Le brouillon est indisponible.');
-      }
       const updated = await updateContent(draft);
       setDraft(updated);
       setHasUnsavedChanges(false);
       setSaveSuccess('Modifications enregistrées avec succès.');
       addToHistory('Sauvegarde manuelle', updated, 'manual');
     } catch (err) {
-      setSaveError(
-        err instanceof Error ? err.message : 'Une erreur est survenue lors de la sauvegarde.',
-      );
+      console.error('Save error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue lors de la sauvegarde.';
+      setSaveError(errorMessage);
+      
+      // Auto-hide error message after 8 seconds
+      setTimeout(() => {
+        setSaveError(null);
+      }, 8000);
     } finally {
       setSaving(false);
     }
