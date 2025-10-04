@@ -8,7 +8,7 @@ import React, {
   useId,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, CheckCircle2, Loader2, Upload, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Upload, X, Search, RotateCcw, Save, Eye, Edit3, Layers, RefreshCw } from 'lucide-react';
 import SitePreviewCanvas, { resolveZoneFromElement } from '../components/SitePreviewCanvas';
 import useSiteContent from '../hooks/useSiteContent';
 import RichTextEditor from '../components/RichTextEditor';
@@ -122,12 +122,17 @@ const ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
   ...BASE_ELEMENT_LABELS,
 };
 
-const TABS = [
-  { id: 'preview', label: 'Aperçu' },
-  { id: 'custom', label: 'Personnalisation' },
+const ELEMENT_CATEGORIES = [
+  { id: 'all', label: 'Tous les éléments', icon: Layers },
+  { id: 'navigation', label: 'Navigation', icon: null },
+  { id: 'hero', label: 'Hero', icon: null },
+  { id: 'about', label: 'À propos', icon: null },
+  { id: 'menu', label: 'Menu', icon: null },
+  { id: 'findUs', label: 'Localisation', icon: null },
+  { id: 'footer', label: 'Pied de page', icon: null },
 ] as const;
 
-type TabId = (typeof TABS)[number]['id'];
+type CategoryId = (typeof ELEMENT_CATEGORIES)[number]['id'];
 
 type DraftUpdater = (current: SiteContent) => SiteContent;
 
@@ -573,7 +578,7 @@ interface TextElementEditorProps {
   element: EditableElementKey;
   label: string;
   draft: SiteContent;
-  onApply: (updater: DraftUpdater) => void;
+  onApply: (updater: DraftUpdater, elementKey?: EditableElementKey) => void;
   onClose: () => void;
   fontOptions: readonly string[];
   onAssetAdded: (asset: CustomizationAsset) => void;
@@ -617,7 +622,7 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
     event.preventDefault();
     const sanitizedPlain = plainText;
 
-    onApply(current => {
+    onApply((current) => {
       setNestedValue(current, element, sanitizedPlain);
       applyElementRichText(current, element, richText);
       applyElementStyleOverrides(current, element, {
@@ -627,7 +632,7 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
         backgroundColor,
       });
       return current;
-    });
+    }, element);
     onClose();
   };
 
@@ -840,7 +845,7 @@ interface ImageElementEditorProps {
   element: EditableElementKey;
   label: string;
   draft: SiteContent;
-  onApply: (updater: DraftUpdater) => void;
+  onApply: (updater: DraftUpdater, elementKey?: EditableElementKey) => void;
   onClose: () => void;
   onAssetAdded: (asset: CustomizationAsset) => void;
   anchor: AnchorRect | null;
@@ -870,10 +875,10 @@ const ImageElementEditor: React.FC<ImageElementEditorProps> = ({
     const trimmed = imageUrl.trim();
     const normalized = normalizeCloudinaryImageUrl(trimmed) ?? (trimmed.length > 0 ? trimmed : null);
 
-    onApply(current => {
+    onApply((current) => {
       setNestedValue(current, element, normalized);
       return current;
-    });
+    }, element);
     onClose();
   };
 
@@ -971,7 +976,7 @@ interface BackgroundElementEditorProps {
   element: EditableElementKey;
   label: string;
   draft: SiteContent;
-  onApply: (updater: DraftUpdater) => void;
+  onApply: (updater: DraftUpdater, elementKey?: EditableElementKey) => void;
   onClose: () => void;
   onAssetAdded: (asset: CustomizationAsset) => void;
   anchor: AnchorRect | null;
@@ -1006,14 +1011,14 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
     const trimmedImage = imageUrl.trim();
     const normalizedImage = normalizeCloudinaryImageUrl(trimmedImage) ?? (trimmedImage.length > 0 ? trimmedImage : null);
 
-    onApply(current => {
+    onApply((current) => {
       applySectionBackground(current, element, {
         type: backgroundType,
         color: trimmedColor,
         image: backgroundType === 'image' ? normalizedImage : null,
       });
       return current;
-    });
+    }, element);
     onClose();
   };
 
@@ -1165,7 +1170,6 @@ const SiteCustomization: React.FC = () => {
   );
   const [activeElement, setActiveElement] = useState<EditableElementKey | null>(null);
   const [activeZone, setActiveZone] = useState<EditableZoneKey | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>('custom');
   const [activeAnchor, setActiveAnchor] = useState<AnchorRect | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -1173,10 +1177,17 @@ const SiteCustomization: React.FC = () => {
   const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
   const [bestSellerLoading, setBestSellerLoading] = useState<boolean>(false);
   const [bestSellerError, setBestSellerError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [showNavigator, setShowNavigator] = useState<boolean>(true);
+  const [modifiedElements, setModifiedElements] = useState<Set<EditableElementKey>>(new Set());
 
   useEffect(() => {
     if (content) {
       setDraft(cloneSiteContent(content));
+      setHasUnsavedChanges(false);
+      setModifiedElements(new Set());
     }
   }, [content]);
 
@@ -1220,13 +1231,18 @@ const SiteCustomization: React.FC = () => {
   }, [saveSuccess]);
 
   const applyDraftUpdate = useCallback(
-    (updater: DraftUpdater) => {
+    (updater: DraftUpdater, elementKey?: EditableElementKey) => {
       setDraft(prev => {
         if (!prev) {
           return prev;
         }
         const clone = cloneSiteContent(prev);
-        return updater(clone);
+        const result = updater(clone);
+        setHasUnsavedChanges(true);
+        if (elementKey) {
+          setModifiedElements(prev => new Set(prev).add(elementKey));
+        }
+        return result;
       });
     },
     [],
@@ -1271,6 +1287,8 @@ const SiteCustomization: React.FC = () => {
       }
       const updated = await updateContent(draft);
       setDraft(updated);
+      setHasUnsavedChanges(false);
+      setModifiedElements(new Set());
       setSaveSuccess('Modifications enregistrées avec succès.');
     } catch (err) {
       setSaveError(
@@ -1280,6 +1298,106 @@ const SiteCustomization: React.FC = () => {
       setSaving(false);
     }
   };
+
+  const handleResetElement = useCallback(
+    (elementKey: EditableElementKey) => {
+      if (!content || !draft) return;
+      
+      setDraft(prev => {
+        if (!prev) return prev;
+        const clone = cloneSiteContent(prev);
+        
+        // Reset to original value from content
+        const segments = elementKey.split('.');
+        const last = segments.pop();
+        if (!last) return clone;
+
+        let sourceCursor: any = content;
+        let targetCursor: any = clone;
+        
+        for (const segment of segments) {
+          sourceCursor = sourceCursor?.[segment];
+          if (targetCursor && typeof targetCursor === 'object') {
+            targetCursor = targetCursor[segment];
+          }
+        }
+        
+        if (targetCursor && typeof targetCursor === 'object' && sourceCursor) {
+          targetCursor[last] = JSON.parse(JSON.stringify(sourceCursor[last]));
+        }
+        
+        // Remove from element styles if present
+        if (clone.elementStyles[elementKey]) {
+          const nextStyles = { ...clone.elementStyles };
+          delete nextStyles[elementKey];
+          clone.elementStyles = nextStyles;
+        }
+        
+        // Remove from element rich text if present
+        if (clone.elementRichText[elementKey]) {
+          const nextRichText = { ...clone.elementRichText };
+          delete nextRichText[elementKey];
+          clone.elementRichText = nextRichText;
+        }
+        
+        setHasUnsavedChanges(true);
+        setModifiedElements(prev => {
+          const next = new Set(prev);
+          next.delete(elementKey);
+          return next;
+        });
+        
+        return clone;
+      });
+    },
+    [content, draft],
+  );
+
+  const handleResetSection = useCallback(
+    (zone: EditableZoneKey) => {
+      if (!content || !draft) return;
+      
+      setDraft(prev => {
+        if (!prev) return prev;
+        const clone = cloneSiteContent(prev);
+        
+        // Reset entire zone
+        clone[zone] = JSON.parse(JSON.stringify(content[zone]));
+        
+        // Remove all element styles for this zone
+        const nextStyles = { ...clone.elementStyles };
+        Object.keys(nextStyles).forEach(key => {
+          if (key.startsWith(`${zone}.`)) {
+            delete nextStyles[key as EditableElementKey];
+          }
+        });
+        clone.elementStyles = nextStyles;
+        
+        // Remove all element rich text for this zone
+        const nextRichText = { ...clone.elementRichText };
+        Object.keys(nextRichText).forEach(key => {
+          if (key.startsWith(`${zone}.`)) {
+            delete nextRichText[key as EditableElementKey];
+          }
+        });
+        clone.elementRichText = nextRichText;
+        
+        setHasUnsavedChanges(true);
+        setModifiedElements(prev => {
+          const next = new Set(prev);
+          Array.from(next).forEach(key => {
+            if (key.startsWith(`${zone}.`)) {
+              next.delete(key);
+            }
+          });
+          return next;
+        });
+        
+        return clone;
+      });
+    },
+    [content, draft],
+  );
 
   const fontOptions = useMemo(() => {
     const base = Array.from(FONT_FAMILY_SUGGESTIONS);
@@ -1292,6 +1410,41 @@ const SiteCustomization: React.FC = () => {
     return Array.from(new Set([...base, ...custom]));
   }, [draft]);
 
+  // Filter editable elements based on search and category
+  const filteredElements = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    return Object.keys(ELEMENT_LABELS).filter((key) => {
+      const elementKey = key as EditableElementKey;
+      const label = ELEMENT_LABELS[elementKey] || key;
+      
+      // Filter by category
+      if (activeCategory !== 'all') {
+        const zone = resolveZoneFromElement(elementKey);
+        if (zone !== activeCategory) return false;
+      }
+      
+      // Filter by search query
+      if (query) {
+        return label.toLowerCase().includes(query) || elementKey.toLowerCase().includes(query);
+      }
+      
+      return true;
+    }) as EditableElementKey[];
+  }, [searchQuery, activeCategory]);
+
+  // Group elements by zone
+  const groupedElements = useMemo(() => {
+    const groups: Record<string, EditableElementKey[]> = {};
+    filteredElements.forEach((key) => {
+      const zone = resolveZoneFromElement(key);
+      if (!groups[zone]) {
+        groups[zone] = [];
+      }
+      groups[zone].push(key);
+    });
+    return groups;
+  }, [filteredElements]);
+
   const activeLabel = activeElement ? ELEMENT_LABELS[activeElement] ?? activeElement : null;
   const elementType = activeElement
     ? BACKGROUND_ELEMENT_KEYS.has(activeElement)
@@ -1302,6 +1455,39 @@ const SiteCustomization: React.FC = () => {
       ? 'text'
       : 'text'
     : null;
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + S to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (hasUnsavedChanges && !saving) {
+          void handleSave();
+        }
+      }
+      // Escape to close editor
+      if (e.key === 'Escape' && activeElement) {
+        closeEditor();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasUnsavedChanges, saving, activeElement]);
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   if (loading) {
     return (
@@ -1322,102 +1508,222 @@ const SiteCustomization: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 px-4 sm:px-6 lg:px-0">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Site public</h1>
-          <p className="text-sm text-slate-500">
-            Cliquez sur l'icône en forme de crayon pour personnaliser chaque bloc de contenu, image ou logo.
-          </p>
+    <div className="flex h-screen flex-col overflow-hidden">
+      {/* Header */}
+      <header className="flex flex-shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setShowNavigator(!showNavigator)}
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+            aria-label="Afficher/masquer le navigateur"
+          >
+            <Layers className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="text-lg font-semibold text-slate-900 sm:text-xl">Personnalisation du site</h1>
+            <p className="hidden text-xs text-slate-500 sm:block">
+              {hasUnsavedChanges ? (
+                <span className="flex items-center gap-1.5 text-amber-600">
+                  <AlertTriangle className="h-3 w-3" />
+                  Modifications non enregistrées
+                </span>
+              ) : (
+                'Tous les changements sont enregistrés'
+              )}
+            </p>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
           {saveSuccess && (
-            <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+            <div className="hidden items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700 sm:flex">
               <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-              {saveSuccess}
+              <span className="hidden md:inline">{saveSuccess}</span>
             </div>
           )}
           {saveError && (
-            <div className="flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-sm text-amber-700">
+            <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-700">
               <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-              {saveError}
+              <span className="hidden md:inline">{saveError}</span>
             </div>
           )}
           <button
             type="button"
             onClick={handleSave}
-            className="ui-btn-primary"
-            disabled={saving}
+            className={`ui-btn-primary flex items-center gap-2 ${!hasUnsavedChanges ? 'opacity-50' : ''}`}
+            disabled={saving || !hasUnsavedChanges}
+            title="Enregistrer (Ctrl+S)"
           >
-            {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="hidden sm:inline">Enregistrement…</span>
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                <span className="hidden sm:inline">Enregistrer</span>
+              </>
+            )}
           </button>
         </div>
       </header>
 
-      {error && (
-        <div className="flex items-start gap-3 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-          <AlertTriangle className="h-5 w-5" aria-hidden="true" />
-          <div>
-            <p>{error}</p>
-            <p className="mt-1">Les valeurs affichées correspondent à la configuration par défaut.</p>
-          </div>
-        </div>
-      )}
+      {/* Main content area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Element Navigator Sidebar */}
+        <aside
+          className={`flex-shrink-0 border-r border-slate-200 bg-white transition-all ${
+            showNavigator ? 'w-full sm:w-80' : 'w-0'
+          } overflow-hidden lg:w-80`}
+        >
+          <div className="flex h-full flex-col">
+            {/* Search bar */}
+            <div className="border-b border-slate-200 p-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Rechercher un élément..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 py-2 pl-10 pr-4 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                />
+              </div>
+            </div>
 
-      <nav className="flex w-full items-center gap-2 overflow-x-auto rounded-full bg-slate-100 p-1">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
-              activeTab === tab.id
-                ? 'bg-white text-slate-900 shadow'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+            {/* Category filters */}
+            <div className="border-b border-slate-200 p-4">
+              <div className="flex flex-wrap gap-2">
+                {ELEMENT_CATEGORIES.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => setActiveCategory(category.id)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                      activeCategory === category.id
+                        ? 'bg-brand-primary text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {category.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-      <div>
-        {activeTab === 'preview' ? (
-          <div className="mx-auto w-full max-w-6xl">
-            <div className="rounded-[2.5rem] border border-slate-200 bg-slate-50 p-6">
-              <SitePreviewCanvas
-                content={draft}
-                bestSellerProducts={bestSellerProducts}
-                onEdit={() => undefined}
-                activeZone={null}
-                showEditButtons={false}
-              />
+            {/* Element list */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {filteredElements.length === 0 ? (
+                <p className="text-center text-sm text-slate-500">Aucun élément trouvé</p>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(groupedElements).map(([zone, elements]) => (
+                    <div key={zone} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          {ELEMENT_CATEGORIES.find(c => c.id === zone)?.label || zone}
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => handleResetSection(zone as EditableZoneKey)}
+                          className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                          title="Réinitialiser la section"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </button>
+                      </div>
+                      {elements.map((elementKey) => {
+                        const isModified = modifiedElements.has(elementKey);
+                        const isActive = activeElement === elementKey;
+                        return (
+                          <button
+                            key={elementKey}
+                            type="button"
+                            onClick={() => {
+                              const mockAnchor = document.querySelector(`[data-element-id="${elementKey}"]`)?.getBoundingClientRect();
+                              handleEdit(elementKey, { 
+                                zone: resolveZoneFromElement(elementKey), 
+                                anchor: mockAnchor || null 
+                              });
+                            }}
+                            className={`group relative flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
+                              isActive
+                                ? 'border-brand-primary bg-brand-primary/5 text-brand-primary'
+                                : isModified
+                                ? 'border-amber-200 bg-amber-50/50 text-slate-900 hover:bg-amber-50'
+                                : 'border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2 truncate">
+                              {isModified && (
+                                <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-500" title="Modifié" />
+                              )}
+                              {ELEMENT_LABELS[elementKey] || elementKey}
+                            </span>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleResetElement(elementKey);
+                                }}
+                                className="rounded p-1 hover:bg-slate-200"
+                                title="Réinitialiser"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </button>
+                              <Edit3 className="h-3 w-3" />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {bestSellerError && (
-              <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-                <AlertTriangle className="h-5 w-5" aria-hidden="true" />
-                <p>{bestSellerError}</p>
+        </aside>
+
+        {/* Preview area */}
+        <div className="flex flex-1 flex-col overflow-hidden bg-slate-50">
+          {error && (
+            <div className="m-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+              <div>
+                <p>{error}</p>
+                <p className="mt-1">Les valeurs affichées correspondent à la configuration par défaut.</p>
               </div>
-            )}
+            </div>
+          )}
+          
+          {bestSellerError && (
+            <div className="m-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+              <p>{bestSellerError}</p>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto p-4">
             <div className="mx-auto w-full max-w-6xl">
               <SitePreviewCanvas
                 content={draft}
                 bestSellerProducts={bestSellerProducts}
                 onEdit={(element, meta) => handleEdit(element, meta)}
                 activeZone={activeZone}
+                showEditButtons={true}
               />
             </div>
+            
             {bestSellerLoading && (
-              <div className="flex items-center gap-2 text-sm text-slate-500">
+              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 Chargement des produits populaires…
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
 
       {activeElement && elementType === 'text' && activeLabel && (
