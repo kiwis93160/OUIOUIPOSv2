@@ -560,24 +560,6 @@ const EditorPopover: React.FC<EditorPopoverProps> = ({
             <span className="sr-only">Fermer</span>
           </button>
         </div>
-        {fontAssets.length > 0 && (
-          <div className="mt-3">
-            <p className="text-sm font-medium text-slate-700">Bibliothèque de polices</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {fontAssets.slice(0, 9).map(asset => (
-                <button
-                  key={asset.id}
-                  type="button"
-                  onClick={() => setFontFamily(asset.name)}
-                  className="rounded-full border border-slate-200 px-3 py-1 text-sm hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
-                  title={asset.name}
-                >
-                  {asset.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
         <div className="max-h-[70vh] overflow-y-auto px-6 py-5">{children}</div>
         <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">{footer}</div>
       </div>
