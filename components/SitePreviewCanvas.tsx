@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Clock, Edit2, Mail, MapPin, Star } from 'lucide-react';
 import {
   EditableElementKey,
@@ -88,14 +88,16 @@ const EditableElement: React.FC<EditableElementProps> = ({
 }) => {
   const containerClasses = ['group relative', className].filter(Boolean).join(' ');
   const showButtons = React.useContext(EditButtonVisibilityContext);
+  const [isHovered, setIsHovered] = useState(false);
 
   if (!showButtons) {
     return <Component className={containerClasses}>{children}</Component>;
   }
   const buttonClasses = [
-    'absolute z-30 flex h-7 w-7 items-center justify-center rounded-full bg-brand-primary text-white shadow-sm transition-opacity duration-200',
+    'customization-edit-button absolute z-30 flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg transition-all duration-200',
     'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100',
-    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary',
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500',
+    'hover:scale-110 hover:bg-blue-600 active:scale-95',
     buttonClassName ?? 'right-2 top-2',
   ]
     .filter(Boolean)
@@ -114,16 +116,35 @@ const EditableElement: React.FC<EditableElementProps> = ({
   };
 
   return (
-    <Component className={containerClasses}>
+    <Component 
+      className={containerClasses}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <button
         type="button"
         onClick={handleEdit}
         className={buttonClasses}
         aria-label={label}
         data-element-id={id}
+        title={label}
       >
-        <Edit2 className="h-3.5 w-3.5" aria-hidden="true" />
+        <Edit2 className="h-4 w-4" aria-hidden="true" />
       </button>
+      
+      {/* Indicateur de survol amélioré */}
+      {isHovered && (
+        <div className="absolute inset-0 pointer-events-none border-2 border-blue-500 border-dashed rounded-lg opacity-50 animate-pulse" />
+      )}
+      
+      {/* Tooltip */}
+      {isHovered && (
+        <div className="absolute z-40 bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap">
+          {label}
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900" />
+        </div>
+      )}
+      
       {children}
     </Component>
   );
@@ -132,8 +153,8 @@ const EditableElement: React.FC<EditableElementProps> = ({
 const SectionCard: React.FC<SectionCardProps> = ({ children, className, zone, activeZone }) => {
   const isActive = activeZone === zone;
   const classes = [
-    'relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-all',
-    isActive ? 'border-brand-primary/70 shadow-brand-primary/20 ring-2 ring-brand-primary/10' : 'border-gray-200',
+    'customization-section-card relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-all',
+    isActive ? 'active border-brand-primary/70 shadow-brand-primary/20 ring-2 ring-brand-primary/10' : 'border-gray-200',
     className,
   ]
     .filter(Boolean)
