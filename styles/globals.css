@@ -1,3 +1,5 @@
+@import './customization-enhancements.css';
+
 :root {
   color-scheme: light;
   font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;

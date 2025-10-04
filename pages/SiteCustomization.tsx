@@ -8,10 +8,13 @@ import React, {
   useId,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, CheckCircle2, Loader2, Upload, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Upload, X, Undo2, Redo2, Search, Eye, EyeOff, Save, RotateCcw, Keyboard } from 'lucide-react';
 import SitePreviewCanvas, { resolveZoneFromElement } from '../components/SitePreviewCanvas';
 import useSiteContent from '../hooks/useSiteContent';
 import RichTextEditor from '../components/RichTextEditor';
+import PresetSelector from '../components/PresetSelector';
+import KeyboardShortcuts from '../components/KeyboardShortcuts';
+import ResponsivePreview from '../components/ResponsivePreview';
 import {
   CustomizationAsset,
   CustomizationAssetType,
@@ -125,6 +128,9 @@ const ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
 const TABS = [
   { id: 'preview', label: 'Aperçu' },
   { id: 'custom', label: 'Personnalisation' },
+  { id: 'live', label: 'Aperçu en direct' },
+  { id: 'responsive', label: 'Responsive' },
+  { id: 'themes', label: 'Thèmes' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -318,6 +324,101 @@ const cloneAnchorRect = (rect: DOMRect | DOMRectReadOnly | AnchorRect | null): A
   }
   const { x, y, top, left, bottom, right, width, height } = rect;
   return { x, y, top, left, bottom, right, width, height };
+};
+
+// Composant pour le panneau latéral
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  onElementClick: (element: EditableElementKey) => void;
+  draft: SiteContent | null;
+  originalContent: SiteContent | null;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({
+  isOpen,
+  onClose,
+  searchQuery,
+  onSearchChange,
+  onElementClick,
+  draft,
+  originalContent,
+}) => {
+  const filteredElements = useMemo(() => {
+    if (!draft || !originalContent) return [];
+    
+    return EDITABLE_ELEMENT_KEYS.filter(key => {
+      const label = ELEMENT_LABELS[key];
+      if (!label) return false;
+      
+      const matchesSearch = label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           key.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      return matchesSearch;
+    }).map(key => {
+      const label = ELEMENT_LABELS[key] || key;
+      const hasChanges = JSON.stringify(draft[key]) !== JSON.stringify(originalContent[key]);
+      
+      return { key, label, hasChanges };
+    });
+  }, [searchQuery, draft, originalContent]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-y-0 left-0 z-50 w-80 bg-white shadow-xl border-r border-slate-200">
+      <div className="flex flex-col h-full">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+          <h2 className="text-lg font-semibold text-slate-900">Éléments modifiables</h2>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-slate-100 transition-colors"
+          >
+            <X className="h-5 w-5 text-slate-500" />
+          </button>
+        </div>
+        
+        <div className="p-4 border-b border-slate-200">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Rechercher un élément..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+            />
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-2">
+            {filteredElements.map(({ key, label, hasChanges }) => (
+              <button
+                key={key}
+                onClick={() => onElementClick(key)}
+                className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                  hasChanges
+                    ? 'border-brand-primary/50 bg-brand-primary/5 text-brand-primary'
+                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{label}</span>
+                  {hasChanges && (
+                    <div className="w-2 h-2 bg-brand-primary rounded-full" />
+                  )}
+                </div>
+                <div className="text-xs text-slate-500 mt-1">{key}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 interface EditorPopoverProps {
@@ -1173,12 +1274,157 @@ const SiteCustomization: React.FC = () => {
   const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
   const [bestSellerLoading, setBestSellerLoading] = useState<boolean>(false);
   const [bestSellerError, setBestSellerError] = useState<string | null>(null);
+  
+  // Nouvelles fonctionnalités
+  const [history, setHistory] = useState<SiteContent[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showEditButtons, setShowEditButtons] = useState<boolean>(true);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState<boolean>(false);
 
   useEffect(() => {
     if (content) {
-      setDraft(cloneSiteContent(content));
+      const clonedContent = cloneSiteContent(content);
+      setDraft(clonedContent);
+      // Initialiser l'historique avec le contenu original
+      setHistory([clonedContent]);
+      setHistoryIndex(0);
+      setHasUnsavedChanges(false);
     }
   }, [content]);
+
+  // Gestion de l'historique
+  const addToHistory = useCallback((newDraft: SiteContent) => {
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(cloneSiteContent(newDraft));
+      return newHistory.slice(-50); // Limiter à 50 entrées
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+    setHasUnsavedChanges(true);
+  }, [historyIndex]);
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setDraft(cloneSiteContent(history[newIndex]));
+      setHasUnsavedChanges(true);
+    }
+  }, [historyIndex, history]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setDraft(cloneSiteContent(history[newIndex]));
+      setHasUnsavedChanges(true);
+    }
+  }, [historyIndex, history]);
+
+  const resetToOriginal = useCallback(() => {
+    if (content) {
+      const originalContent = cloneSiteContent(content);
+      setDraft(originalContent);
+      setHistory([originalContent]);
+      setHistoryIndex(0);
+      setHasUnsavedChanges(false);
+    }
+  }, [content]);
+
+  // Fonctions pour les presets
+  const handlePresetSelect = useCallback((preset: any) => {
+    if (!draft) return;
+    
+    const updatedDraft = cloneSiteContent(draft);
+    // Appliquer les modifications du preset
+    Object.keys(preset.content).forEach(sectionKey => {
+      const section = preset.content[sectionKey];
+      if (updatedDraft[sectionKey]) {
+        Object.assign(updatedDraft[sectionKey], section);
+      }
+    });
+    
+    setDraft(updatedDraft);
+    addToHistory(updatedDraft);
+  }, [draft, addToHistory]);
+
+  const handleExport = useCallback(() => {
+    if (!draft) return;
+    
+    const dataStr = JSON.stringify(draft, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `site-customization-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [draft]);
+
+  const handleImport = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedContent = JSON.parse(e.target?.result as string);
+        const updatedDraft = cloneSiteContent(importedContent);
+        setDraft(updatedDraft);
+        addToHistory(updatedDraft);
+      } catch (error) {
+        console.error('Erreur lors de l\'import:', error);
+        setSaveError('Erreur lors de l\'import du fichier');
+      }
+    };
+    reader.readAsText(file);
+  }, [addToHistory]);
+
+  // Raccourcis clavier
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key.toLowerCase()) {
+          case 's':
+            event.preventDefault();
+            handleSave();
+            break;
+          case 'z':
+            event.preventDefault();
+            if (event.shiftKey) {
+              redo();
+            } else {
+              undo();
+            }
+            break;
+          case 'y':
+            event.preventDefault();
+            redo();
+            break;
+          case 'r':
+            event.preventDefault();
+            resetToOriginal();
+            break;
+          case '/':
+            event.preventDefault();
+            setShowKeyboardShortcuts(true);
+            break;
+        }
+      }
+      if (event.key === 'Escape') {
+        if (showKeyboardShortcuts) {
+          setShowKeyboardShortcuts(false);
+        } else {
+          closeEditor();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, resetToOriginal]);
 
   useEffect(() => {
     let mounted = true;
@@ -1226,10 +1472,12 @@ const SiteCustomization: React.FC = () => {
           return prev;
         }
         const clone = cloneSiteContent(prev);
-        return updater(clone);
+        const updated = updater(clone);
+        addToHistory(updated);
+        return updated;
       });
     },
-    [],
+    [addToHistory],
   );
 
   const appendAssetToDraft = useCallback((asset: CustomizationAsset) => {
@@ -1271,6 +1519,7 @@ const SiteCustomization: React.FC = () => {
       }
       const updated = await updateContent(draft);
       setDraft(updated);
+      setHasUnsavedChanges(false);
       setSaveSuccess('Modifications enregistrées avec succès.');
     } catch (err) {
       setSaveError(
@@ -1324,13 +1573,75 @@ const SiteCustomization: React.FC = () => {
   return (
     <div className="space-y-8 px-4 sm:px-6 lg:px-0">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Site public</h1>
-          <p className="text-sm text-slate-500">
-            Cliquez sur l'icône en forme de crayon pour personnaliser chaque bloc de contenu, image ou logo.
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">Site public</h1>
+            <p className="text-sm text-slate-500">
+              Cliquez sur l'icône en forme de crayon pour personnaliser chaque bloc de contenu, image ou logo.
+            </p>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="ui-btn-secondary flex items-center gap-2"
+          >
+            <Search className="h-4 w-4" />
+            Éléments
+          </button>
+          <button
+            onClick={() => setShowKeyboardShortcuts(true)}
+            className="ui-btn-secondary flex items-center gap-2"
+            title="Afficher les raccourcis clavier (Ctrl+/)"
+          >
+            <Keyboard className="h-4 w-4" />
+            Raccourcis
+          </button>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {/* Indicateur de modifications non sauvegardées */}
+          {hasUnsavedChanges && (
+            <div className="flex items-center gap-2 rounded-full bg-orange-50 px-4 py-2 text-sm text-orange-700">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              Modifications non sauvegardées
+            </div>
+          )}
+          
+          {/* Boutons d'historique */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={undo}
+              disabled={historyIndex <= 0}
+              className="ui-btn-secondary p-2"
+              title="Annuler (Ctrl+Z)"
+            >
+              <Undo2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={redo}
+              disabled={historyIndex >= history.length - 1}
+              className="ui-btn-secondary p-2"
+              title="Refaire (Ctrl+Y)"
+            >
+              <Redo2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={resetToOriginal}
+              className="ui-btn-secondary p-2"
+              title="Réinitialiser (Ctrl+R)"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </button>
+          </div>
+          
+          {/* Bouton toggle aperçu */}
+          <button
+            onClick={() => setShowEditButtons(!showEditButtons)}
+            className="ui-btn-secondary flex items-center gap-2"
+            title={showEditButtons ? "Masquer les boutons d'édition" : "Afficher les boutons d'édition"}
+          >
+            {showEditButtons ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showEditButtons ? 'Masquer' : 'Afficher'}
+          </button>
+          
           {saveSuccess && (
             <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
               <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
@@ -1346,10 +1657,12 @@ const SiteCustomization: React.FC = () => {
           <button
             type="button"
             onClick={handleSave}
-            className="ui-btn-primary"
+            className="ui-btn-primary flex items-center gap-2"
             disabled={saving}
+            title="Enregistrer (Ctrl+S)"
           >
-            {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
+            <Save className="h-4 w-4" />
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>
       </header>
@@ -1377,6 +1690,9 @@ const SiteCustomization: React.FC = () => {
             }`}
           >
             {tab.label}
+            {tab.id === 'live' && hasUnsavedChanges && (
+              <span className="ml-2 w-2 h-2 bg-orange-500 rounded-full" />
+            )}
           </button>
         ))}
       </nav>
@@ -1394,6 +1710,47 @@ const SiteCustomization: React.FC = () => {
               />
             </div>
           </div>
+        ) : activeTab === 'live' ? (
+          <div className="mx-auto w-full max-w-6xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-slate-900">Aperçu en direct</h3>
+                {hasUnsavedChanges && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800">
+                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
+                    Modifications en cours
+                  </span>
+                )}
+              </div>
+              <div className="text-sm text-slate-500">
+                Les modifications sont visibles en temps réel
+              </div>
+            </div>
+            <div className="rounded-[2.5rem] border border-slate-200 bg-slate-50 p-6">
+              <SitePreviewCanvas
+                content={draft}
+                bestSellerProducts={bestSellerProducts}
+                onEdit={() => undefined}
+                activeZone={null}
+                showEditButtons={false}
+              />
+            </div>
+          </div>
+        ) : activeTab === 'responsive' ? (
+          <div className="mx-auto w-full max-w-6xl">
+            <ResponsivePreview
+              content={draft}
+              bestSellerProducts={bestSellerProducts}
+            />
+          </div>
+        ) : activeTab === 'themes' ? (
+          <div className="mx-auto w-full max-w-6xl">
+            <PresetSelector
+              onPresetSelect={handlePresetSelect}
+              onExport={handleExport}
+              onImport={handleImport}
+            />
+          </div>
         ) : (
           <div className="space-y-4">
             {bestSellerError && (
@@ -1408,6 +1765,7 @@ const SiteCustomization: React.FC = () => {
                 bestSellerProducts={bestSellerProducts}
                 onEdit={(element, meta) => handleEdit(element, meta)}
                 activeZone={activeZone}
+                showEditButtons={showEditButtons}
               />
             </div>
             {bestSellerLoading && (
@@ -1456,6 +1814,33 @@ const SiteCustomization: React.FC = () => {
           anchor={activeAnchor}
         />
       )}
+
+      {/* Panneau latéral */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onElementClick={(element) => {
+          // Trouver l'élément dans le DOM et déclencher l'édition
+          const elementSelector = `[data-element-id="${escapeAttributeValue(element)}"]`;
+          const elementNode = document.querySelector(elementSelector) as HTMLElement;
+          if (elementNode) {
+            const rect = elementNode.getBoundingClientRect();
+            const zone = resolveZoneFromElement(element);
+            handleEdit(element, { zone, anchor: rect });
+          }
+          setSidebarOpen(false);
+        }}
+        draft={draft}
+        originalContent={content}
+      />
+
+      {/* Raccourcis clavier */}
+      <KeyboardShortcuts
+        isOpen={showKeyboardShortcuts}
+        onClose={() => setShowKeyboardShortcuts(false)}
+      />
     </div>
   );
 };
