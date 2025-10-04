@@ -164,6 +164,31 @@ const cloneSiteContent = (content: SiteContent): SiteContent => {
   return JSON.parse(JSON.stringify(content)) as SiteContent;
 };
 
+// Normalize site content to a stable representation for change detection
+const normalizeContentForCompare = (content: SiteContent): SiteContent => {
+  const normalized = cloneSiteContent(content);
+  // Sort asset library deterministically by id then createdAt
+  if (Array.isArray(normalized.assets?.library)) {
+    normalized.assets.library = [...normalized.assets.library].sort((a, b) => {
+      if (a.id === b.id) {
+        return (a.createdAt || '').localeCompare(b.createdAt || '');
+      }
+      return a.id.localeCompare(b.id);
+    });
+  }
+  return normalized;
+};
+
+const areContentsEqual = (a: SiteContent, b: SiteContent): boolean => {
+  try {
+    const aStr = JSON.stringify(normalizeContentForCompare(a));
+    const bStr = JSON.stringify(normalizeContentForCompare(b));
+    return aStr === bStr;
+  } catch {
+    return false;
+  }
+};
+
 const setNestedValue = (content: SiteContent, key: EditableElementKey, value: string | null): void => {
   const segments = key.split('.');
   const last = segments.pop();
@@ -604,6 +629,34 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
   const [fontUploadError, setFontUploadError] = useState<string | null>(null);
   const [uploadingFont, setUploadingFont] = useState<boolean>(false);
 
+  const [textColorError, setTextColorError] = useState<string | null>(null);
+  const [bgColorError, setBgColorError] = useState<string | null>(null);
+  const [fontSizeError, setFontSizeError] = useState<string | null>(null);
+
+  const cssSupports = (prop: string, value: string): boolean => {
+    if (typeof window === 'undefined' || !(window as any).CSS || typeof (window as any).CSS.supports !== 'function') {
+      // Assume valid in non-browser contexts
+      return true;
+    }
+    try {
+      return (window as any).CSS.supports(prop, value);
+    } catch {
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    setTextColorError(textColor && !cssSupports('color', textColor) ? 'Couleur invalide' : null);
+  }, [textColor]);
+
+  useEffect(() => {
+    setBgColorError(backgroundColor && !cssSupports('background-color', backgroundColor) ? 'Couleur de fond invalide' : null);
+  }, [backgroundColor]);
+
+  useEffect(() => {
+    setFontSizeError(fontSize && !cssSupports('font-size', fontSize) ? 'Taille de police invalide' : null);
+  }, [fontSize]);
+
   useEffect(() => {
     setPlainText(initialPlain);
     setRichText(initialRichText);
@@ -615,6 +668,9 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (textColorError || bgColorError || fontSizeError) {
+      return;
+    }
     const sanitizedPlain = plainText;
 
     onApply(current => {
@@ -639,6 +695,11 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
     setFontUploadError(null);
     setUploadingFont(true);
     try {
+      // Enforce a reasonable font file size limit (5MB)
+      const MAX_FONT_BYTES = 5 * 1024 * 1024;
+      if (file.size > MAX_FONT_BYTES) {
+        throw new Error('La police dépasse la taille maximale autorisée (5 Mo).');
+      }
       const url = await uploadCustomizationAsset(file, { tags: [guessAssetType(file)] });
       const asset = createAssetFromFile(file, url);
       onAssetAdded(asset);
@@ -758,6 +819,7 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
                 <option key={size} value={size} />
               ))}
             </datalist>
+          {fontSizeError && <p className="mt-2 text-sm text-amber-600">{fontSizeError}</p>}
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -793,6 +855,7 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
                 />
               ))}
             </div>
+          {textColorError && <p className="mt-2 text-sm text-amber-600">{textColorError}</p>}
           </div>
           <div>
             <label htmlFor={`${formId}-bg-color`} className="block text-sm font-medium text-slate-700">
@@ -814,6 +877,7 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
                 aria-label="Choisir la couleur d'arrière-plan"
               />
             </div>
+          {bgColorError && <p className="mt-2 text-sm text-amber-600">{bgColorError}</p>}
           </div>
         </div>
         <div className="flex items-center justify-between border-t border-slate-200 pt-4">
@@ -860,6 +924,7 @@ const ImageElementEditor: React.FC<ImageElementEditorProps> = ({
   const [imageUrl, setImageUrl] = useState<string>(initialImage);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [assetQuery, setAssetQuery] = useState<string>('');
 
   useEffect(() => {
     setImageUrl(initialImage);
@@ -885,6 +950,16 @@ const ImageElementEditor: React.FC<ImageElementEditorProps> = ({
     setError(null);
     setUploading(true);
     try {
+      // File size limits by type
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      const isAudio = file.type.startsWith('audio/');
+      const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB
+      const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100MB
+      const MAX_AUDIO_BYTES = 20 * 1024 * 1024; // 20MB
+      if ((isImage && file.size > MAX_IMAGE_BYTES) || (isVideo && file.size > MAX_VIDEO_BYTES) || (isAudio && file.size > MAX_AUDIO_BYTES)) {
+        throw new Error('Le fichier sélectionné est trop volumineux.');
+      }
       const url = await uploadCustomizationAsset(file, { tags: [guessAssetType(file)] });
       const asset = createAssetFromFile(file, url);
       onAssetAdded(asset);
@@ -905,6 +980,13 @@ const ImageElementEditor: React.FC<ImageElementEditorProps> = ({
   );
 
   const previewUrl = imageUrl.trim();
+  const imageAssets = useMemo(
+    () =>
+      (draft.assets?.library ?? [])
+        .filter(asset => asset.type === 'image')
+        .filter(asset => asset.name.toLowerCase().includes(assetQuery.toLowerCase())),
+    [draft.assets?.library, assetQuery],
+  );
 
   return (
     <EditorPopover
@@ -951,6 +1033,35 @@ const ImageElementEditor: React.FC<ImageElementEditorProps> = ({
             Supprimer le média
           </button>
         </div>
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-slate-700">Bibliothèque d'assets</p>
+            <input
+              className="ui-input w-48"
+              placeholder="Rechercher..."
+              value={assetQuery}
+              onChange={e => setAssetQuery(e.target.value)}
+            />
+          </div>
+          {imageAssets.length > 0 ? (
+            <div className="grid grid-cols-3 gap-3">
+              {imageAssets.slice(0, 12).map(asset => (
+                <button
+                  key={asset.id}
+                  type="button"
+                  className="group overflow-hidden rounded-xl border border-slate-200 hover:ring-2 hover:ring-brand-primary"
+                  onClick={() => setImageUrl(asset.url)}
+                  title={asset.name}
+                >
+                  <img src={asset.url} alt={asset.name} className="h-24 w-full object-cover transition group-hover:scale-[1.02]" />
+                  <div className="truncate px-2 py-1 text-left text-xs text-slate-600">{asset.name}</div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">Aucune image dans la bibliothèque pour le moment.</p>
+          )}
+        </div>
         {error && (
           <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
             <AlertTriangle className="mt-0.5 h-4 w-4" aria-hidden="true" />
@@ -993,6 +1104,23 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
   const [imageUrl, setImageUrl] = useState<string>(background.image ?? '');
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [assetQuery, setAssetQuery] = useState<string>('');
+  const [colorError, setColorError] = useState<string | null>(null);
+
+  const cssSupports = (prop: string, value: string): boolean => {
+    if (typeof window === 'undefined' || !(window as any).CSS || typeof (window as any).CSS.supports !== 'function') {
+      return true;
+    }
+    try {
+      return (window as any).CSS.supports(prop, value);
+    } catch {
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    setColorError(color && !cssSupports('background-color', color) ? 'Couleur invalide' : null);
+  }, [color]);
 
   useEffect(() => {
     setBackgroundType(background.type);
@@ -1002,6 +1130,9 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (colorError) {
+      return;
+    }
     const trimmedColor = color.trim() || 'transparent';
     const trimmedImage = imageUrl.trim();
     const normalizedImage = normalizeCloudinaryImageUrl(trimmedImage) ?? (trimmedImage.length > 0 ? trimmedImage : null);
@@ -1025,6 +1156,11 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
     setError(null);
     setUploading(true);
     try {
+      // Enforce upload limits (image background)
+      const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB
+      if (file.size > MAX_IMAGE_BYTES) {
+        throw new Error("L'image sélectionnée dépasse 10 Mo.");
+      }
       const url = await uploadCustomizationAsset(file, { tags: [guessAssetType(file)] });
       const asset = createAssetFromFile(file, url);
       onAssetAdded(asset);
@@ -1046,6 +1182,13 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
   );
 
   const previewUrl = imageUrl.trim();
+  const imageAssets = useMemo(
+    () =>
+      (draft.assets?.library ?? [])
+        .filter(asset => asset.type === 'image')
+        .filter(asset => asset.name.toLowerCase().includes(assetQuery.toLowerCase())),
+    [draft.assets?.library, assetQuery],
+  );
 
   return (
     <EditorPopover
@@ -1104,6 +1247,7 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
               />
             ))}
           </div>
+          {colorError && <p className="mt-2 text-sm text-amber-600">{colorError}</p>}
         </div>
         {backgroundType === 'image' && (
           <div className="space-y-4">
@@ -1140,6 +1284,35 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
                 Retirer l'image
               </button>
             </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-700">Bibliothèque d'images</p>
+                <input
+                  className="ui-input w-48"
+                  placeholder="Rechercher..."
+                  value={assetQuery}
+                  onChange={e => setAssetQuery(e.target.value)}
+                />
+              </div>
+              {imageAssets.length > 0 ? (
+                <div className="grid grid-cols-3 gap-3">
+                  {imageAssets.slice(0, 12).map(asset => (
+                    <button
+                      key={asset.id}
+                      type="button"
+                      className="group overflow-hidden rounded-xl border border-slate-200 hover:ring-2 hover:ring-brand-primary"
+                      onClick={() => setImageUrl(asset.url)}
+                      title={asset.name}
+                    >
+                      <img src={asset.url} alt={asset.name} className="h-24 w-full object-cover transition group-hover:scale-[1.02]" />
+                      <div className="truncate px-2 py-1 text-left text-xs text-slate-600">{asset.name}</div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">Aucune image disponible.</p>
+              )}
+            </div>
             {error && (
               <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
                 <AlertTriangle className="mt-0.5 h-4 w-4" aria-hidden="true" />
@@ -1173,6 +1346,11 @@ const SiteCustomization: React.FC = () => {
   const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
   const [bestSellerLoading, setBestSellerLoading] = useState<boolean>(false);
   const [bestSellerError, setBestSellerError] = useState<string | null>(null);
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!content || !draft) return false;
+    return !areContentsEqual(draft, content);
+  }, [content, draft]);
 
   useEffect(() => {
     if (content) {
@@ -1211,6 +1389,18 @@ const SiteCustomization: React.FC = () => {
     };
   }, []);
 
+  // Warn user before leaving the page if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   useEffect(() => {
     if (!saveSuccess) {
       return;
@@ -1218,6 +1408,21 @@ const SiteCustomization: React.FC = () => {
     const timeout = setTimeout(() => setSaveSuccess(null), 4000);
     return () => clearTimeout(timeout);
   }, [saveSuccess]);
+
+  // Keyboard shortcut: Ctrl/Cmd+S to save
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isSave = (e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey);
+      if (isSave) {
+        e.preventDefault();
+        if (hasUnsavedChanges && !saving) {
+          void handleSave();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [hasUnsavedChanges, saving]);
 
   const applyDraftUpdate = useCallback(
     (updater: DraftUpdater) => {
@@ -1281,6 +1486,17 @@ const SiteCustomization: React.FC = () => {
     }
   };
 
+  const handleResetChanges = () => {
+    if (!content) return;
+    if (hasUnsavedChanges && typeof window !== 'undefined') {
+      const confirmReset = window.confirm('Annuler toutes les modifications non enregistrées ?');
+      if (!confirmReset) return;
+    }
+    setDraft(cloneSiteContent(content));
+    setSaveError(null);
+    setSaveSuccess(null);
+  };
+
   const fontOptions = useMemo(() => {
     const base = Array.from(FONT_FAMILY_SUGGESTIONS);
     if (!draft) {
@@ -1329,6 +1545,9 @@ const SiteCustomization: React.FC = () => {
           <p className="text-sm text-slate-500">
             Cliquez sur l'icône en forme de crayon pour personnaliser chaque bloc de contenu, image ou logo.
           </p>
+          <p className="mt-1 text-xs text-slate-500">
+            {hasUnsavedChanges ? 'Brouillon modifié — non enregistré' : 'Toutes les modifications sont enregistrées'}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {saveSuccess && (
@@ -1345,9 +1564,18 @@ const SiteCustomization: React.FC = () => {
           )}
           <button
             type="button"
+            onClick={handleResetChanges}
+            className="ui-btn-secondary"
+            disabled={!hasUnsavedChanges || saving}
+            title={hasUnsavedChanges ? 'Réinitialiser les modifications non enregistrées' : 'Aucune modification à réinitialiser'}
+          >
+            Réinitialiser
+          </button>
+          <button
+            type="button"
             onClick={handleSave}
             className="ui-btn-primary"
-            disabled={saving}
+            disabled={saving || !hasUnsavedChanges}
           >
             {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
           </button>
