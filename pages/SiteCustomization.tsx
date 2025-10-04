@@ -8,7 +8,27 @@ import React, {
   useId,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, CheckCircle2, Loader2, Upload, X, Search, Undo2, Redo2, Filter, Smartphone, Tablet, Monitor, Zap, Save, Copy, Palette } from 'lucide-react';
+import { 
+  AlertTriangle, 
+  CheckCircle2, 
+  Loader2, 
+  Upload, 
+  X, 
+  Search, 
+  Palette, 
+  History, 
+  Eye, 
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  Save,
+  Undo,
+  Redo,
+  Copy,
+  Download,
+  RefreshCw
+} from 'lucide-react';
 import SitePreviewCanvas, { resolveZoneFromElement } from '../components/SitePreviewCanvas';
 import useSiteContent from '../hooks/useSiteContent';
 import RichTextEditor from '../components/RichTextEditor';
@@ -141,101 +161,83 @@ const ELEMENT_LABELS: Partial<Record<EditableElementKey, string>> = {
 };
 
 const TABS = [
-  { id: 'preview', label: 'Aperçu' },
-  { id: 'custom', label: 'Personnalisation' },
+  { id: 'preview', label: 'Aperçu', icon: Eye },
+  { id: 'custom', label: 'Personnalisation', icon: Settings },
+  { id: 'themes', label: 'Thèmes', icon: Palette },
+  { id: 'history', label: 'Historique', icon: History },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
 
-const DEVICE_PRESETS = [
-  { id: 'mobile', label: 'Mobile', icon: Smartphone, width: 375, height: 667 },
-  { id: 'tablet', label: 'Tablette', icon: Tablet, width: 768, height: 1024 },
-  { id: 'desktop', label: 'Bureau', icon: Monitor, width: 1440, height: 900 },
-] as const;
-
-type DevicePreset = (typeof DEVICE_PRESETS)[number]['id'];
-
-interface HistoryEntry {
-  content: SiteContent;
-  timestamp: number;
-  description?: string;
-}
-
-interface SearchFilters {
-  query: string;
-  elementType: 'all' | 'text' | 'image' | 'background';
-  zone: 'all' | EditableZoneKey;
-}
-
-interface StylePreset {
-  id: string;
-  name: string;
-  description: string;
-  styles: {
-    fontFamily?: string;
-    fontSize?: string;
-    textColor?: string;
-    backgroundColor?: string;
-  };
-}
-
-const STYLE_PRESETS: StylePreset[] = [
+// Thèmes prédéfinis
+const PREDEFINED_THEMES = [
   {
     id: 'modern',
     name: 'Moderne',
-    description: 'Style moderne avec des couleurs neutres',
-    styles: {
-      fontFamily: 'Inter',
-      fontSize: '16px',
-      textColor: '#0f172a',
-      backgroundColor: 'transparent'
-    }
+    description: 'Design épuré et contemporain',
+    preview: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    colors: {
+      primary: '#667eea',
+      secondary: '#764ba2',
+      background: '#f8fafc',
+      text: '#1e293b',
+    },
   },
   {
     id: 'warm',
     name: 'Chaleureux',
-    description: 'Tons chauds et accueillants',
-    styles: {
-      fontFamily: 'Georgia, serif',
-      fontSize: '18px',
-      textColor: '#92400e',
-      backgroundColor: '#fef3c7'
-    }
+    description: 'Couleurs chaudes et accueillantes',
+    preview: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    colors: {
+      primary: '#f093fb',
+      secondary: '#f5576c',
+      background: '#fef7f0',
+      text: '#7c2d12',
+    },
   },
   {
-    id: 'bold',
-    name: 'Audacieux',
-    description: 'Contrastes élevés et couleurs vives',
-    styles: {
-      fontFamily: 'Montserrat',
-      fontSize: '20px',
-      textColor: '#ffffff',
-      backgroundColor: '#0f172a'
-    }
+    id: 'nature',
+    name: 'Nature',
+    description: 'Inspiré de la nature et du bio',
+    preview: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+    colors: {
+      primary: '#11998e',
+      secondary: '#38ef7d',
+      background: '#f0fdf4',
+      text: '#14532d',
+    },
   },
   {
     id: 'elegant',
     name: 'Élégant',
-    description: 'Typographie raffinée et couleurs subtiles',
-    styles: {
-      fontFamily: 'Playfair Display',
-      fontSize: 'clamp(1rem, 2vw, 1.2rem)',
-      textColor: '#374151',
-      backgroundColor: '#f9fafb'
-    }
+    description: 'Sophistication et luxe',
+    preview: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
+    colors: {
+      primary: '#2c3e50',
+      secondary: '#34495e',
+      background: '#f8fafc',
+      text: '#1e293b',
+    },
   },
-  {
-    id: 'brand',
-    name: 'Marque',
-    description: 'Couleurs de la marque OUIOUITACOS',
-    styles: {
-      fontFamily: 'Poppins',
-      fontSize: '16px',
-      textColor: '#2D2D2D',
-      backgroundColor: '#F9A826'
-    }
-  }
-];
+] as const;
+
+// Historique des modifications
+interface ModificationHistory {
+  id: string;
+  timestamp: Date;
+  description: string;
+  content: SiteContent;
+  type: 'manual' | 'theme' | 'reset';
+}
+
+// États de l'interface
+interface UIState {
+  searchQuery: string;
+  selectedSection: EditableZoneKey | null;
+  showAdvancedOptions: boolean;
+  autoSave: boolean;
+  previewMode: 'desktop' | 'tablet' | 'mobile';
+}
 
 type DraftUpdater = (current: SiteContent) => SiteContent;
 
@@ -452,6 +454,8 @@ const EditorPopover: React.FC<EditorPopoverProps> = ({
   const [isMounted, setIsMounted] = useState(false);
   const [isPositioned, setIsPositioned] = useState(false);
   const [arrowPosition, setArrowPosition] = useState<{ top: number; left: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     setIsMounted(true);
@@ -631,6 +635,45 @@ const EditorPopover: React.FC<EditorPopoverProps> = ({
     target.focus({ preventScroll: true });
   }, [isMounted]);
 
+  // Gestion du glisser-déposer
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget || (e.target as HTMLElement).closest('[data-draggable]')) {
+      setIsDragging(true);
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        setDragOffset({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        });
+      }
+    }
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isDragging && containerRef.current) {
+      const newPosition = {
+        top: e.clientY - dragOffset.y,
+        left: e.clientX - dragOffset.x,
+      };
+      setPosition(newPosition);
+    }
+  }, [isDragging, dragOffset]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   if (typeof document === 'undefined' || !isMounted) {
     return null;
   }
@@ -643,11 +686,29 @@ const EditorPopover: React.FC<EditorPopoverProps> = ({
         aria-modal="true"
         aria-labelledby={headingId}
         tabIndex={-1}
-        className="pointer-events-auto flex w-[min(90vw,32rem)] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200"
-        style={{ position: 'absolute', top: position.top, left: position.left, opacity: isPositioned ? 1 : 0 }}
+        className={`customization-popover pointer-events-auto flex w-[min(90vw,32rem)] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200 ${
+          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+        style={{ 
+          position: 'absolute', 
+          top: position.top, 
+          left: position.left, 
+          opacity: isPositioned ? 1 : 0,
+          transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+          transition: isDragging ? 'none' : 'all 0.2s ease',
+        }}
+        onMouseDown={handleMouseDown}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <h2 id={headingId} className="text-lg font-semibold text-slate-900">
+        <div 
+          className="flex items-center justify-between border-b border-slate-200 px-6 py-4 cursor-grab"
+          data-draggable
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-gray-300 rounded-full" />
+            <div className="w-2 h-2 bg-gray-300 rounded-full" />
+            <div className="w-2 h-2 bg-gray-300 rounded-full" />
+          </div>
+          <h2 id={headingId} className="text-lg font-semibold text-slate-900 flex-1 text-center">
             {title}
           </h2>
           <button
@@ -1487,6 +1548,232 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
   );
 };
 
+// Composant de barre d'outils améliorée
+interface ToolbarProps {
+  onSave: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  onReset: () => void;
+  onExport: () => void;
+  onImport: () => void;
+  saving: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  hasChanges: boolean;
+  previewMode: UIState['previewMode'];
+  onPreviewModeChange: (mode: UIState['previewMode']) => void;
+  autoSave: boolean;
+  onAutoSaveToggle: () => void;
+}
+
+const Toolbar = React.memo<ToolbarProps>(({
+  onSave,
+  onUndo,
+  onRedo,
+  onReset,
+  onExport,
+  onImport,
+  saving,
+  canUndo,
+  canRedo,
+  hasChanges,
+  previewMode,
+  onPreviewModeChange,
+  autoSave,
+  onAutoSaveToggle,
+}) => {
+  return (
+    <div className="customization-toolbar flex flex-wrap items-center justify-between gap-4 p-4 bg-white border-b border-gray-200 rounded-t-xl">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onUndo}
+            disabled={!canUndo}
+            className="ui-btn-secondary"
+            title="Annuler"
+          >
+            <Undo className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onRedo}
+            disabled={!canRedo}
+            className="ui-btn-secondary"
+            title="Refaire"
+          >
+            <Redo className="h-4 w-4" />
+          </button>
+        </div>
+        
+        <div className="h-6 w-px bg-gray-300" />
+        
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving || !hasChanges}
+            className="ui-btn-primary"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Enregistrement...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Enregistrer
+              </>
+            )}
+          </button>
+          
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={!hasChanges}
+            className="ui-btn-secondary"
+            title="Réinitialiser"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={autoSave}
+              onChange={onAutoSaveToggle}
+              className="rounded border-gray-300"
+            />
+            Sauvegarde auto
+          </label>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Aperçu:</span>
+          <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+            {(['desktop', 'tablet', 'mobile'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => onPreviewModeChange(mode)}
+                className={`px-3 py-1 text-xs font-medium transition ${
+                  previewMode === mode
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {mode === 'desktop' ? '🖥️' : mode === 'tablet' ? '📱' : '📱'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onExport}
+            className="ui-btn-secondary"
+            title="Exporter"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onImport}
+            className="ui-btn-secondary"
+            title="Importer"
+          >
+            <Upload className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// Composant de recherche et filtres
+interface SearchAndFiltersProps {
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  selectedSection: EditableZoneKey | null;
+  onSectionChange: (section: EditableZoneKey | null) => void;
+  showAdvancedOptions: boolean;
+  onAdvancedOptionsToggle: () => void;
+}
+
+const SearchAndFilters = React.memo<SearchAndFiltersProps>(({
+  searchQuery,
+  onSearchChange,
+  selectedSection,
+  onSectionChange,
+  showAdvancedOptions,
+  onAdvancedOptionsToggle,
+}) => {
+  const sections = [
+    { id: null, label: 'Toutes les sections', icon: Settings },
+    { id: 'navigation', label: 'Navigation', icon: Settings },
+    { id: 'hero', label: 'Hero', icon: Eye },
+    { id: 'about', label: 'À propos', icon: Settings },
+    { id: 'menu', label: 'Menu', icon: Settings },
+    { id: 'instagramReviews', label: 'Avis Instagram', icon: Settings },
+    { id: 'findUs', label: 'Nous trouver', icon: Settings },
+    { id: 'footer', label: 'Pied de page', icon: Settings },
+  ] as const;
+
+  return (
+    <div className="p-4 bg-gray-50 border-b border-gray-200">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Rechercher un élément..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="ui-input pl-10"
+            />
+          </div>
+          
+          <button
+            type="button"
+            onClick={onAdvancedOptionsToggle}
+            className={`ui-btn-secondary ${showAdvancedOptions ? 'bg-blue-50 text-blue-600' : ''}`}
+          >
+            <Filter className="h-4 w-4" />
+            Filtres
+            {showAdvancedOptions ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+        </div>
+
+        {showAdvancedOptions && (
+          <div className="flex flex-wrap gap-2">
+            {sections.map((section) => (
+              <button
+                key={section.id || 'all'}
+                type="button"
+                onClick={() => onSectionChange(section.id)}
+                className={`px-3 py-1 text-sm rounded-full border transition ${
+                  selectedSection === section.id
+                    ? 'bg-blue-500 text-white border-blue-500'
+                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {section.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
 const SiteCustomization: React.FC = () => {
   const { content, loading, error, updateContent } = useSiteContent();
   const [draft, setDraft] = useState<SiteContent | null>(() =>
@@ -1503,72 +1790,217 @@ const SiteCustomization: React.FC = () => {
   const [bestSellerLoading, setBestSellerLoading] = useState<boolean>(false);
   const [bestSellerError, setBestSellerError] = useState<string | null>(null);
   
-  // New state for enhanced features
-  const [searchFilters, setSearchFilters] = useState<SearchFilters>({
-    query: '',
-    elementType: 'all',
-    zone: 'all',
+  // Nouveaux états pour les améliorations
+  const [uiState, setUIState] = useState<UIState>({
+    searchQuery: '',
+    selectedSection: null,
+    showAdvancedOptions: false,
+    autoSave: true,
+    previewMode: 'desktop',
   });
-  const [devicePreset, setDevicePreset] = useState<DevicePreset>('desktop');
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
-  const [selectedElements, setSelectedElements] = useState<Set<EditableElementKey>>(new Set());
-  const [isBulkEditMode, setIsBulkEditMode] = useState(false);
+  const [modificationHistory, setModificationHistory] = useState<ModificationHistory[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
   useEffect(() => {
     if (content) {
-      const newDraft = cloneSiteContent(content);
-      setDraft(newDraft);
-      // Initialize history with the first entry
-      if (history.length === 0) {
-        setHistory([{
-          content: newDraft,
-          timestamp: Date.now(),
-          description: 'Initial content'
-        }]);
-        setHistoryIndex(0);
+      setDraft(cloneSiteContent(content));
+      // Ajouter l'état initial à l'historique
+      if (modificationHistory.length === 0) {
+        addToHistory('État initial', content, 'reset');
       }
     }
   }, [content]);
 
-  // Add keyboard shortcuts
+  // Fonction pour ajouter une modification à l'historique
+  const addToHistory = useCallback((description: string, content: SiteContent, type: ModificationHistory['type']) => {
+    const newEntry: ModificationHistory = {
+      id: `mod-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      timestamp: new Date(),
+      description,
+      content: cloneSiteContent(content),
+      type,
+    };
+
+    setModificationHistory(prev => {
+      const newHistory = [...prev.slice(0, historyIndex + 1), newEntry];
+      setHistoryIndex(newHistory.length - 1);
+      return newHistory.slice(-50); // Garder seulement les 50 dernières modifications
+    });
+  }, [historyIndex]);
+
+  // Fonction pour appliquer un thème prédéfini
+  const applyTheme = useCallback((theme: typeof PREDEFINED_THEMES[number]) => {
+    if (!draft) return;
+
+    const themedContent = cloneSiteContent(draft);
+    
+    // Appliquer les couleurs du thème aux sections
+    themedContent.navigation.style.textColor = theme.colors.text;
+    themedContent.navigation.style.background.color = theme.colors.primary;
+    
+    themedContent.hero.style.textColor = '#ffffff';
+    themedContent.hero.style.background.color = theme.colors.primary;
+    
+    themedContent.about.style.textColor = theme.colors.text;
+    themedContent.about.style.background.color = theme.colors.background;
+    
+    themedContent.menu.style.textColor = theme.colors.text;
+    themedContent.menu.style.background.color = theme.colors.background;
+    
+    themedContent.findUs.style.textColor = theme.colors.text;
+    themedContent.findUs.style.background.color = theme.colors.background;
+    
+    themedContent.footer.style.textColor = '#ffffff';
+    themedContent.footer.style.background.color = theme.colors.secondary;
+
+    setDraft(themedContent);
+    setHasUnsavedChanges(true);
+    addToHistory(`Thème "${theme.name}" appliqué`, themedContent, 'theme');
+  }, [draft, addToHistory]);
+
+  // Fonction pour annuler/refaire
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setDraft(cloneSiteContent(modificationHistory[newIndex].content));
+      setHasUnsavedChanges(true);
+    }
+  }, [historyIndex, modificationHistory]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < modificationHistory.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setDraft(cloneSiteContent(modificationHistory[newIndex].content));
+      setHasUnsavedChanges(true);
+    }
+  }, [historyIndex, modificationHistory]);
+
+  // Fonction pour réinitialiser
+  const handleReset = useCallback(() => {
+    if (content) {
+      setDraft(cloneSiteContent(content));
+      setHasUnsavedChanges(false);
+      addToHistory('Réinitialisation', content, 'reset');
+    }
+  }, [content, addToHistory]);
+
+  // Fonction pour exporter/importer
+  const handleExport = useCallback(() => {
+    if (!draft) return;
+    
+    const dataStr = JSON.stringify(draft, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `site-customization-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  }, [draft]);
+
+  const handleImport = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const importedContent = JSON.parse(e.target?.result as string) as SiteContent;
+            setDraft(importedContent);
+            setHasUnsavedChanges(true);
+            addToHistory('Configuration importée', importedContent, 'manual');
+          } catch (error) {
+            console.error('Erreur lors de l\'import:', error);
+            setSaveError('Erreur lors de l\'import du fichier');
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  }, [addToHistory]);
+
+  // Sauvegarde automatique
+  useEffect(() => {
+    if (uiState.autoSave && hasUnsavedChanges && draft) {
+      const timeoutId = setTimeout(() => {
+        handleSave();
+      }, 2000); // Sauvegarde automatique après 2 secondes d'inactivité
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [draft, hasUnsavedChanges, uiState.autoSave]);
+
+  // Raccourcis clavier pour l'accessibilité
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Ctrl/Cmd + S to save
+      // Ctrl/Cmd + S pour sauvegarder
       if ((event.ctrlKey || event.metaKey) && event.key === 's') {
         event.preventDefault();
-        handleSave();
+        if (hasUnsavedChanges) {
+          handleSave();
+        }
+        return;
       }
-      // Ctrl/Cmd + Z to undo
+
+      // Ctrl/Cmd + Z pour annuler
       if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
         event.preventDefault();
         handleUndo();
+        return;
       }
-      // Ctrl/Cmd + Shift + Z to redo
-      if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
+
+      // Ctrl/Cmd + Shift + Z pour refaire
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && event.shiftKey) {
         event.preventDefault();
         handleRedo();
+        return;
       }
-      // Escape to close editors
-      if (event.key === 'Escape') {
-        if (activeElement) {
-          closeEditor();
-        }
-      }
-      // Ctrl/Cmd + F to focus search
-      if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+
+      // Ctrl/Cmd + E pour exporter
+      if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
         event.preventDefault();
-        const searchInput = document.querySelector('#customization-search') as HTMLInputElement;
-        if (searchInput) {
-          searchInput.focus();
+        handleExport();
+        return;
+      }
+
+      // Ctrl/Cmd + I pour importer
+      if ((event.ctrlKey || event.metaKey) && event.key === 'i') {
+        event.preventDefault();
+        handleImport();
+        return;
+      }
+
+      // Échap pour fermer les popovers
+      if (event.key === 'Escape' && activeElement) {
+        event.preventDefault();
+        closeEditor();
+        return;
+      }
+
+      // Navigation par onglets avec Ctrl/Cmd + 1-4
+      if ((event.ctrlKey || event.metaKey) && event.key >= '1' && event.key <= '4') {
+        event.preventDefault();
+        const tabIndex = parseInt(event.key) - 1;
+        const tabId = TABS[tabIndex]?.id;
+        if (tabId) {
+          setActiveTab(tabId);
         }
+        return;
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [activeElement, historyIndex, history]);
+  }, [hasUnsavedChanges, activeElement, handleSave, handleUndo, handleRedo, handleExport, handleImport, closeEditor]);
+
 
   useEffect(() => {
     let mounted = true;
@@ -1659,8 +2091,7 @@ const SiteCustomization: React.FC = () => {
         }
         const clone = cloneSiteContent(prev);
         const updated = updater(clone);
-        // Add to history
-        addHistoryEntry(updated, description);
+        setHasUnsavedChanges(true);
         return updated;
       });
     },
@@ -1709,17 +2140,9 @@ const SiteCustomization: React.FC = () => {
     try {
       const updated = await updateContent(draft);
       setDraft(updated);
-      
-      // Add successful save to history
-      addHistoryEntry(updated, 'Sauvegarde réussie');
-      
-      setSaveSuccess('Modifications enregistrées avec succès!');
-      
-      // Auto-hide success message after 3 seconds
-      setTimeout(() => {
-        setSaveSuccess(null);
-      }, 3000);
-      
+      setHasUnsavedChanges(false);
+      setSaveSuccess('Modifications enregistrées avec succès.');
+      addToHistory('Sauvegarde manuelle', updated, 'manual');
     } catch (err) {
       console.error('Save error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue lors de la sauvegarde.';
@@ -1745,58 +2168,210 @@ const SiteCustomization: React.FC = () => {
     return Array.from(new Set([...base, ...custom]));
   }, [draft]);
 
-  // Filter editable elements based on search criteria
+  // Optimisation des calculs pour les éléments filtrés
   const filteredElements = useMemo(() => {
-    const allElements = Object.keys(ELEMENT_LABELS) as EditableElementKey[];
+    if (!uiState.searchQuery && !uiState.selectedSection) {
+      return null; // Pas de filtre appliqué
+    }
     
-    return allElements.filter(element => {
-      const label = ELEMENT_LABELS[element] || element;
+    const searchLower = uiState.searchQuery.toLowerCase();
+    return Object.entries(ELEMENT_LABELS).filter(([key, label]) => {
+      const matchesSearch = !uiState.searchQuery || 
+        key.toLowerCase().includes(searchLower) || 
+        label?.toLowerCase().includes(searchLower);
       
-      // Text search
-      if (searchFilters.query) {
-        const query = searchFilters.query.toLowerCase();
-        if (!label.toLowerCase().includes(query) && !element.toLowerCase().includes(query)) {
-          return false;
-        }
-      }
+      const matchesSection = !uiState.selectedSection || 
+        key.startsWith(uiState.selectedSection + '.');
       
-      // Element type filter
-      if (searchFilters.elementType !== 'all') {
-        const isText = TEXT_ELEMENT_KEYS.has(element);
-        const isImage = IMAGE_ELEMENT_KEYS.has(element);
-        const isBackground = BACKGROUND_ELEMENT_KEYS.has(element);
-        
-        switch (searchFilters.elementType) {
-          case 'text': return isText;
-          case 'image': return isImage;
-          case 'background': return isBackground;
-          default: return true;
-        }
-      }
-      
-      // Zone filter
-      if (searchFilters.zone !== 'all') {
-        const elementZone = resolveZoneFromElement(element);
-        return elementZone === searchFilters.zone;
-      }
-      
-      return true;
+      return matchesSearch && matchesSection;
     });
-  }, [searchFilters]);
+  }, [uiState.searchQuery, uiState.selectedSection]);
 
-  // Keyboard shortcut handlers
-  const handleBulkApplyStyle = useCallback((style: Partial<ElementStyle>) => {
-    if (selectedElements.size === 0) return;
-    
-    applyDraftUpdate(current => {
-      selectedElements.forEach(element => {
-        if (TEXT_ELEMENT_KEYS.has(element)) {
-          applyElementStyleOverrides(current, element, style);
-        }
-      });
-      return current;
-    }, `Bulk style applied to ${selectedElements.size} elements`);
-  }, [selectedElements, applyDraftUpdate]);
+  // Optimisation des callbacks avec useCallback
+  const handleUIStateUpdate = useCallback((updates: Partial<UIState>) => {
+    setUIState(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleSearchChange = useCallback((query: string) => {
+    handleUIStateUpdate({ searchQuery: query });
+  }, [handleUIStateUpdate]);
+
+  const handleSectionChange = useCallback((section: EditableZoneKey | null) => {
+    handleUIStateUpdate({ selectedSection: section });
+  }, [handleUIStateUpdate]);
+
+  const handleAdvancedOptionsToggle = useCallback(() => {
+    handleUIStateUpdate({ showAdvancedOptions: !uiState.showAdvancedOptions });
+  }, [handleUIStateUpdate, uiState.showAdvancedOptions]);
+
+  const handlePreviewModeChange = useCallback((mode: UIState['previewMode']) => {
+    handleUIStateUpdate({ previewMode: mode });
+  }, [handleUIStateUpdate]);
+
+  const handleAutoSaveToggle = useCallback(() => {
+    handleUIStateUpdate({ autoSave: !uiState.autoSave });
+  }, [handleUIStateUpdate, uiState.autoSave]);
+
+  // Composant d'aide pour les raccourcis clavier
+  const KeyboardShortcutsHelp = React.memo(() => {
+    const [isVisible, setIsVisible] = useState(false);
+
+    const shortcuts = [
+      { key: 'Ctrl/Cmd + S', description: 'Sauvegarder' },
+      { key: 'Ctrl/Cmd + Z', description: 'Annuler' },
+      { key: 'Ctrl/Cmd + Shift + Z', description: 'Refaire' },
+      { key: 'Ctrl/Cmd + E', description: 'Exporter' },
+      { key: 'Ctrl/Cmd + I', description: 'Importer' },
+      { key: 'Échap', description: 'Fermer le popover' },
+      { key: 'Ctrl/Cmd + 1-4', description: 'Navigation par onglets' },
+    ];
+
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setIsVisible(true)}
+          className="fixed bottom-4 right-4 z-50 w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+          title="Aide raccourcis clavier"
+          aria-label="Afficher l'aide des raccourcis clavier"
+        >
+          ?
+        </button>
+
+        {isVisible && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Raccourcis clavier</h3>
+                <button
+                  type="button"
+                  onClick={() => setIsVisible(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                  aria-label="Fermer l'aide"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {shortcuts.map((shortcut, index) => (
+                  <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                    <kbd className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-sm font-mono">
+                      {shortcut.key}
+                    </kbd>
+                    <span className="text-sm text-gray-600">{shortcut.description}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  });
+
+  // Composant pour l'onglet Thèmes optimisé
+  const ThemesTab = React.memo(() => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Thèmes prédéfinis</h2>
+        <p className="text-gray-600">Choisissez un thème pour appliquer automatiquement une palette de couleurs cohérente</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {PREDEFINED_THEMES.map((theme) => (
+          <div
+            key={theme.id}
+            className="customization-theme-card bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => applyTheme(theme)}
+          >
+            <div 
+              className="h-32 w-full"
+              style={{ background: theme.preview }}
+            />
+            <div className="p-4">
+              <h3 className="font-semibold text-gray-900 mb-1">{theme.name}</h3>
+              <p className="text-sm text-gray-600 mb-3">{theme.description}</p>
+              <div className="flex gap-2">
+                <div 
+                  className="w-6 h-6 rounded-full border border-gray-300"
+                  style={{ backgroundColor: theme.colors.primary }}
+                  title="Couleur principale"
+                />
+                <div 
+                  className="w-6 h-6 rounded-full border border-gray-300"
+                  style={{ backgroundColor: theme.colors.secondary }}
+                  title="Couleur secondaire"
+                />
+                <div 
+                  className="w-6 h-6 rounded-full border border-gray-300"
+                  style={{ backgroundColor: theme.colors.background }}
+                  title="Couleur de fond"
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ));
+
+  // Composant pour l'onglet Historique optimisé
+  const HistoryTab = React.memo(() => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Historique des modifications</h2>
+        <p className="text-gray-600">Retracez toutes vos modifications et revenez à un état précédent</p>
+      </div>
+      
+      <div className="bg-white rounded-xl border border-gray-200 max-h-96 overflow-y-auto">
+        {modificationHistory.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            <History className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <p>Aucune modification dans l'historique</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {modificationHistory.map((entry, index) => (
+              <div
+                key={entry.id}
+                className={`customization-history-item p-4 hover:bg-gray-50 cursor-pointer transition ${
+                  index === historyIndex ? 'active bg-blue-50 border-l-4 border-blue-500' : ''
+                }`}
+                onClick={() => {
+                  setHistoryIndex(index);
+                  setDraft(cloneSiteContent(entry.content));
+                  setHasUnsavedChanges(true);
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900">{entry.description}</h4>
+                    <p className="text-sm text-gray-500">
+                      {entry.timestamp.toLocaleString('fr-FR')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      entry.type === 'theme' 
+                        ? 'bg-purple-100 text-purple-800'
+                        : entry.type === 'reset'
+                        ? 'bg-gray-100 text-gray-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {entry.type === 'theme' ? 'Thème' : entry.type === 'reset' ? 'Reset' : 'Manuel'}
+                    </span>
+                    {index === historyIndex && (
+                      <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  ));
 
   const activeLabel = activeElement ? ELEMENT_LABELS[activeElement] ?? activeElement : null;
   const elementType = activeElement
@@ -1828,15 +2403,28 @@ const SiteCustomization: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 px-4 sm:px-6 lg:px-0">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Site public</h1>
-          <p className="text-sm text-slate-500">
-            Utilisez Ctrl+S pour sauvegarder, Ctrl+Z pour annuler, Ctrl+F pour rechercher.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
+    <div className="min-h-screen bg-gray-50">
+      {/* Barre d'outils principale */}
+      <Toolbar
+        onSave={handleSave}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onReset={handleReset}
+        onExport={handleExport}
+        onImport={handleImport}
+        saving={saving}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < modificationHistory.length - 1}
+        hasChanges={hasUnsavedChanges}
+        previewMode={uiState.previewMode}
+        onPreviewModeChange={handlePreviewModeChange}
+        autoSave={uiState.autoSave}
+        onAutoSaveToggle={handleAutoSaveToggle}
+      />
+
+      {/* Messages de statut */}
+      {(saveSuccess || saveError) && (
+        <div className="px-4 py-2">
           {saveSuccess && (
             <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
               <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
@@ -1849,399 +2437,98 @@ const SiteCustomization: React.FC = () => {
               {saveError}
             </div>
           )}
-          
-          {/* History controls */}
-          <div className="flex items-center gap-1 rounded-lg border border-slate-200 p-1">
-            <button
-              type="button"
-              onClick={handleUndo}
-              disabled={historyIndex <= 0}
-              className="flex h-8 w-8 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Annuler (Ctrl+Z)"
-            >
-              <Undo2 className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={handleRedo}
-              disabled={historyIndex >= history.length - 1}
-              className="flex h-8 w-8 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Refaire (Ctrl+Y)"
-            >
-              <Redo2 className="h-4 w-4" />
-            </button>
-          </div>
-          
-          <button
-            type="button"
-            onClick={handleSave}
-            className="ui-btn-primary flex items-center gap-2"
-            disabled={saving}
-          >
-            <Save className="h-4 w-4" />
-            {saving ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
-        </div>
-      </header>
-
-      {error && (
-        <div className="flex items-start gap-3 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-          <AlertTriangle className="h-5 w-5" aria-hidden="true" />
-          <div>
-            <p>{error}</p>
-            <p className="mt-1">Les valeurs affichées correspondent à la configuration par défaut.</p>
-          </div>
         </div>
       )}
 
-      <div className="space-y-4">
-        <nav className="flex w-full items-center gap-2 overflow-x-auto rounded-full bg-slate-100 p-1">
-          {TABS.map(tab => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
-                activeTab === tab.id
-                  ? 'bg-white text-slate-900 shadow'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-        
-        {/* Enhanced controls for customization tab */}
-        {activeTab === 'custom' && (
-          <div className="space-y-4">
-            {/* Search and filter controls */}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative flex-1 min-w-64">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                <input
-                  id="customization-search"
-                  type="text"
-                  value={searchFilters.query}
-                  onChange={e => setSearchFilters(prev => ({ ...prev, query: e.target.value }))}
-                  placeholder="Rechercher un élément à personnaliser..."
-                  className="w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                />
-              </div>
-              
-              <button
-                type="button"
-                onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
-                  isFilterPanelOpen || searchFilters.elementType !== 'all' || searchFilters.zone !== 'all'
-                    ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
-                    : 'border-slate-200 bg-white text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                <Filter className="h-4 w-4" />
-                Filtres
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setIsBulkEditMode(!isBulkEditMode)}
-                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
-                  isBulkEditMode
-                    ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
-                    : 'border-slate-200 bg-white text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                <Zap className="h-4 w-4" />
-                Édition groupée
-              </button>
+      {/* Recherche et filtres */}
+      {activeTab === 'custom' && (
+        <SearchAndFilters
+          searchQuery={uiState.searchQuery}
+          onSearchChange={handleSearchChange}
+          selectedSection={uiState.selectedSection}
+          onSectionChange={handleSectionChange}
+          showAdvancedOptions={uiState.showAdvancedOptions}
+          onAdvancedOptionsToggle={handleAdvancedOptionsToggle}
+        />
+      )}
+
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        <header className="mb-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Personnalisation du site</h1>
+              <p className="text-gray-600 mt-2">
+                {activeTab === 'preview' && 'Aperçu en temps réel de votre site personnalisé'}
+                {activeTab === 'custom' && 'Cliquez sur l\'icône crayon pour personnaliser chaque élément'}
+                {activeTab === 'themes' && 'Appliquez des thèmes prédéfinis pour un design cohérent'}
+                {activeTab === 'history' && 'Gérez l\'historique de vos modifications'}
+              </p>
             </div>
-            
-            {/* Device preview controls */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-700">Aperçu :</span>
-              {DEVICE_PRESETS.map(preset => {
-                const Icon = preset.icon;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => setDevicePreset(preset.id)}
-                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
-                      devicePreset === preset.id
-                        ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
-                        : 'border-slate-200 bg-white text-slate-500 hover:text-slate-700'
-                    }`}
-                    title={`${preset.label} (${preset.width}×${preset.height})`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {preset.label}
-                  </button>
-                );
-              })}
+          </div>
+        </header>
+
+        {error && (
+          <div className="flex items-start gap-3 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 mb-6">
+            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+            <div>
+              <p>{error}</p>
+              <p className="mt-1">Les valeurs affichées correspondent à la configuration par défaut.</p>
             </div>
-            
-            {/* Filter panel */}
-            {isFilterPanelOpen && (
-              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Type d'élément
-                    </label>
-                    <select
-                      value={searchFilters.elementType}
-                      onChange={e => setSearchFilters(prev => ({ ...prev, elementType: e.target.value as any }))}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                    >
-                      <option value="all">Tous les types</option>
-                      <option value="text">Textes</option>
-                      <option value="image">Images</option>
-                      <option value="background">Arrière-plans</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Section
-                    </label>
-                    <select
-                      value={searchFilters.zone}
-                      onChange={e => setSearchFilters(prev => ({ ...prev, zone: e.target.value as any }))}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                    >
-                      <option value="all">Toutes les sections</option>
-                      <option value="navigation">Navigation</option>
-                      <option value="hero">Hero</option>
-                      <option value="about">À propos</option>
-                      <option value="menu">Menu</option>
-                      <option value="findUs">Contact</option>
-                      <option value="footer">Pied de page</option>
-                    </select>
-                  </div>
-                </div>
-                
-                {filteredElements.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-slate-200">
-                    <p className="text-sm text-slate-600 mb-3">
-                      {filteredElements.length} élément(s) trouvé(s)
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {filteredElements.slice(0, 10).map(element => {
-                        const label = ELEMENT_LABELS[element] || element;
-                        const isSelected = selectedElements.has(element);
-                        return (
-                          <button
-                            key={element}
-                            type="button"
-                            onClick={() => {
-                              if (isBulkEditMode) {
-                                const newSelected = new Set(selectedElements);
-                                if (isSelected) {
-                                  newSelected.delete(element);
-                                } else {
-                                  newSelected.add(element);
-                                }
-                                setSelectedElements(newSelected);
-                              } else {
-                                // Navigate to element
-                                const zone = resolveZoneFromElement(element);
-                                setActiveZone(zone);
-                                // Scroll to element if needed
-                                setTimeout(() => {
-                                  const elementNode = document.querySelector(`[data-element-id="${element}"]`);
-                                  if (elementNode) {
-                                    elementNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                  }
-                                }, 100);
-                              }
-                            }}
-                            className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                              isSelected
-                                ? 'bg-brand-primary text-white'
-                                : isBulkEditMode
-                                  ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                                  : 'bg-slate-100 text-slate-700 hover:bg-brand-primary/10 hover:text-brand-primary'
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
-                      {filteredElements.length > 10 && (
-                        <span className="px-3 py-1 text-xs text-slate-500">
-                          +{filteredElements.length - 10} autres...
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {/* Bulk edit controls */}
-            {isBulkEditMode && selectedElements.size > 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium text-amber-800">
-                    {selectedElements.size} élément(s) sélectionné(s) pour l'édition groupée
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedElements(new Set())}
-                    className="text-sm text-amber-600 hover:text-amber-700"
-                  >
-                    Tout désélectionner
-                  </button>
-                </div>
-                
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs font-medium text-amber-700 mb-2">Actions rapides</p>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleBulkApplyStyle({ fontFamily: 'Inter' })}
-                        className="px-3 py-1 rounded bg-white text-sm text-amber-800 hover:bg-amber-100 transition"
-                      >
-                        Police Inter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleBulkApplyStyle({ fontSize: '16px' })}
-                        className="px-3 py-1 rounded bg-white text-sm text-amber-800 hover:bg-amber-100 transition"
-                      >
-                        Taille 16px
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleBulkApplyStyle({ textColor: '#0f172a' })}
-                        className="px-3 py-1 rounded bg-white text-sm text-amber-800 hover:bg-amber-100 transition"
-                      >
-                        Couleur sombre
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <p className="text-xs font-medium text-amber-700 mb-2">Appliquer un preset à tous</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {STYLE_PRESETS.slice(0, 3).map(preset => (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => handleBulkApplyStyle(preset.styles)}
-                          className="text-left p-2 rounded bg-white text-xs text-amber-800 hover:bg-amber-100 transition border border-amber-200"
-                        >
-                          <div className="font-medium">{preset.name}</div>
-                          <div className="text-amber-600">{preset.description}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}           
-            
-            {/* Accessibility and help tips */}
-            {!isBulkEditMode && (
-              <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0">
-                    <div className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center">
-                      <span className="text-xs font-bold text-blue-600">?</span>
-                    </div>
-                  </div>
-                  <div className="text-sm text-blue-800">
-                    <p className="font-medium mb-2">Raccourcis clavier utiles :</p>
-                    <ul className="space-y-1 text-xs">
-                      <li><kbd className="px-2 py-1 bg-blue-200 rounded">Ctrl+S</kbd> Sauvegarder</li>
-                      <li><kbd className="px-2 py-1 bg-blue-200 rounded">Ctrl+Z</kbd> Annuler</li>
-                      <li><kbd className="px-2 py-1 bg-blue-200 rounded">Ctrl+F</kbd> Rechercher</li>
-                      <li><kbd className="px-2 py-1 bg-blue-200 rounded">Échap</kbd> Fermer l'éditeur</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
-      </div>
 
-      <div>
-        {activeTab === 'preview' ? (
-          <div className="mx-auto w-full max-w-6xl">
-            <div className="rounded-[2.5rem] border border-slate-200 bg-slate-50 p-6">
-              <div 
-                className="mx-auto transition-all duration-300 ease-in-out"
-                style={{
-                  width: devicePreset === 'desktop' ? '100%' : `${DEVICE_PRESETS.find(p => p.id === devicePreset)?.width}px`,
-                  maxWidth: '100%',
-                  minHeight: devicePreset !== 'desktop' ? `${DEVICE_PRESETS.find(p => p.id === devicePreset)?.height}px` : 'auto',
-                  border: devicePreset !== 'desktop' ? '1px solid #e2e8f0' : 'none',
-                  borderRadius: devicePreset !== 'desktop' ? '12px' : '0',
-                  overflow: 'hidden',
-                  boxShadow: devicePreset !== 'desktop' ? '0 10px 25px rgba(0,0,0,0.1)' : 'none'
-                }}
+        {/* Navigation par onglets améliorée */}
+        <nav className="flex w-full items-center gap-2 overflow-x-auto rounded-xl bg-white border border-gray-200 p-1 mb-8">
+          {TABS.map(tab => {
+            const IconComponent = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`customization-tab customization-focus-visible flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition ${
+                  activeTab === tab.id
+                    ? 'bg-blue-500 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
               >
-                <SitePreviewCanvas
-                  content={draft}
-                  bestSellerProducts={bestSellerProducts}
-                  onEdit={() => undefined}
-                  activeZone={null}
-                  showEditButtons={false}
-                />
+                <IconComponent className="h-4 w-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Contenu principal selon l'onglet actif */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {activeTab === 'preview' && (
+            <div className="p-6">
+              <div className="mx-auto w-full max-w-6xl">
+                <div className={`rounded-[2.5rem] border border-slate-200 bg-slate-50 p-6 transition-all ${
+                  uiState.previewMode === 'mobile' ? 'max-w-sm mx-auto' :
+                  uiState.previewMode === 'tablet' ? 'max-w-2xl mx-auto' : ''
+                }`}>
+                  <SitePreviewCanvas
+                    content={draft}
+                    bestSellerProducts={bestSellerProducts}
+                    onEdit={() => undefined}
+                    activeZone={null}
+                    showEditButtons={false}
+                  />
+                </div>
               </div>
-              
-              {devicePreset !== 'desktop' && (
-                <div className="mt-4 text-center text-sm text-slate-500">
-                  Aperçu {DEVICE_PRESETS.find(p => p.id === devicePreset)?.label.toLowerCase()} - 
-                  {DEVICE_PRESETS.find(p => p.id === devicePreset)?.width}×{DEVICE_PRESETS.find(p => p.id === devicePreset)?.height}px
+            </div>
+          )}
+
+          {activeTab === 'custom' && (
+            <div className="space-y-4">
+              {bestSellerError && (
+                <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 m-6">
+                  <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+                  <p>{bestSellerError}</p>
                 </div>
               )}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {bestSellerError && (
-              <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-                <AlertTriangle className="h-5 w-5" aria-hidden="true" />
-                <p>{bestSellerError}</p>
-              </div>
-            )}
-            
-            {/* Search results info */}
-            {(searchFilters.query || searchFilters.elementType !== 'all' || searchFilters.zone !== 'all') && (
-              <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm text-blue-700">
-                  <Search className="h-4 w-4" />
-                  <span>
-                    {filteredElements.length} élément(s) correspondent à vos critères
-                    {searchFilters.query && ` pour "${searchFilters.query}"`}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSearchFilters({ query: '', elementType: 'all', zone: 'all' })}
-                  className="text-sm text-blue-600 hover:text-blue-700"
-                >
-                  Effacer les filtres
-                </button>
-              </div>
-            )}
-            
-            <div className="mx-auto w-full max-w-6xl">
-              <div 
-                className="mx-auto transition-all duration-300 ease-in-out"
-                style={{
-                  width: devicePreset === 'desktop' ? '100%' : `${DEVICE_PRESETS.find(p => p.id === devicePreset)?.width}px`,
-                  maxWidth: '100%',
-                  minHeight: devicePreset !== 'desktop' ? `${DEVICE_PRESETS.find(p => p.id === devicePreset)?.height}px` : 'auto',
-                  border: devicePreset !== 'desktop' ? '1px solid #e2e8f0' : 'none',
-                  borderRadius: devicePreset !== 'desktop' ? '12px' : '0',
-                  overflow: 'hidden',
-                  boxShadow: devicePreset !== 'desktop' ? '0 10px 25px rgba(0,0,0,0.1)' : 'none'
-                }}
-              >
+              <div className="mx-auto w-full max-w-6xl p-6">
                 <SitePreviewCanvas
                   content={draft}
                   bestSellerProducts={bestSellerProducts}
@@ -2249,23 +2536,27 @@ const SiteCustomization: React.FC = () => {
                   activeZone={activeZone}
                 />
               </div>
-              
-              {devicePreset !== 'desktop' && (
-                <div className="mt-4 text-center text-sm text-slate-500">
-                  Aperçu {DEVICE_PRESETS.find(p => p.id === devicePreset)?.label.toLowerCase()} - 
-                  {DEVICE_PRESETS.find(p => p.id === devicePreset)?.width}×{DEVICE_PRESETS.find(p => p.id === devicePreset)?.height}px
+              {bestSellerLoading && (
+                <div className="flex items-center gap-2 text-sm text-slate-500 p-6">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Chargement des produits populaires…
                 </div>
               )}
             </div>
-            
-            {bestSellerLoading && (
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                Chargement des produits populaires…
-              </div>
-            )}
-          </div>
-        )}
+          )}
+
+          {activeTab === 'themes' && (
+            <div className="p-6">
+              <ThemesTab />
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div className="p-6">
+              <HistoryTab />
+            </div>
+          )}
+        </div>
       </div>
 
       {activeElement && elementType === 'text' && activeLabel && (
@@ -2281,29 +2572,33 @@ const SiteCustomization: React.FC = () => {
         />
       )}
 
-      {activeElement && elementType === 'image' && activeLabel && (
-        <ImageElementEditor
-          element={activeElement}
-          label={activeLabel}
-          draft={draft}
-          onApply={applyDraftUpdate}
-          onClose={closeEditor}
-          onAssetAdded={appendAssetToDraft}
-          anchor={activeAnchor}
-        />
-      )}
+        {activeElement && elementType === 'image' && activeLabel && (
+          <ImageElementEditor
+            element={activeElement}
+            label={activeLabel}
+            draft={draft}
+            onApply={applyDraftUpdate}
+            onClose={closeEditor}
+            onAssetAdded={appendAssetToDraft}
+            anchor={activeAnchor}
+          />
+        )}
 
-      {activeElement && elementType === 'background' && activeLabel && (
-        <BackgroundElementEditor
-          element={activeElement}
-          label={activeLabel}
-          draft={draft}
-          onApply={applyDraftUpdate}
-          onClose={closeEditor}
-          onAssetAdded={appendAssetToDraft}
-          anchor={activeAnchor}
-        />
-      )}
+        {activeElement && elementType === 'background' && activeLabel && (
+          <BackgroundElementEditor
+            element={activeElement}
+            label={activeLabel}
+            draft={draft}
+            onApply={applyDraftUpdate}
+            onClose={closeEditor}
+            onAssetAdded={appendAssetToDraft}
+            anchor={activeAnchor}
+          />
+        )}
+      </div>
+
+      {/* Composant d'aide pour les raccourcis clavier */}
+      <KeyboardShortcutsHelp />
     </div>
   );
 };
