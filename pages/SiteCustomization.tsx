@@ -8,7 +8,7 @@ import React, {
   useId,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, CheckCircle2, Loader2, Upload, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Upload, X, Search, Undo2, Redo2, Filter, Smartphone, Tablet, Monitor, Zap, Save, Copy, Palette } from 'lucide-react';
 import SitePreviewCanvas, { resolveZoneFromElement } from '../components/SitePreviewCanvas';
 import useSiteContent from '../hooks/useSiteContent';
 import RichTextEditor from '../components/RichTextEditor';
@@ -58,6 +58,24 @@ const COLOR_SUGGESTIONS = [
   '#f97316',
   'transparent',
   'currentColor',
+] as const;
+
+const EXTENDED_COLOR_PALETTE = {
+  neutrals: ['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155', '#1e293b', '#0f172a'],
+  blues: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a'],
+  reds: ['#fef2f2', '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d'],
+  greens: ['#f0fdf4', '#dcfce7', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534'],
+  yellows: ['#fefce8', '#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e'],
+  oranges: ['#fff7ed', '#fed7aa', '#fdba74', '#fb923c', '#f97316', '#ea580c', '#dc2626', '#c2410c', '#9a3412'],
+  purples: ['#faf5ff', '#f3e8ff', '#e9d5ff', '#d8b4fe', '#c084fc', '#a855f7', '#9333ea', '#7c3aed', '#6b21a8'],
+  pinks: ['#fdf2f8', '#fce7f3', '#fbcfe8', '#f9a8d4', '#f472b6', '#ec4899', '#db2777', '#be185d', '#9d174d']
+} as const;
+
+const BRAND_COLORS = [
+  '#F9A826', // brand-primary
+  '#DD8C00', // brand-primary-dark  
+  '#2D2D2D', // brand-secondary
+  '#E63946', // brand-accent
 ] as const;
 
 const TEXT_ELEMENT_KEYS = new Set<EditableElementKey>(STYLE_EDITABLE_ELEMENT_KEYS);
@@ -128,6 +146,96 @@ const TABS = [
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
+
+const DEVICE_PRESETS = [
+  { id: 'mobile', label: 'Mobile', icon: Smartphone, width: 375, height: 667 },
+  { id: 'tablet', label: 'Tablette', icon: Tablet, width: 768, height: 1024 },
+  { id: 'desktop', label: 'Bureau', icon: Monitor, width: 1440, height: 900 },
+] as const;
+
+type DevicePreset = (typeof DEVICE_PRESETS)[number]['id'];
+
+interface HistoryEntry {
+  content: SiteContent;
+  timestamp: number;
+  description?: string;
+}
+
+interface SearchFilters {
+  query: string;
+  elementType: 'all' | 'text' | 'image' | 'background';
+  zone: 'all' | EditableZoneKey;
+}
+
+interface StylePreset {
+  id: string;
+  name: string;
+  description: string;
+  styles: {
+    fontFamily?: string;
+    fontSize?: string;
+    textColor?: string;
+    backgroundColor?: string;
+  };
+}
+
+const STYLE_PRESETS: StylePreset[] = [
+  {
+    id: 'modern',
+    name: 'Moderne',
+    description: 'Style moderne avec des couleurs neutres',
+    styles: {
+      fontFamily: 'Inter',
+      fontSize: '16px',
+      textColor: '#0f172a',
+      backgroundColor: 'transparent'
+    }
+  },
+  {
+    id: 'warm',
+    name: 'Chaleureux',
+    description: 'Tons chauds et accueillants',
+    styles: {
+      fontFamily: 'Georgia, serif',
+      fontSize: '18px',
+      textColor: '#92400e',
+      backgroundColor: '#fef3c7'
+    }
+  },
+  {
+    id: 'bold',
+    name: 'Audacieux',
+    description: 'Contrastes élevés et couleurs vives',
+    styles: {
+      fontFamily: 'Montserrat',
+      fontSize: '20px',
+      textColor: '#ffffff',
+      backgroundColor: '#0f172a'
+    }
+  },
+  {
+    id: 'elegant',
+    name: 'Élégant',
+    description: 'Typographie raffinée et couleurs subtiles',
+    styles: {
+      fontFamily: 'Playfair Display',
+      fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+      textColor: '#374151',
+      backgroundColor: '#f9fafb'
+    }
+  },
+  {
+    id: 'brand',
+    name: 'Marque',
+    description: 'Couleurs de la marque OUIOUITACOS',
+    styles: {
+      fontFamily: 'Poppins',
+      fontSize: '16px',
+      textColor: '#2D2D2D',
+      backgroundColor: '#F9A826'
+    }
+  }
+];
 
 type DraftUpdater = (current: SiteContent) => SiteContent;
 
@@ -603,6 +711,37 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
   const [backgroundColor, setBackgroundColor] = useState<string>(elementStyle.backgroundColor ?? '');
   const [fontUploadError, setFontUploadError] = useState<string | null>(null);
   const [uploadingFont, setUploadingFont] = useState<boolean>(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [previewMode, setPreviewMode] = useState<boolean>(false);
+  
+  // Validation function
+  const validateInputs = useCallback(() => {
+    const errors: Record<string, string> = {};
+    
+    if (fontSize && fontSize.trim()) {
+      const sizeRegex = /^\d+(\.\d+)?(px|rem|em|%)$|^clamp\([^)]+\)$|^calc\([^)]+\)$/;
+      if (!sizeRegex.test(fontSize.trim())) {
+        errors.fontSize = 'Format invalide. Utilisez px, rem, em, % ou des fonctions CSS comme clamp()';
+      }
+    }
+    
+    if (textColor && textColor.trim()) {
+      const colorRegex = /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]+|transparent|currentColor)$/;
+      if (!colorRegex.test(textColor.trim())) {
+        errors.textColor = 'Format de couleur invalide. Utilisez hex, rgb, hsl ou nom de couleur';
+      }
+    }
+    
+    if (backgroundColor && backgroundColor.trim()) {
+      const colorRegex = /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]+|transparent|currentColor)$/;
+      if (!colorRegex.test(backgroundColor.trim())) {
+        errors.backgroundColor = 'Format de couleur invalide. Utilisez hex, rgb, hsl ou nom de couleur';
+      }
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [fontSize, textColor, backgroundColor]);
 
   useEffect(() => {
     setPlainText(initialPlain);
@@ -615,6 +754,11 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
+    if (!validateInputs()) {
+      return;
+    }
+    
     const sanitizedPlain = plainText;
 
     onApply(current => {
@@ -627,8 +771,24 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
         backgroundColor,
       });
       return current;
-    });
+    }, `Updated ${label}`);
     onClose();
+  };
+  
+  // Live validation on input change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      validateInputs();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [validateInputs]);
+  
+  // Preview styles
+  const previewStyles = {
+    fontFamily: fontFamily || undefined,
+    fontSize: fontSize || undefined,
+    color: textColor || undefined,
+    backgroundColor: backgroundColor || undefined,
   };
 
   const handleFontUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -670,19 +830,39 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
     >
       <form id={formId} onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor={`${formId}-plain`} className="block text-sm font-medium text-slate-700">
-            Texte de base
-          </label>
-          <textarea
-            id={`${formId}-plain`}
-            className="ui-textarea mt-2 w-full"
-            value={plainText}
-            onChange={event => {
-              setPlainText(event.target.value);
-              setRichText(null);
-            }}
-            rows={3}
-          />
+          <div className="flex items-center justify-between mb-2">
+            <label htmlFor={`${formId}-plain`} className="block text-sm font-medium text-slate-700">
+              Texte de base
+            </label>
+            <button
+              type="button"
+              onClick={() => setPreviewMode(!previewMode)}
+              className="text-sm text-brand-primary hover:text-brand-primary/80 flex items-center gap-1"
+            >
+              <Palette className="h-3 w-3" />
+              {previewMode ? 'Mode édition' : 'Aperçu en direct'}
+            </button>
+          </div>
+          
+          {previewMode ? (
+            <div 
+              className="ui-textarea mt-2 w-full min-h-[4rem] p-3 border border-slate-200 rounded-lg bg-white"
+              style={previewStyles}
+            >
+              {plainText || 'Tapez votre texte pour voir l\'aperçu...'}
+            </div>
+          ) : (
+            <textarea
+              id={`${formId}-plain`}
+              className="ui-textarea mt-2 w-full"
+              value={plainText}
+              onChange={event => {
+                setPlainText(event.target.value);
+                setRichText(null);
+              }}
+              rows={3}
+            />
+          )}
         </div>
         <div>
           <p className="text-sm font-medium text-slate-700">Mise en forme avancée</p>
@@ -747,17 +927,23 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
             </label>
             <input
               id={`${formId}-size`}
-              className="ui-input mt-2 w-full"
+              className={`ui-input mt-2 w-full ${validationErrors.fontSize ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
               value={fontSize}
               onChange={event => setFontSize(event.target.value)}
               list={`${formId}-size-options`}
-              placeholder="Ex: 18px"
+              placeholder="Ex: 18px, 1.2rem, clamp(1rem, 2vw, 1.5rem)"
             />
             <datalist id={`${formId}-size-options`}>
               {FONT_SIZE_SUGGESTIONS.map(size => (
                 <option key={size} value={size} />
               ))}
             </datalist>
+            {validationErrors.fontSize && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.fontSize}</p>
+            )}
+            {fontSize && !validationErrors.fontSize && (
+              <p className="mt-1 text-xs text-slate-500">✓ Format valide</p>
+            )}
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -768,30 +954,83 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
             <div className="mt-2 flex items-center gap-3">
               <input
                 id={`${formId}-text-color`}
-                className="ui-input w-full"
+                className={`ui-input w-full ${validationErrors.textColor ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                 value={textColor}
                 onChange={event => setTextColor(event.target.value)}
-                placeholder="Ex: #0f172a"
+                placeholder="Ex: #0f172a, rgb(15, 23, 42), hsl(220, 39%, 11%)"
               />
               <input
                 type="color"
-                className="h-10 w-10 rounded border border-slate-200"
-                value={textColor || '#000000'}
+                className="h-10 w-10 rounded border border-slate-200 cursor-pointer transition hover:scale-105"
+                value={textColor && /^#[0-9a-fA-F]{6}$/.test(textColor) ? textColor : '#000000'}
                 onChange={event => setTextColor(event.target.value)}
                 aria-label="Choisir la couleur du texte"
               />
             </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {COLOR_SUGGESTIONS.map(color => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setTextColor(color)}
-                  className="h-8 w-8 rounded-full border border-slate-200"
-                  style={{ backgroundColor: color === 'transparent' ? '#ffffff' : color }}
-                  title={color}
-                />
-              ))}
+            {validationErrors.textColor && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.textColor}</p>
+            )}
+            {textColor && !validationErrors.textColor && (
+              <p className="mt-1 text-xs text-slate-500">✓ Format valide</p>
+            )}
+            <div className="mt-3 space-y-3">
+              <div>
+                <p className="text-xs font-medium text-slate-600 mb-2">Couleurs de marque</p>
+                <div className="flex flex-wrap gap-2">
+                  {BRAND_COLORS.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setTextColor(color)}
+                      className="h-8 w-8 rounded-full border border-slate-200 shadow-sm transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary"
+                      style={{ backgroundColor: color }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-slate-600 mb-2">Palette étendue</p>
+                <div className="grid grid-cols-8 gap-1">
+                  {Object.entries(EXTENDED_COLOR_PALETTE).map(([category, colors]) => 
+                    colors.slice(0, 8).map(color => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setTextColor(color)}
+                        className="h-6 w-6 rounded border border-slate-200 transition hover:scale-110 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-brand-primary"
+                        style={{ backgroundColor: color }}
+                        title={`${category}: ${color}`}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-slate-600 mb-2">Suggestions rapides</p>
+                <div className="flex flex-wrap gap-2">
+                  {COLOR_SUGGESTIONS.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setTextColor(color)}
+                      className="h-6 w-12 rounded border border-slate-200 text-xs font-medium transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary"
+                      style={{ 
+                        backgroundColor: color === 'transparent' ? '#ffffff' : color === 'currentColor' ? '#64748b' : color,
+                        color: color === 'transparent' ? '#64748b' : color === 'currentColor' ? '#ffffff' : '#ffffff',
+                        backgroundImage: color === 'transparent' ? 'linear-gradient(45deg, #f1f5f9 25%, transparent 25%), linear-gradient(-45deg, #f1f5f9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f1f5f9 75%), linear-gradient(-45deg, transparent 75%, #f1f5f9 75%)' : 'none',
+                        backgroundSize: color === 'transparent' ? '8px 8px' : 'auto',
+                        backgroundPosition: color === 'transparent' ? '0 0, 0 4px, 4px -4px, -4px 0px' : 'auto'
+                      }}
+                      title={color}
+                    >
+                      {color === 'transparent' ? 'T' : color === 'currentColor' ? 'C' : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
           <div>
@@ -801,35 +1040,78 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
             <div className="mt-2 flex items-center gap-3">
               <input
                 id={`${formId}-bg-color`}
-                className="ui-input w-full"
+                className={`ui-input w-full ${validationErrors.backgroundColor ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                 value={backgroundColor}
                 onChange={event => setBackgroundColor(event.target.value)}
-                placeholder="Ex: rgba(255,255,255,0.8)"
+                placeholder="Ex: rgba(255,255,255,0.8), transparent"
               />
               <input
                 type="color"
-                className="h-10 w-10 rounded border border-slate-200"
-                value={backgroundColor || '#ffffff'}
+                className="h-10 w-10 rounded border border-slate-200 cursor-pointer transition hover:scale-105"
+                value={backgroundColor && /^#[0-9a-fA-F]{6}$/.test(backgroundColor) ? backgroundColor : '#ffffff'}
                 onChange={event => setBackgroundColor(event.target.value)}
                 aria-label="Choisir la couleur d'arrière-plan"
               />
             </div>
+            {validationErrors.backgroundColor && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.backgroundColor}</p>
+            )}
+            {backgroundColor && !validationErrors.backgroundColor && (
+              <p className="mt-1 text-xs text-slate-500">✓ Format valide</p>
+            )}
           </div>
         </div>
-        <div className="flex items-center justify-between border-t border-slate-200 pt-4">
-          <p className="text-sm text-slate-500">Laissez un champ vide pour hériter du style par défaut.</p>
-          <button
-            type="button"
-            className="text-sm font-medium text-brand-primary hover:text-brand-primary/80"
-            onClick={() => {
-              setFontFamily('');
-              setFontSize('');
-              setTextColor('');
-              setBackgroundColor('');
-            }}
-          >
-            Réinitialiser le style
-          </button>
+        <div className="space-y-4 border-t border-slate-200 pt-4">
+          <div>
+            <p className="text-sm font-medium text-slate-700 mb-3">Presets de style</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {STYLE_PRESETS.map(preset => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => {
+                    setFontFamily(preset.styles.fontFamily || '');
+                    setFontSize(preset.styles.fontSize || '');
+                    setTextColor(preset.styles.textColor || '');
+                    setBackgroundColor(preset.styles.backgroundColor || '');
+                  }}
+                  className="text-left p-3 rounded-lg border border-slate-200 hover:border-brand-primary hover:bg-brand-primary/5 transition group"
+                  title={preset.description}
+                >
+                  <div className="text-sm font-medium text-slate-900 group-hover:text-brand-primary">
+                    {preset.name}
+                  </div>
+                  <div 
+                    className="text-xs mt-1 px-2 py-1 rounded"
+                    style={{
+                      fontFamily: preset.styles.fontFamily,
+                      fontSize: '12px',
+                      color: preset.styles.textColor,
+                      backgroundColor: preset.styles.backgroundColor === 'transparent' ? '#f8fafc' : preset.styles.backgroundColor
+                    }}
+                  >
+                    Exemple de texte
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-500">Laissez un champ vide pour hériter du style par défaut.</p>
+            <button
+              type="button"
+              className="text-sm font-medium text-brand-primary hover:text-brand-primary/80"
+              onClick={() => {
+                setFontFamily('');
+                setFontSize('');
+                setTextColor('');
+                setBackgroundColor('');
+              }}
+            >
+              Réinitialiser le style
+            </button>
+          </div>
         </div>
       </form>
     </EditorPopover>
@@ -1092,17 +1374,64 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
               aria-label="Choisir la couleur d'arrière-plan"
             />
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {COLOR_SUGGESTIONS.map(option => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setColor(option)}
-                className="h-8 w-8 rounded-full border border-slate-200"
-                style={{ backgroundColor: option === 'transparent' ? '#ffffff' : option }}
-                title={option}
-              />
-            ))}
+          <div className="mt-3 space-y-3">
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Couleurs de marque</p>
+              <div className="flex flex-wrap gap-2">
+                {BRAND_COLORS.map(color => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setColor(color)}
+                    className="h-8 w-8 rounded-full border border-slate-200 shadow-sm transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary"
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Palette étendue</p>
+              <div className="grid grid-cols-8 gap-1">
+                {Object.entries(EXTENDED_COLOR_PALETTE).map(([category, colors]) => 
+                  colors.slice(0, 8).map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setColor(color)}
+                      className="h-6 w-6 rounded border border-slate-200 transition hover:scale-110 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-brand-primary"
+                      style={{ backgroundColor: color }}
+                      title={`${category}: ${color}`}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Suggestions rapides</p>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_SUGGESTIONS.map(color => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setColor(color)}
+                    className="h-6 w-12 rounded border border-slate-200 text-xs font-medium transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary"
+                    style={{ 
+                      backgroundColor: color === 'transparent' ? '#ffffff' : color === 'currentColor' ? '#64748b' : color,
+                      color: color === 'transparent' ? '#64748b' : color === 'currentColor' ? '#ffffff' : '#ffffff',
+                      backgroundImage: color === 'transparent' ? 'linear-gradient(45deg, #f1f5f9 25%, transparent 25%), linear-gradient(-45deg, #f1f5f9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f1f5f9 75%), linear-gradient(-45deg, transparent 75%, #f1f5f9 75%)' : 'none',
+                      backgroundSize: color === 'transparent' ? '8px 8px' : 'auto',
+                      backgroundPosition: color === 'transparent' ? '0 0, 0 4px, 4px -4px, -4px 0px' : 'auto'
+                    }}
+                    title={color}
+                  >
+                    {color === 'transparent' ? 'T' : color === 'currentColor' ? 'C' : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
         {backgroundType === 'image' && (
@@ -1173,12 +1502,73 @@ const SiteCustomization: React.FC = () => {
   const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
   const [bestSellerLoading, setBestSellerLoading] = useState<boolean>(false);
   const [bestSellerError, setBestSellerError] = useState<string | null>(null);
+  
+  // New state for enhanced features
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({
+    query: '',
+    elementType: 'all',
+    zone: 'all',
+  });
+  const [devicePreset, setDevicePreset] = useState<DevicePreset>('desktop');
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [selectedElements, setSelectedElements] = useState<Set<EditableElementKey>>(new Set());
+  const [isBulkEditMode, setIsBulkEditMode] = useState(false);
 
   useEffect(() => {
     if (content) {
-      setDraft(cloneSiteContent(content));
+      const newDraft = cloneSiteContent(content);
+      setDraft(newDraft);
+      // Initialize history with the first entry
+      if (history.length === 0) {
+        setHistory([{
+          content: newDraft,
+          timestamp: Date.now(),
+          description: 'Initial content'
+        }]);
+        setHistoryIndex(0);
+      }
     }
   }, [content]);
+
+  // Add keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl/Cmd + S to save
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        handleSave();
+      }
+      // Ctrl/Cmd + Z to undo
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        handleUndo();
+      }
+      // Ctrl/Cmd + Shift + Z to redo
+      if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
+        event.preventDefault();
+        handleRedo();
+      }
+      // Escape to close editors
+      if (event.key === 'Escape') {
+        if (activeElement) {
+          closeEditor();
+        }
+      }
+      // Ctrl/Cmd + F to focus search
+      if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+        event.preventDefault();
+        const searchInput = document.querySelector('#customization-search') as HTMLInputElement;
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [activeElement, historyIndex, history]);
 
   useEffect(() => {
     let mounted = true;
@@ -1219,17 +1609,62 @@ const SiteCustomization: React.FC = () => {
     return () => clearTimeout(timeout);
   }, [saveSuccess]);
 
+  const addHistoryEntry = useCallback((newContent: SiteContent, description?: string) => {
+    const newEntry: HistoryEntry = {
+      content: cloneSiteContent(newContent),
+      timestamp: Date.now(),
+      description
+    };
+    
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(newEntry);
+      // Limit history to 50 entries
+      if (newHistory.length > 50) {
+        newHistory.shift();
+      }
+      return newHistory;
+    });
+    
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [historyIndex]);
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1;
+      const prevEntry = history[prevIndex];
+      if (prevEntry) {
+        setDraft(cloneSiteContent(prevEntry.content));
+        setHistoryIndex(prevIndex);
+      }
+    }
+  }, [history, historyIndex]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextIndex = historyIndex + 1;
+      const nextEntry = history[nextIndex];
+      if (nextEntry) {
+        setDraft(cloneSiteContent(nextEntry.content));
+        setHistoryIndex(nextIndex);
+      }
+    }
+  }, [history, historyIndex]);
+
   const applyDraftUpdate = useCallback(
-    (updater: DraftUpdater) => {
+    (updater: DraftUpdater, description?: string) => {
       setDraft(prev => {
         if (!prev) {
           return prev;
         }
         const clone = cloneSiteContent(prev);
-        return updater(clone);
+        const updated = updater(clone);
+        // Add to history
+        addHistoryEntry(updated, description);
+        return updated;
       });
     },
-    [],
+    [addHistoryEntry],
   );
 
   const appendAssetToDraft = useCallback((asset: CustomizationAsset) => {
@@ -1262,20 +1697,38 @@ const SiteCustomization: React.FC = () => {
   }, []);
 
   const handleSave = async () => {
+    if (!draft) {
+      setSaveError('Aucune modification à sauvegarder.');
+      return;
+    }
+    
     setSaving(true);
     setSaveError(null);
     setSaveSuccess(null);
+    
     try {
-      if (!draft) {
-        throw new Error('Le brouillon est indisponible.');
-      }
       const updated = await updateContent(draft);
       setDraft(updated);
-      setSaveSuccess('Modifications enregistrées avec succès.');
+      
+      // Add successful save to history
+      addHistoryEntry(updated, 'Sauvegarde réussie');
+      
+      setSaveSuccess('Modifications enregistrées avec succès!');
+      
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => {
+        setSaveSuccess(null);
+      }, 3000);
+      
     } catch (err) {
-      setSaveError(
-        err instanceof Error ? err.message : 'Une erreur est survenue lors de la sauvegarde.',
-      );
+      console.error('Save error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue lors de la sauvegarde.';
+      setSaveError(errorMessage);
+      
+      // Auto-hide error message after 8 seconds
+      setTimeout(() => {
+        setSaveError(null);
+      }, 8000);
     } finally {
       setSaving(false);
     }
@@ -1291,6 +1744,59 @@ const SiteCustomization: React.FC = () => {
       .map(asset => sanitizeFontFamilyName(asset.name));
     return Array.from(new Set([...base, ...custom]));
   }, [draft]);
+
+  // Filter editable elements based on search criteria
+  const filteredElements = useMemo(() => {
+    const allElements = Object.keys(ELEMENT_LABELS) as EditableElementKey[];
+    
+    return allElements.filter(element => {
+      const label = ELEMENT_LABELS[element] || element;
+      
+      // Text search
+      if (searchFilters.query) {
+        const query = searchFilters.query.toLowerCase();
+        if (!label.toLowerCase().includes(query) && !element.toLowerCase().includes(query)) {
+          return false;
+        }
+      }
+      
+      // Element type filter
+      if (searchFilters.elementType !== 'all') {
+        const isText = TEXT_ELEMENT_KEYS.has(element);
+        const isImage = IMAGE_ELEMENT_KEYS.has(element);
+        const isBackground = BACKGROUND_ELEMENT_KEYS.has(element);
+        
+        switch (searchFilters.elementType) {
+          case 'text': return isText;
+          case 'image': return isImage;
+          case 'background': return isBackground;
+          default: return true;
+        }
+      }
+      
+      // Zone filter
+      if (searchFilters.zone !== 'all') {
+        const elementZone = resolveZoneFromElement(element);
+        return elementZone === searchFilters.zone;
+      }
+      
+      return true;
+    });
+  }, [searchFilters]);
+
+  // Keyboard shortcut handlers
+  const handleBulkApplyStyle = useCallback((style: Partial<ElementStyle>) => {
+    if (selectedElements.size === 0) return;
+    
+    applyDraftUpdate(current => {
+      selectedElements.forEach(element => {
+        if (TEXT_ELEMENT_KEYS.has(element)) {
+          applyElementStyleOverrides(current, element, style);
+        }
+      });
+      return current;
+    }, `Bulk style applied to ${selectedElements.size} elements`);
+  }, [selectedElements, applyDraftUpdate]);
 
   const activeLabel = activeElement ? ELEMENT_LABELS[activeElement] ?? activeElement : null;
   const elementType = activeElement
@@ -1327,7 +1833,7 @@ const SiteCustomization: React.FC = () => {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Site public</h1>
           <p className="text-sm text-slate-500">
-            Cliquez sur l'icône en forme de crayon pour personnaliser chaque bloc de contenu, image ou logo.
+            Utilisez Ctrl+S pour sauvegarder, Ctrl+Z pour annuler, Ctrl+F pour rechercher.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -1343,13 +1849,37 @@ const SiteCustomization: React.FC = () => {
               {saveError}
             </div>
           )}
+          
+          {/* History controls */}
+          <div className="flex items-center gap-1 rounded-lg border border-slate-200 p-1">
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={historyIndex <= 0}
+              className="flex h-8 w-8 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Annuler (Ctrl+Z)"
+            >
+              <Undo2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleRedo}
+              disabled={historyIndex >= history.length - 1}
+              className="flex h-8 w-8 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refaire (Ctrl+Y)"
+            >
+              <Redo2 className="h-4 w-4" />
+            </button>
+          </div>
+          
           <button
             type="button"
             onClick={handleSave}
-            className="ui-btn-primary"
+            className="ui-btn-primary flex items-center gap-2"
             disabled={saving}
           >
-            {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
+            <Save className="h-4 w-4" />
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>
       </header>
@@ -1364,34 +1894,310 @@ const SiteCustomization: React.FC = () => {
         </div>
       )}
 
-      <nav className="flex w-full items-center gap-2 overflow-x-auto rounded-full bg-slate-100 p-1">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
-              activeTab === tab.id
-                ? 'bg-white text-slate-900 shadow'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      <div className="space-y-4">
+        <nav className="flex w-full items-center gap-2 overflow-x-auto rounded-full bg-slate-100 p-1">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
+                activeTab === tab.id
+                  ? 'bg-white text-slate-900 shadow'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+        
+        {/* Enhanced controls for customization tab */}
+        {activeTab === 'custom' && (
+          <div className="space-y-4">
+            {/* Search and filter controls */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-64">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                  id="customization-search"
+                  type="text"
+                  value={searchFilters.query}
+                  onChange={e => setSearchFilters(prev => ({ ...prev, query: e.target.value }))}
+                  placeholder="Rechercher un élément à personnaliser..."
+                  className="w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                />
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
+                  isFilterPanelOpen || searchFilters.elementType !== 'all' || searchFilters.zone !== 'all'
+                    ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
+                    : 'border-slate-200 bg-white text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Filter className="h-4 w-4" />
+                Filtres
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setIsBulkEditMode(!isBulkEditMode)}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
+                  isBulkEditMode
+                    ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
+                    : 'border-slate-200 bg-white text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Zap className="h-4 w-4" />
+                Édition groupée
+              </button>
+            </div>
+            
+            {/* Device preview controls */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-700">Aperçu :</span>
+              {DEVICE_PRESETS.map(preset => {
+                const Icon = preset.icon;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => setDevicePreset(preset.id)}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
+                      devicePreset === preset.id
+                        ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
+                        : 'border-slate-200 bg-white text-slate-500 hover:text-slate-700'
+                    }`}
+                    title={`${preset.label} (${preset.width}×${preset.height})`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+            
+            {/* Filter panel */}
+            {isFilterPanelOpen && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Type d'élément
+                    </label>
+                    <select
+                      value={searchFilters.elementType}
+                      onChange={e => setSearchFilters(prev => ({ ...prev, elementType: e.target.value as any }))}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                    >
+                      <option value="all">Tous les types</option>
+                      <option value="text">Textes</option>
+                      <option value="image">Images</option>
+                      <option value="background">Arrière-plans</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Section
+                    </label>
+                    <select
+                      value={searchFilters.zone}
+                      onChange={e => setSearchFilters(prev => ({ ...prev, zone: e.target.value as any }))}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                    >
+                      <option value="all">Toutes les sections</option>
+                      <option value="navigation">Navigation</option>
+                      <option value="hero">Hero</option>
+                      <option value="about">À propos</option>
+                      <option value="menu">Menu</option>
+                      <option value="findUs">Contact</option>
+                      <option value="footer">Pied de page</option>
+                    </select>
+                  </div>
+                </div>
+                
+                {filteredElements.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <p className="text-sm text-slate-600 mb-3">
+                      {filteredElements.length} élément(s) trouvé(s)
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {filteredElements.slice(0, 10).map(element => {
+                        const label = ELEMENT_LABELS[element] || element;
+                        const isSelected = selectedElements.has(element);
+                        return (
+                          <button
+                            key={element}
+                            type="button"
+                            onClick={() => {
+                              if (isBulkEditMode) {
+                                const newSelected = new Set(selectedElements);
+                                if (isSelected) {
+                                  newSelected.delete(element);
+                                } else {
+                                  newSelected.add(element);
+                                }
+                                setSelectedElements(newSelected);
+                              } else {
+                                // Navigate to element
+                                const zone = resolveZoneFromElement(element);
+                                setActiveZone(zone);
+                                // Scroll to element if needed
+                                setTimeout(() => {
+                                  const elementNode = document.querySelector(`[data-element-id="${element}"]`);
+                                  if (elementNode) {
+                                    elementNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  }
+                                }, 100);
+                              }
+                            }}
+                            className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                              isSelected
+                                ? 'bg-brand-primary text-white'
+                                : isBulkEditMode
+                                  ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                  : 'bg-slate-100 text-slate-700 hover:bg-brand-primary/10 hover:text-brand-primary'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                      {filteredElements.length > 10 && (
+                        <span className="px-3 py-1 text-xs text-slate-500">
+                          +{filteredElements.length - 10} autres...
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Bulk edit controls */}
+            {isBulkEditMode && selectedElements.size > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-amber-800">
+                    {selectedElements.size} élément(s) sélectionné(s) pour l'édition groupée
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedElements(new Set())}
+                    className="text-sm text-amber-600 hover:text-amber-700"
+                  >
+                    Tout désélectionner
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-medium text-amber-700 mb-2">Actions rapides</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleBulkApplyStyle({ fontFamily: 'Inter' })}
+                        className="px-3 py-1 rounded bg-white text-sm text-amber-800 hover:bg-amber-100 transition"
+                      >
+                        Police Inter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBulkApplyStyle({ fontSize: '16px' })}
+                        className="px-3 py-1 rounded bg-white text-sm text-amber-800 hover:bg-amber-100 transition"
+                      >
+                        Taille 16px
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBulkApplyStyle({ textColor: '#0f172a' })}
+                        className="px-3 py-1 rounded bg-white text-sm text-amber-800 hover:bg-amber-100 transition"
+                      >
+                        Couleur sombre
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs font-medium text-amber-700 mb-2">Appliquer un preset à tous</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {STYLE_PRESETS.slice(0, 3).map(preset => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => handleBulkApplyStyle(preset.styles)}
+                          className="text-left p-2 rounded bg-white text-xs text-amber-800 hover:bg-amber-100 transition border border-amber-200"
+                        >
+                          <div className="font-medium">{preset.name}</div>
+                          <div className="text-amber-600">{preset.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}           
+            
+            {/* Accessibility and help tips */}
+            {!isBulkEditMode && (
+              <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center">
+                      <span className="text-xs font-bold text-blue-600">?</span>
+                    </div>
+                  </div>
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-2">Raccourcis clavier utiles :</p>
+                    <ul className="space-y-1 text-xs">
+                      <li><kbd className="px-2 py-1 bg-blue-200 rounded">Ctrl+S</kbd> Sauvegarder</li>
+                      <li><kbd className="px-2 py-1 bg-blue-200 rounded">Ctrl+Z</kbd> Annuler</li>
+                      <li><kbd className="px-2 py-1 bg-blue-200 rounded">Ctrl+F</kbd> Rechercher</li>
+                      <li><kbd className="px-2 py-1 bg-blue-200 rounded">Échap</kbd> Fermer l'éditeur</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <div>
         {activeTab === 'preview' ? (
           <div className="mx-auto w-full max-w-6xl">
             <div className="rounded-[2.5rem] border border-slate-200 bg-slate-50 p-6">
-              <SitePreviewCanvas
-                content={draft}
-                bestSellerProducts={bestSellerProducts}
-                onEdit={() => undefined}
-                activeZone={null}
-                showEditButtons={false}
-              />
+              <div 
+                className="mx-auto transition-all duration-300 ease-in-out"
+                style={{
+                  width: devicePreset === 'desktop' ? '100%' : `${DEVICE_PRESETS.find(p => p.id === devicePreset)?.width}px`,
+                  maxWidth: '100%',
+                  minHeight: devicePreset !== 'desktop' ? `${DEVICE_PRESETS.find(p => p.id === devicePreset)?.height}px` : 'auto',
+                  border: devicePreset !== 'desktop' ? '1px solid #e2e8f0' : 'none',
+                  borderRadius: devicePreset !== 'desktop' ? '12px' : '0',
+                  overflow: 'hidden',
+                  boxShadow: devicePreset !== 'desktop' ? '0 10px 25px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                <SitePreviewCanvas
+                  content={draft}
+                  bestSellerProducts={bestSellerProducts}
+                  onEdit={() => undefined}
+                  activeZone={null}
+                  showEditButtons={false}
+                />
+              </div>
+              
+              {devicePreset !== 'desktop' && (
+                <div className="mt-4 text-center text-sm text-slate-500">
+                  Aperçu {DEVICE_PRESETS.find(p => p.id === devicePreset)?.label.toLowerCase()} - 
+                  {DEVICE_PRESETS.find(p => p.id === devicePreset)?.width}×{DEVICE_PRESETS.find(p => p.id === devicePreset)?.height}px
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -1402,14 +2208,56 @@ const SiteCustomization: React.FC = () => {
                 <p>{bestSellerError}</p>
               </div>
             )}
+            
+            {/* Search results info */}
+            {(searchFilters.query || searchFilters.elementType !== 'all' || searchFilters.zone !== 'all') && (
+              <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <Search className="h-4 w-4" />
+                  <span>
+                    {filteredElements.length} élément(s) correspondent à vos critères
+                    {searchFilters.query && ` pour "${searchFilters.query}"`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSearchFilters({ query: '', elementType: 'all', zone: 'all' })}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  Effacer les filtres
+                </button>
+              </div>
+            )}
+            
             <div className="mx-auto w-full max-w-6xl">
-              <SitePreviewCanvas
-                content={draft}
-                bestSellerProducts={bestSellerProducts}
-                onEdit={(element, meta) => handleEdit(element, meta)}
-                activeZone={activeZone}
-              />
+              <div 
+                className="mx-auto transition-all duration-300 ease-in-out"
+                style={{
+                  width: devicePreset === 'desktop' ? '100%' : `${DEVICE_PRESETS.find(p => p.id === devicePreset)?.width}px`,
+                  maxWidth: '100%',
+                  minHeight: devicePreset !== 'desktop' ? `${DEVICE_PRESETS.find(p => p.id === devicePreset)?.height}px` : 'auto',
+                  border: devicePreset !== 'desktop' ? '1px solid #e2e8f0' : 'none',
+                  borderRadius: devicePreset !== 'desktop' ? '12px' : '0',
+                  overflow: 'hidden',
+                  boxShadow: devicePreset !== 'desktop' ? '0 10px 25px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                <SitePreviewCanvas
+                  content={draft}
+                  bestSellerProducts={bestSellerProducts}
+                  onEdit={(element, meta) => handleEdit(element, meta)}
+                  activeZone={activeZone}
+                />
+              </div>
+              
+              {devicePreset !== 'desktop' && (
+                <div className="mt-4 text-center text-sm text-slate-500">
+                  Aperçu {DEVICE_PRESETS.find(p => p.id === devicePreset)?.label.toLowerCase()} - 
+                  {DEVICE_PRESETS.find(p => p.id === devicePreset)?.width}×{DEVICE_PRESETS.find(p => p.id === devicePreset)?.height}px
+                </div>
+              )}
             </div>
+            
             {bestSellerLoading && (
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
