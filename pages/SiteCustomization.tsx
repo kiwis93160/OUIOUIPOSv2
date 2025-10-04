@@ -2270,6 +2270,7 @@ const SiteCustomization: React.FC = () => {
         </div>
       </div>
 
+      {/* Éditeurs d'éléments */}
       {activeElement && elementType === 'text' && activeLabel && (
         <TextElementEditor
           element={activeElement}
