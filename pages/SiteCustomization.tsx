@@ -8,7 +8,7 @@ import React, {
   useId,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, CheckCircle2, Loader2, Upload, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Upload, X, Undo2, Redo2, RotateCcw, Monitor, Tablet, Smartphone } from 'lucide-react';
 import SitePreviewCanvas, { resolveZoneFromElement } from '../components/SitePreviewCanvas';
 import useSiteContent from '../hooks/useSiteContent';
 import RichTextEditor from '../components/RichTextEditor';
@@ -27,6 +27,7 @@ import {
 import { api } from '../services/api';
 import { normalizeCloudinaryImageUrl, uploadCustomizationAsset } from '../services/cloudinary';
 import { sanitizeFontFamilyName } from '../utils/fonts';
+import { DEFAULT_SITE_CONTENT } from '../utils/siteContent';
 
 const FONT_FAMILY_SUGGESTIONS = [
   'Inter',
@@ -162,6 +163,14 @@ const cloneSiteContent = (content: SiteContent): SiteContent => {
     return globalThis.structuredClone(content);
   }
   return JSON.parse(JSON.stringify(content)) as SiteContent;
+};
+
+const shallowEqual = (a: unknown, b: unknown): boolean => {
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
 };
 
 const setNestedValue = (content: SiteContent, key: EditableElementKey, value: string | null): void => {
@@ -551,6 +560,24 @@ const EditorPopover: React.FC<EditorPopoverProps> = ({
             <span className="sr-only">Fermer</span>
           </button>
         </div>
+        {fontAssets.length > 0 && (
+          <div className="mt-3">
+            <p className="text-sm font-medium text-slate-700">Bibliothèque de polices</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {fontAssets.slice(0, 9).map(asset => (
+                <button
+                  key={asset.id}
+                  type="button"
+                  onClick={() => setFontFamily(asset.name)}
+                  className="rounded-full border border-slate-200 px-3 py-1 text-sm hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+                  title={asset.name}
+                >
+                  {asset.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="max-h-[70vh] overflow-y-auto px-6 py-5">{children}</div>
         <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">{footer}</div>
       </div>
@@ -603,6 +630,53 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
   const [backgroundColor, setBackgroundColor] = useState<string>(elementStyle.backgroundColor ?? '');
   const [fontUploadError, setFontUploadError] = useState<string | null>(null);
   const [uploadingFont, setUploadingFont] = useState<boolean>(false);
+
+  // Asset shortcuts and accessibility helpers
+  const fontAssets = (draft.assets.library ?? []).filter(asset => asset.type === 'font');
+  const zone = resolveZoneFromElement(element);
+  const zoneBackgroundColor = draft[zone].style.background.color;
+
+  const parseColor = (value: string): { r: number; g: number; b: number } | null => {
+    const v = value.trim();
+    const hex = v.startsWith('#') ? v.slice(1) : null;
+    if (hex) {
+      const normalized = hex.length === 3 ? hex.split('').map(ch => ch + ch).join('') : hex;
+      if (/^[0-9a-fA-F]{6}$/.test(normalized)) {
+        const r = parseInt(normalized.slice(0, 2), 16);
+        const g = parseInt(normalized.slice(2, 4), 16);
+        const b = parseInt(normalized.slice(4, 6), 16);
+        return { r, g, b };
+      }
+    }
+    const m = v.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if (m) {
+      return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) };
+    }
+    return null;
+  };
+
+  const relativeLuminance = (c: { r: number; g: number; b: number }): number => {
+    const channel = (x: number) => {
+      const s = x / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    const r = channel(c.r);
+    const g = channel(c.g);
+    const b = channel(c.b);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+
+  const computeContrast = (fg: string, bg: string): number | null => {
+    const fgRgb = parseColor(fg);
+    const bgRgb = parseColor(bg);
+    if (!fgRgb || !bgRgb) {
+      return null;
+    }
+    const L1 = relativeLuminance(fgRgb) + 0.05;
+    const L2 = relativeLuminance(bgRgb) + 0.05;
+    const ratio = L1 > L2 ? L1 / L2 : L2 / L1;
+    return Math.round(ratio * 100) / 100;
+  };
 
   useEffect(() => {
     setPlainText(initialPlain);
@@ -816,6 +890,22 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
             </div>
           </div>
         </div>
+        {(() => {
+          const fg = (textColor || '').trim();
+          const bg = (backgroundColor || zoneBackgroundColor || '').trim();
+          const ratio = fg && bg ? computeContrast(fg, bg) : null;
+          if (ratio && ratio < 4.5) {
+            return (
+              <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                <AlertTriangle className="mt-0.5 h-4 w-4" aria-hidden="true" />
+                <p>
+                  Le contraste texte/fond est faible ({ratio}:1). Visez ≥ 4.5 pour une bonne lisibilité.
+                </p>
+              </div>
+            );
+          }
+          return null;
+        })()}
         <div className="flex items-center justify-between border-t border-slate-200 pt-4">
           <p className="text-sm text-slate-500">Laissez un champ vide pour hériter du style par défaut.</p>
           <button
@@ -860,6 +950,7 @@ const ImageElementEditor: React.FC<ImageElementEditorProps> = ({
   const [imageUrl, setImageUrl] = useState<string>(initialImage);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
+  const imageAssets = (draft.assets.library ?? []).filter(asset => asset.type === 'image');
 
   useEffect(() => {
     setImageUrl(initialImage);
@@ -951,6 +1042,24 @@ const ImageElementEditor: React.FC<ImageElementEditorProps> = ({
             Supprimer le média
           </button>
         </div>
+        {imageAssets.length > 0 && (
+          <div>
+            <p className="mt-4 text-sm font-medium text-slate-700">Bibliothèque d'images</p>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {imageAssets.slice(0, 9).map(asset => (
+                <button
+                  key={asset.id}
+                  type="button"
+                  onClick={() => setImageUrl(asset.url)}
+                  className="overflow-hidden rounded-lg border border-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+                  title={asset.name}
+                >
+                  <img src={asset.url} alt={asset.name} className="h-20 w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {error && (
           <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
             <AlertTriangle className="mt-0.5 h-4 w-4" aria-hidden="true" />
@@ -993,6 +1102,7 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
   const [imageUrl, setImageUrl] = useState<string>(background.image ?? '');
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
+  const imageAssets = (draft.assets.library ?? []).filter(asset => asset.type === 'image');
 
   useEffect(() => {
     setBackgroundType(background.type);
@@ -1104,6 +1214,21 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
               />
             ))}
           </div>
+          <div className="mt-3">
+            <button
+              type="button"
+              className="text-sm font-medium text-brand-primary hover:text-brand-primary/80"
+              onClick={() => {
+                const zone = resolveZoneFromElement(element);
+                const defaults = DEFAULT_SITE_CONTENT[zone].style;
+                setBackgroundType(defaults.background.type);
+                setColor(defaults.background.color);
+                setImageUrl(defaults.background.image ?? '');
+              }}
+            >
+              Réinitialiser le fond par défaut
+            </button>
+          </div>
         </div>
         {backgroundType === 'image' && (
           <div className="space-y-4">
@@ -1140,6 +1265,24 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
                 Retirer l'image
               </button>
             </div>
+            {imageAssets.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-slate-700">Bibliothèque d'images</p>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {imageAssets.slice(0, 9).map(asset => (
+                    <button
+                      key={asset.id}
+                      type="button"
+                      onClick={() => setImageUrl(asset.url)}
+                      className="overflow-hidden rounded-lg border border-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+                      title={asset.name}
+                    >
+                      <img src={asset.url} alt={asset.name} className="h-20 w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {error && (
               <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
                 <AlertTriangle className="mt-0.5 h-4 w-4" aria-hidden="true" />
@@ -1158,6 +1301,8 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
   );
 };
 
+type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
+
 const SiteCustomization: React.FC = () => {
   const { content, loading, error, updateContent } = useSiteContent();
   const [draft, setDraft] = useState<SiteContent | null>(() =>
@@ -1173,10 +1318,17 @@ const SiteCustomization: React.FC = () => {
   const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
   const [bestSellerLoading, setBestSellerLoading] = useState<boolean>(false);
   const [bestSellerError, setBestSellerError] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [history, setHistory] = useState<SiteContent[]>([]);
+  const [future, setFuture] = useState<SiteContent[]>([]);
+  const [previewDevice, setPreviewDevice] = useState<PreviewDevice>('desktop');
 
   useEffect(() => {
     if (content) {
       setDraft(cloneSiteContent(content));
+      setHasUnsavedChanges(false);
+      setHistory([]);
+      setFuture([]);
     }
   }, [content]);
 
@@ -1219,14 +1371,46 @@ const SiteCustomization: React.FC = () => {
     return () => clearTimeout(timeout);
   }, [saveSuccess]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toLowerCase().includes('mac');
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if (!mod) return;
+      if (e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [history, future]);
+
   const applyDraftUpdate = useCallback(
     (updater: DraftUpdater) => {
       setDraft(prev => {
         if (!prev) {
           return prev;
         }
-        const clone = cloneSiteContent(prev);
-        return updater(clone);
+        const prevClone = cloneSiteContent(prev);
+        const nextClone = updater(cloneSiteContent(prev));
+        setHistory(h => [...h.slice(-49), prevClone]);
+        setFuture([]);
+        setHasUnsavedChanges(true);
+        return nextClone;
       });
     },
     [],
@@ -1272,6 +1456,9 @@ const SiteCustomization: React.FC = () => {
       const updated = await updateContent(draft);
       setDraft(updated);
       setSaveSuccess('Modifications enregistrées avec succès.');
+      setHasUnsavedChanges(false);
+      setHistory([]);
+      setFuture([]);
     } catch (err) {
       setSaveError(
         err instanceof Error ? err.message : 'Une erreur est survenue lors de la sauvegarde.',
@@ -1280,6 +1467,36 @@ const SiteCustomization: React.FC = () => {
       setSaving(false);
     }
   };
+
+  const handleUndo = useCallback(() => {
+    setDraft(current => {
+      if (!current || history.length === 0) return current;
+      const previous = history[history.length - 1];
+      setHistory(h => h.slice(0, -1));
+      setFuture(f => [cloneSiteContent(current), ...f].slice(0, 50));
+      setHasUnsavedChanges(true);
+      return cloneSiteContent(previous);
+    });
+  }, [history]);
+
+  const handleRedo = useCallback(() => {
+    setDraft(current => {
+      if (!current || future.length === 0) return current;
+      const next = future[0];
+      setFuture(f => f.slice(1));
+      setHistory(h => [...h.slice(-49), cloneSiteContent(current)]);
+      setHasUnsavedChanges(true);
+      return cloneSiteContent(next);
+    });
+  }, [future]);
+
+  const handleResetAll = useCallback(() => {
+    if (!content) return;
+    setDraft(cloneSiteContent(content));
+    setHasUnsavedChanges(false);
+    setHistory([]);
+    setFuture([]);
+  }, [content]);
 
   const fontOptions = useMemo(() => {
     const base = Array.from(FONT_FAMILY_SUGGESTIONS);
@@ -1331,6 +1548,61 @@ const SiteCustomization: React.FC = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <div className="mr-2 flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-slate-600">
+            <button
+              type="button"
+              className={`rounded-full p-1 ${previewDevice === 'mobile' ? 'bg-slate-100 text-slate-900' : ''}`}
+              title="Aperçu mobile"
+              onClick={() => setPreviewDevice('mobile')}
+            >
+              <Smartphone className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              className={`rounded-full p-1 ${previewDevice === 'tablet' ? 'bg-slate-100 text-slate-900' : ''}`}
+              title="Aperçu tablette"
+              onClick={() => setPreviewDevice('tablet')}
+            >
+              <Tablet className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              className={`rounded-full p-1 ${previewDevice === 'desktop' ? 'bg-slate-100 text-slate-900' : ''}`}
+              title="Aperçu bureau"
+              onClick={() => setPreviewDevice('desktop')}
+            >
+              <Monitor className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mr-2 flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-slate-600">
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={history.length === 0}
+              className="rounded-full p-1 disabled:opacity-50"
+              title="Annuler (Ctrl/Cmd+Z)"
+            >
+              <Undo2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleRedo}
+              disabled={future.length === 0}
+              className="rounded-full p-1 disabled:opacity-50"
+              title="Rétablir (Ctrl/Cmd+Y)"
+            >
+              <Redo2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleResetAll}
+              disabled={!hasUnsavedChanges}
+              className="rounded-full p-1 disabled:opacity-50"
+              title="Annuler toutes les modifications non enregistrées"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </button>
+          </div>
           {saveSuccess && (
             <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
               <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
@@ -1347,9 +1619,9 @@ const SiteCustomization: React.FC = () => {
             type="button"
             onClick={handleSave}
             className="ui-btn-primary"
-            disabled={saving}
+            disabled={saving || !hasUnsavedChanges}
           >
-            {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
+            {saving ? 'Enregistrement…' : hasUnsavedChanges ? 'Enregistrer les modifications' : 'Aucune modification'}
           </button>
         </div>
       </header>
@@ -1360,6 +1632,15 @@ const SiteCustomization: React.FC = () => {
           <div>
             <p>{error}</p>
             <p className="mt-1">Les valeurs affichées correspondent à la configuration par défaut.</p>
+          </div>
+        </div>
+      )}
+
+      {hasUnsavedChanges && (
+        <div className="flex items-start gap-3 rounded-3xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
+          <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+          <div>
+            <p>Modifications non enregistrées. Pensez à sauvegarder.</p>
           </div>
         </div>
       )}
@@ -1383,7 +1664,10 @@ const SiteCustomization: React.FC = () => {
 
       <div>
         {activeTab === 'preview' ? (
-          <div className="mx-auto w-full max-w-6xl">
+          <div
+            className="mx-auto w-full"
+            style={{ maxWidth: previewDevice === 'mobile' ? 420 : previewDevice === 'tablet' ? 820 : 1200 }}
+          >
             <div className="rounded-[2.5rem] border border-slate-200 bg-slate-50 p-6">
               <SitePreviewCanvas
                 content={draft}
@@ -1402,7 +1686,10 @@ const SiteCustomization: React.FC = () => {
                 <p>{bestSellerError}</p>
               </div>
             )}
-            <div className="mx-auto w-full max-w-6xl">
+            <div
+              className="mx-auto w-full"
+              style={{ maxWidth: previewDevice === 'mobile' ? 420 : previewDevice === 'tablet' ? 820 : 1200 }}
+            >
               <SitePreviewCanvas
                 content={draft}
                 bestSellerProducts={bestSellerProducts}
