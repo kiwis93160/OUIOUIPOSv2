@@ -742,7 +742,7 @@ interface TextElementEditorProps {
   element: EditableElementKey;
   label: string;
   draft: SiteContent;
-  onApply: (updater: DraftUpdater) => void;
+  onApply: (updater: DraftUpdater, description?: string, type?: ModificationHistory['type']) => void;
   onClose: () => void;
   fontOptions: readonly string[];
   onAssetAdded: (asset: CustomizationAsset) => void;
@@ -832,7 +832,7 @@ const TextElementEditor: React.FC<TextElementEditorProps> = ({
         backgroundColor,
       });
       return current;
-    }, `Updated ${label}`);
+    }, `Texte mis à jour : ${label}`, 'manual');
     onClose();
   };
   
@@ -1183,7 +1183,7 @@ interface ImageElementEditorProps {
   element: EditableElementKey;
   label: string;
   draft: SiteContent;
-  onApply: (updater: DraftUpdater) => void;
+  onApply: (updater: DraftUpdater, description?: string, type?: ModificationHistory['type']) => void;
   onClose: () => void;
   onAssetAdded: (asset: CustomizationAsset) => void;
   anchor: AnchorRect | null;
@@ -1216,7 +1216,7 @@ const ImageElementEditor: React.FC<ImageElementEditorProps> = ({
     onApply(current => {
       setNestedValue(current, element, normalized);
       return current;
-    });
+    }, `Média mis à jour : ${label}`, 'manual');
     onClose();
   };
 
@@ -1314,7 +1314,7 @@ interface BackgroundElementEditorProps {
   element: EditableElementKey;
   label: string;
   draft: SiteContent;
-  onApply: (updater: DraftUpdater) => void;
+  onApply: (updater: DraftUpdater, description?: string, type?: ModificationHistory['type']) => void;
   onClose: () => void;
   onAssetAdded: (asset: CustomizationAsset) => void;
   anchor: AnchorRect | null;
@@ -1356,7 +1356,7 @@ const BackgroundElementEditor: React.FC<BackgroundElementEditorProps> = ({
         image: backgroundType === 'image' ? normalizedImage : null,
       });
       return current;
-    });
+    }, `Fond mis à jour : ${label}`, 'manual');
     onClose();
   };
 
@@ -2041,61 +2041,27 @@ const SiteCustomization: React.FC = () => {
     return () => clearTimeout(timeout);
   }, [saveSuccess]);
 
-  const addHistoryEntry = useCallback((newContent: SiteContent, description?: string) => {
-    const newEntry: HistoryEntry = {
-      content: cloneSiteContent(newContent),
-      timestamp: Date.now(),
-      description
-    };
-    
-    setHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push(newEntry);
-      // Limit history to 50 entries
-      if (newHistory.length > 50) {
-        newHistory.shift();
-      }
-      return newHistory;
-    });
-    
-    setHistoryIndex(prev => Math.min(prev + 1, 49));
-  }, [historyIndex]);
-
-  const handleUndo = useCallback(() => {
-    if (historyIndex > 0) {
-      const prevIndex = historyIndex - 1;
-      const prevEntry = history[prevIndex];
-      if (prevEntry) {
-        setDraft(cloneSiteContent(prevEntry.content));
-        setHistoryIndex(prevIndex);
-      }
-    }
-  }, [history, historyIndex]);
-
-  const handleRedo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const nextIndex = historyIndex + 1;
-      const nextEntry = history[nextIndex];
-      if (nextEntry) {
-        setDraft(cloneSiteContent(nextEntry.content));
-        setHistoryIndex(nextIndex);
-      }
-    }
-  }, [history, historyIndex]);
-
   const applyDraftUpdate = useCallback(
-    (updater: DraftUpdater, description?: string) => {
+    (
+      updater: DraftUpdater,
+      description: string = 'Modification personnalisée',
+      type: ModificationHistory['type'] = 'manual',
+    ) => {
       setDraft(prev => {
         if (!prev) {
           return prev;
         }
+
         const clone = cloneSiteContent(prev);
         const updated = updater(clone);
+
+        addToHistory(description, updated, type);
         setHasUnsavedChanges(true);
+
         return updated;
       });
     },
-    [addHistoryEntry],
+    [addToHistory],
   );
 
   const appendAssetToDraft = useCallback((asset: CustomizationAsset) => {
@@ -2572,7 +2538,7 @@ const SiteCustomization: React.FC = () => {
         />
       )}
 
-        {activeElement && elementType === 'image' && activeLabel && (
+      {activeElement && elementType === 'image' && activeLabel && (
           <ImageElementEditor
             element={activeElement}
             label={activeLabel}
@@ -2584,7 +2550,7 @@ const SiteCustomization: React.FC = () => {
           />
         )}
 
-        {activeElement && elementType === 'background' && activeLabel && (
+      {activeElement && elementType === 'background' && activeLabel && (
           <BackgroundElementEditor
             element={activeElement}
             label={activeLabel}
@@ -2595,7 +2561,6 @@ const SiteCustomization: React.FC = () => {
             anchor={activeAnchor}
           />
         )}
-      </div>
 
       {/* Composant d'aide pour les raccourcis clavier */}
       <KeyboardShortcutsHelp />
