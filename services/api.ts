@@ -1354,18 +1354,6 @@ export const api = {
     const rows = unwrap<SupabaseOrderRow[]>(response as SupabaseResponse<SupabaseOrderRow[]>);
     const orders = await Promise.all(rows.map(row => ensureOrderHasItems(mapOrderRow(row))));
 
-    const eligibleOrders = orders.filter(order => {
-      if (order.type === 'a_emporter') {
-        if (order.statut !== 'en_cours') {
-          return false;
-        }
-
-        return order.estado_cocina !== 'entregada' && order.estado_cocina !== 'listo';
-      }
-
-      return order.statut === 'en_cours' && order.estado_cocina === 'recibido';
-    });
-
     const tickets: KitchenTicket[] = [];
 
     eligibleOrders.forEach(order => {
