@@ -706,6 +706,15 @@ const fetchOrderById = async (orderId: string): Promise<Order | null> => {
   return row ? mapOrderRow(row) : null;
 };
 
+const ensureOrderHasItems = async (order: Order): Promise<Order> => {
+  if (order.items.length > 0) {
+    return order;
+  }
+
+  const enrichedOrder = await fetchOrderById(order.id);
+  return enrichedOrder ?? order;
+};
+
 const fetchIngredients = async (): Promise<Ingredient[]> => {
   const response = await supabase
     .from('ingredients')
@@ -1336,21 +1345,43 @@ export const api = {
   },
 
   getKitchenOrders: async (): Promise<KitchenTicket[]> => {
-    const response = await selectOrdersQuery()
-      .eq('estado_cocina', 'recibido')
-      .or('statut.eq.en_cours,type.eq.a_emporter');
+    const response = await selectOrdersQuery().or(
+      [
+        'and(estado_cocina.eq.recibido,statut.eq.en_cours)',
+        'and(type.eq.a_emporter,statut.eq.en_cours)',
+      ].join(','),
+    );
     const rows = unwrap<SupabaseOrderRow[]>(response as SupabaseResponse<SupabaseOrderRow[]>);
-    const orders = rows.map(mapOrderRow);
+    const orders = await Promise.all(rows.map(row => ensureOrderHasItems(mapOrderRow(row))));
+
+    const eligibleOrders = orders.filter(order => {
+      if (order.type === 'a_emporter') {
+        if (order.statut !== 'en_cours') {
+          return false;
+        }
+
+        return order.estado_cocina !== 'entregada' && order.estado_cocina !== 'listo';
+      }
+
+      return order.statut === 'en_cours' && order.estado_cocina === 'recibido';
+    });
 
     const tickets: KitchenTicket[] = [];
 
-    orders.forEach(order => {
+    eligibleOrders.forEach(order => {
       const sentItems = order.items.filter(item => item.estado === 'enviado');
-      if (sentItems.length === 0) {
+      const itemsForTicket =
+        sentItems.length > 0
+          ? sentItems
+          : order.type === 'a_emporter'
+            ? order.items
+            : [];
+
+      if (itemsForTicket.length === 0) {
         return;
       }
 
-      const groups = sentItems.reduce((acc, item) => {
+      const groups = itemsForTicket.reduce((acc, item) => {
         const key = item.date_envoi ?? order.date_envoi_cuisine ?? order.date_creation;
         const group = acc.get(key) ?? [];
         group.push(item);
@@ -1378,7 +1409,7 @@ export const api = {
   getTakeawayOrders: async (): Promise<{ pending: Order[]; ready: Order[] }> => {
     const response = await selectOrdersQuery().eq('type', 'a_emporter');
     const rows = unwrap<SupabaseOrderRow[]>(response as SupabaseResponse<SupabaseOrderRow[]>);
-    const orders = rows.map(mapOrderRow);
+    const orders = await Promise.all(rows.map(row => ensureOrderHasItems(mapOrderRow(row))));
     return {
       pending: orders.filter(order => order.statut === 'pendiente_validacion'),
       ready: orders.filter(order => order.estado_cocina === 'listo'),
