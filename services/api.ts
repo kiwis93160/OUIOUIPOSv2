@@ -1345,15 +1345,18 @@ export const api = {
   },
 
   getKitchenOrders: async (): Promise<KitchenTicket[]> => {
-    const response = await selectOrdersQuery()
-      .eq('estado_cocina', 'recibido')
-      .or('statut.eq.en_cours,type.eq.a_emporter');
+    const response = await selectOrdersQuery().or(
+      [
+        'and(estado_cocina.eq.recibido,statut.eq.en_cours)',
+        'and(type.eq.a_emporter,statut.eq.en_cours)',
+      ].join(','),
+    );
     const rows = unwrap<SupabaseOrderRow[]>(response as SupabaseResponse<SupabaseOrderRow[]>);
     const orders = await Promise.all(rows.map(row => ensureOrderHasItems(mapOrderRow(row))));
 
     const tickets: KitchenTicket[] = [];
 
-    orders.forEach(order => {
+    eligibleOrders.forEach(order => {
       const sentItems = order.items.filter(item => item.estado === 'enviado');
       const itemsForTicket =
         sentItems.length > 0
