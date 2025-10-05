@@ -1356,6 +1356,14 @@ export const api = {
 
     const tickets: KitchenTicket[] = [];
 
+    const eligibleOrders = orders.filter(order => {
+      if (order.type === 'a_emporter') {
+        return true;
+      }
+
+      return order.items.some(item => item.estado === 'enviado');
+    });
+
     eligibleOrders.forEach(order => {
       const sentItems = order.items.filter(item => item.estado === 'enviado');
       const itemsForTicket =
