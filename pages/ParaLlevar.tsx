@@ -70,16 +70,30 @@ const TakeawayCard: React.FC<{ order: Order, onValidate?: (orderId: string) => v
 
                     <div className="space-y-3">
                         <h5 className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Artículos</h5>
-                        <ul className="space-y-2">
-                            {order.items.map((item: OrderItem) => (
-                                <li key={item.id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 shadow-sm">
-                                    <div className="flex items-baseline justify-between gap-3 text-gray-900">
-                                        <span className="font-semibold text-gray-900">{item.nom_produit}</span>
-                                        <span className="text-base sm:text-lg font-bold text-gray-900">{item.quantite}×</span>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
+                        {order.items.length > 0 ? (
+                            <ul className="space-y-2">
+                                {order.items.map((item: OrderItem) => {
+                                    const note = item.commentaire?.trim();
+                                    return (
+                                        <li key={item.id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 shadow-sm">
+                                            <div className="flex items-baseline justify-between gap-3 text-gray-900">
+                                                <span className="font-semibold text-gray-900">{item.quantite}× {item.nom_produit}</span>
+                                                <span className="text-sm sm:text-base font-semibold text-gray-900">{formatCurrencyCOP(item.prix_unitaire * item.quantite)}</span>
+                                            </div>
+                                            {note && (
+                                                <p className="mt-2 rounded-md border border-dashed border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium italic text-blue-800">
+                                                    {note}
+                                                </p>
+                                            )}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        ) : (
+                            <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-500 shadow-sm">
+                                Este pedido aún no tiene artículos registrados.
+                            </p>
+                        )}
                     </div>
 
                     <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-semibold text-gray-900 shadow-sm">
