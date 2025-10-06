@@ -757,6 +757,20 @@ const ensureOrderHasItems = async (order: Order): Promise<Order> => {
   };
 };
 
+const isKitchenEligibleOrder = (order: Order): boolean => {
+  if (order.type === 'a_emporter') {
+    const isValidated = order.statut === 'en_cours';
+    const awaitingKitchen = order.estado_cocina === 'recibido' || order.estado_cocina === 'no_enviado';
+    return isValidated && awaitingKitchen && order.items.length > 0;
+  }
+
+  if (order.estado_cocina !== 'recibido') {
+    return false;
+  }
+
+  return order.items.some(item => item.estado === 'enviado');
+};
+
 const fetchIngredients = async (): Promise<Ingredient[]> => {
   const response = await supabase
     .from('ingredients')
@@ -1388,20 +1402,14 @@ export const api = {
 
   getKitchenOrders: async (): Promise<KitchenTicket[]> => {
     const response = await selectOrdersQuery()
-      .eq('estado_cocina', 'recibido')
+      .in('estado_cocina', ['recibido', 'no_enviado'])
       .neq('statut', 'finalisee');
     const rows = unwrap<SupabaseOrderRow[]>(response as SupabaseResponse<SupabaseOrderRow[]>);
     const orders = await Promise.all(rows.map(row => ensureOrderHasItems(mapOrderRow(row))));
 
     const tickets: KitchenTicket[] = [];
 
-    const eligibleOrders = orders.filter(order => {
-      if (order.type === 'a_emporter') {
-        return true;
-      }
-
-      return order.items.some(item => item.estado === 'enviado');
-    });
+    const eligibleOrders = orders.filter(isKitchenEligibleOrder);
 
     eligibleOrders.forEach(order => {
       const sentItems = order.items.filter(item => item.estado === 'enviado');
@@ -1878,7 +1886,7 @@ export const api = {
     return {
       pendingTakeaway: orders.filter(order => order.type === 'a_emporter' && order.statut === 'pendiente_validacion').length,
       readyTakeaway: orders.filter(order => order.type === 'a_emporter' && order.estado_cocina === 'listo').length,
-      kitchenOrders: orders.filter(order => order.estado_cocina === 'recibido').length,
+      kitchenOrders: orders.filter(isKitchenEligibleOrder).length,
       lowStockIngredients: (await fetchIngredients()).filter(
         ingredient => ingredient.stock_actuel <= ingredient.stock_minimum,
       ).length,
