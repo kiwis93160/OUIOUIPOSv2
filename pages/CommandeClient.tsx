@@ -144,6 +144,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     const [error, setError] = useState<string | null>(null);
     const [clientInfo, setClientInfo] = useState({ nom: '', adresse: '', telephone: '' });
     const [paymentProof, setPaymentProof] = useState<File | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<Order['payment_method']>('transferencia');
     const [submitting, setSubmitting] = useState(false);
     const [submittedOrder, setSubmittedOrder] = useState<Order | null>(null);
     const [orderHistory, setOrderHistory] = useState<Order[]>([]);
@@ -246,7 +247,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
     
     const handleSubmitOrder = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!clientInfo.nom || !clientInfo.telephone || !clientInfo.adresse || !paymentProof) return;
+        if (!clientInfo.nom || !clientInfo.telephone || !clientInfo.adresse || !paymentProof || !paymentMethod) return;
         setSubmitting(true);
         try {
             let receiptUrl: string | undefined;
@@ -262,6 +263,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                 items: itemsToSubmit,
                 clientInfo,
                 receipt_url: receiptUrl,
+                payment_method: paymentMethod,
             };
             const newOrder = await api.submitCustomerOrder(orderData);
             setSubmittedOrder(newOrder);
@@ -269,6 +271,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
             setCart([]);
             setClientInfo({nom: '', adresse: '', telephone: ''});
             setPaymentProof(null);
+            setPaymentMethod('transferencia');
             storeActiveCustomerOrder(newOrder.id);
         } catch (err) {
             alert('Ocurrió un error al enviar el pedido o subir el comprobante.');
@@ -455,7 +458,12 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-gray-700">Método de pago</label>
-                                    <select required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary bg-white text-gray-700">
+                                    <select
+                                        required
+                                        value={paymentMethod}
+                                        onChange={e => setPaymentMethod(e.target.value as Order['payment_method'])}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary bg-white text-gray-700"
+                                    >
                                         <option value="transferencia">Transferencia</option>
                                         <option value="efectivo" disabled>Efectivo - no disponible</option>
                                     </select>
@@ -469,7 +477,7 @@ const OrderMenuView: React.FC<{ onOrderSubmitted: (order: Order) => void }> = ({
                                     </label>
                                     <input id="payment-proof-upload" type="file" required accept="image/*,.pdf" onChange={e => setPaymentProof(e.target.files ? e.target.files[0] : null)} className="hidden" />
                                 </div>
-                                <button type="submit" disabled={!clientInfo.nom || !clientInfo.telephone || !clientInfo.adresse || !paymentProof || submitting} className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg text-lg hover:bg-red-700 transition disabled:bg-gray-400">
+                                <button type="submit" disabled={!clientInfo.nom || !clientInfo.telephone || !clientInfo.adresse || !paymentProof || !paymentMethod || submitting} className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg text-lg hover:bg-red-700 transition disabled:bg-gray-400">
                                     {submitting ? 'Enviando...' : `Enviar el pedido (${formatCurrencyCOP(total)})`}
                                 </button>
                             </form>

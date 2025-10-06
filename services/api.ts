@@ -1778,6 +1778,7 @@ export const api = {
     items: OrderItem[];
     clientInfo: Order['clientInfo'];
     receipt_url?: string;
+    payment_method?: Order['payment_method'];
   }): Promise<Order> => {
     const now = new Date();
     const nowIso = now.toISOString();
@@ -1785,12 +1786,13 @@ export const api = {
     const insertResponse = await supabase
       .from('orders')
       .insert({
-        type: 'a_emporter',
+        type: 'pedir_en_linea',
         couverts: 1,
         statut: 'pendiente_validacion',
         estado_cocina: 'no_enviado',
         date_creation: nowIso,
         payment_status: 'unpaid',
+        payment_method: orderData.payment_method ?? null,
         total: orderData.items.reduce((sum, item) => sum + item.prix_unitaire * item.quantite, 0),
         client_nom: orderData.clientInfo?.nom ?? null,
         client_telephone: orderData.clientInfo?.telephone ?? null,
