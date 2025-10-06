@@ -703,7 +703,11 @@ const runProductsQueryWithFallback = async <T>(
 const fetchOrderById = async (orderId: string): Promise<Order | null> => {
   const response = await selectOrdersQuery().eq('id', orderId).maybeSingle();
   const row = unwrapMaybe<SupabaseOrderRow>(response as SupabaseResponse<SupabaseOrderRow | null>);
-  return row ? mapOrderRow(row) : null;
+  if (!row) {
+    return null;
+  }
+
+  return ensureOrderHasItems(mapOrderRow(row));
 };
 
 const fetchOrderItemsByOrderId = async (orderId: string): Promise<OrderItem[]> => {
