@@ -757,8 +757,12 @@ const ensureOrderHasItems = async (order: Order): Promise<Order> => {
   };
 };
 
+const TAKEAWAY_ORDER_TYPES: Order['type'][] = ['a_emporter', 'pedir_en_linea'];
+
+const isTakeawayLikeOrder = (order: Order): boolean => TAKEAWAY_ORDER_TYPES.includes(order.type);
+
 const isKitchenEligibleOrder = (order: Order): boolean => {
-  if (order.type === 'a_emporter') {
+  if (isTakeawayLikeOrder(order)) {
     const isValidated = order.statut === 'en_cours';
     const awaitingKitchen = order.estado_cocina === 'recibido' || order.estado_cocina === 'no_enviado';
     return isValidated && awaitingKitchen && order.items.length > 0;
@@ -1416,7 +1420,7 @@ export const api = {
       const itemsForTicket =
         sentItems.length > 0
           ? sentItems
-          : order.type === 'a_emporter'
+          : isTakeawayLikeOrder(order)
             ? order.items
             : [];
 
@@ -1450,7 +1454,7 @@ export const api = {
   },
 
   getTakeawayOrders: async (): Promise<{ pending: Order[]; ready: Order[] }> => {
-    const response = await selectOrdersQuery().eq('type', 'a_emporter');
+    const response = await selectOrdersQuery().in('type', TAKEAWAY_ORDER_TYPES);
     const rows = unwrap<SupabaseOrderRow[]>(response as SupabaseResponse<SupabaseOrderRow[]>);
     const orders = await Promise.all(rows.map(row => ensureOrderHasItems(mapOrderRow(row))));
     return {
@@ -1884,8 +1888,8 @@ export const api = {
     const orders = rows.map(mapOrderRow);
 
     return {
-      pendingTakeaway: orders.filter(order => order.type === 'a_emporter' && order.statut === 'pendiente_validacion').length,
-      readyTakeaway: orders.filter(order => order.type === 'a_emporter' && order.estado_cocina === 'listo').length,
+      pendingTakeaway: orders.filter(order => isTakeawayLikeOrder(order) && order.statut === 'pendiente_validacion').length,
+      readyTakeaway: orders.filter(order => isTakeawayLikeOrder(order) && order.estado_cocina === 'listo').length,
       kitchenOrders: orders.filter(isKitchenEligibleOrder).length,
       lowStockIngredients: (await fetchIngredients()).filter(
         ingredient => ingredient.stock_actuel <= ingredient.stock_minimum,

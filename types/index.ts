@@ -304,7 +304,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
-  type: 'sur_place' | 'a_emporter';
+  type: 'sur_place' | 'a_emporter' | 'pedir_en_linea';
   table_id?: string;
   table_nom?: string;
   couverts: number;
