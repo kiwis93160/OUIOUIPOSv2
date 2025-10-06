@@ -706,13 +706,55 @@ const fetchOrderById = async (orderId: string): Promise<Order | null> => {
   return row ? mapOrderRow(row) : null;
 };
 
+const fetchOrderItemsByOrderId = async (orderId: string): Promise<OrderItem[]> => {
+  const response = await supabase
+    .from('order_items')
+    .select(
+      `
+        id,
+        order_id,
+        produit_id,
+        nom_produit,
+        prix_unitaire,
+        quantite,
+        excluded_ingredients,
+        commentaire,
+        estado,
+        date_envoi
+      `,
+    )
+    .eq('order_id', orderId);
+
+  const rows = unwrap<SupabaseOrderItemRow[]>(response as SupabaseResponse<SupabaseOrderItemRow[]>);
+  return rows.map(mapOrderItemRow);
+};
+
 const ensureOrderHasItems = async (order: Order): Promise<Order> => {
   if (order.items.length > 0) {
     return order;
   }
 
   const enrichedOrder = await fetchOrderById(order.id);
-  return enrichedOrder ?? order;
+  if (enrichedOrder?.items.length) {
+    return enrichedOrder;
+  }
+
+  const fallbackItems = await fetchOrderItemsByOrderId(order.id);
+  if (fallbackItems.length === 0) {
+    return enrichedOrder ?? order;
+  }
+
+  const baseOrder = enrichedOrder ?? order;
+  const computedTotal = fallbackItems.reduce(
+    (sum, item) => sum + item.prix_unitaire * item.quantite,
+    0,
+  );
+
+  return {
+    ...baseOrder,
+    items: fallbackItems,
+    total: baseOrder.total > 0 ? baseOrder.total : computedTotal,
+  };
 };
 
 const fetchIngredients = async (): Promise<Ingredient[]> => {
